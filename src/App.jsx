@@ -4,6 +4,8 @@ import { AddCardDialog } from './components/AddCardDialog'
 import { AppIntro } from './components/AppIntro'
 import { CardDetailDrawer } from './components/CardDetailDrawer'
 import { FilterBar } from './components/FilterBar'
+import { MusicPopover } from './components/MusicPopover'
+import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
 import { ModuleWorkspace } from './components/ModuleWorkspace'
 import { ProgressView } from './components/ProgressView'
@@ -317,6 +319,10 @@ export default function App() {
   const referenceDate = tracker.state.settings.referenceDate
   const mat700Active = tracker.state.settings.mat700Active
   const theme = tracker.state.settings.theme ?? 'light'
+  const referenceDateRef = useRef(referenceDate)
+  referenceDateRef.current = referenceDate
+  const updateSettingsRef = useRef(tracker.updateSettings)
+  updateSettingsRef.current = tracker.updateSettings
   const schedule = useMemo(
     () => ({
       campaignStart: tracker.state.settings.campaignStart,
@@ -363,6 +369,19 @@ export default function App() {
   useEffect(() => {
     setNavOpen(false)
   }, [activeView])
+
+  // Keep "today" live so overdue cards update automatically (advances forward only;
+  // a manually-set future planning date is respected). Persists via localStorage.
+  useEffect(() => {
+    function syncToday() {
+      const now = new Date()
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      if (today > referenceDateRef.current) updateSettingsRef.current({ referenceDate: today })
+    }
+    syncToday()
+    const id = window.setInterval(syncToday, 60000)
+    return () => window.clearInterval(id)
+  }, [])
 
   useEffect(() => {
     function onKey(event) {
@@ -720,6 +739,16 @@ export default function App() {
         </nav>
 
         <div className="sidebar-foot">
+          <div className="sidebar-crest">
+            <img
+              src="/cardiff-logo.svg"
+              alt="Cardiff University"
+              onError={(event) => {
+                event.currentTarget.style.display = 'none'
+              }}
+            />
+            <span>Cardiff University</span>
+          </div>
           <div className="mini-progress" title={`${doneCount} of ${totalCount} cards done`}>
             <div className="mini-progress-head">
               <span>Campaign progress</span>
@@ -770,6 +799,16 @@ export default function App() {
               <span>Add card</span>
             </button>
             <StudyTimer />
+            <MusicPopover />
+            <NotificationCenter
+              cards={tracker.cards}
+              referenceDate={referenceDate}
+              examCountdown={examCountdown}
+              unsavedSinceBackup={unsavedSinceBackup}
+              mat700Active={mat700Active}
+              onGoView={setActiveView}
+              onOpenCard={setSelectedCardId}
+            />
             <button
               type="button"
               className="icon-button"

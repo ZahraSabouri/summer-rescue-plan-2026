@@ -4,8 +4,10 @@ A calm, single-page study **command center** for the 2026 summer exam-recovery c
 **Cardiff University · MSc Data Science & Analytics** summer exams window. It unifies a planning tracker, three
 module workspaces, progress analytics, an evidence log, and a built-in study timer into one local-first app.
 
-> Cardiff University branding here is a plain text credit only. To add the official crest, drop an image into
-> `public/` and reference it from `src/components/AppIntro.jsx` and the sidebar brand in `src/App.jsx`.
+> Cardiff University branding uses an **original placeholder crest** at `public/cardiff-logo.svg` (not an
+> official mark). To show the real logo, replace that single file — keep the same name — with Cardiff's
+> official SVG or PNG; it then appears on the intro screen and in the sidebar automatically. The browser tab
+> icon lives at `public/favicon.svg`.
 
 ---
 

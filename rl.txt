@@ -1,0 +1,7 @@
+✘ [ERROR] Unexpected end of file
+
+    src/utils/resourceLinks.js:59:34:
+      59 │   if (extension === 'txt') return 
+         ╵                                   ^
+
+1 error

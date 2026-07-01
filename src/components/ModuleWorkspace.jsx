@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   checklistDoneCount,
   formatDate,
@@ -7,6 +8,7 @@ import {
   sortCards,
   sumHours,
 } from '../utils/progress'
+import { codeLanguage, isYouTube, youtubeEmbedUrl } from '../utils/resourceLinks.js'
 import { CardSummary } from './CardSummary'
 
 function percent(done, total) {
@@ -33,7 +35,12 @@ function useTextResource(resource) {
         return response.text()
       })
       .then((text) => {
-        if (!cancelled) setState({ url, status: 'ready', text, error: '' })
+        if (cancelled) return
+        const head = text.slice(0, 200).trim().toLowerCase()
+        if (head.startsWith('<!doctype html') || head.startsWith('<html')) {
+          throw new Error('File could not be loaded (the server returned the app page). Use “New tab”, or run npm run assets:sync.')
+        }
+        setState({ url, status: 'ready', text, error: '' })
       })
       .catch((error) => {
         if (!cancelled) setState({ url, status: 'error', text: '', error: error.message })
@@ -180,6 +187,30 @@ function TextPreview({ resource }) {
   )
 }
 
+function CodePreview({ resource }) {
+  const { status, text, error } = useTextResource(resource)
+  if (status === 'loading') return <LoadingPreview label="Loading code..." />
+  if (status === 'error') return <p className="empty-state preview-state">Could not load file: {error}</p>
+  const language = codeLanguage(resource.path || resource.url || '') || resource.type
+  const lines = text.replace(/\n$/, '').split('\n')
+  return (
+    <div className="code-preview">
+      <div className="code-bar">
+        <span className="code-lang">{language}</span>
+        <span className="code-meta">{lines.length} lines</span>
+      </div>
+      <div className="code-body">
+        <pre className="code-gutter" aria-hidden="true">
+          {lines.map((_, index) => `${index + 1}\n`).join('')}
+        </pre>
+        <pre className="code-source">
+          <code>{text}</code>
+        </pre>
+      </div>
+    </div>
+  )
+}
+
 function MarkdownPreview({ resource }) {
   const { status, text, error } = useTextResource(resource)
   if (status === 'loading') return <LoadingPreview />
@@ -255,61 +286,132 @@ function ResourceCard({ resource, selected, onSelect }) {
   )
 }
 
-function ResourceViewer({ resource }) {
-  if (!resource) {
+function isHtmlResource(resource) {
+  return /\.html?(\?|#|$)/i.test(resource?.url || '') || resource?.viewer === 'html'
+}
+
+function ResourcePreview({ resource, frameRef }) {
+  if (resource.viewer === 'youtube' || isYouTube(resource.url)) {
+    const embed = youtubeEmbedUrl(resource.url)
+    if (embed) {
+      return (
+        <div className="youtube-preview">
+          <iframe
+            src={embed}
+            title={resource.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      )
+    }
+  }
+  if (resource.viewer === 'image') {
     return (
-      <section className="resource-viewer empty">
-        <p className="empty-state">Choose a resource to preview it here.</p>
-      </section>
+      <div className="image-preview">
+        <img src={resource.url} alt={resource.title} />
+      </div>
     )
   }
-
+  if (resource.viewer === 'frame') {
+    // HTML gets sandboxed (it can run scripts safely); PDFs render in the native viewer (no sandbox).
+    const html = isHtmlResource(resource)
+    return (
+      <iframe
+        ref={frameRef}
+        className="reader-frame"
+        title={resource.title}
+        src={resource.url}
+        {...(html ? { sandbox: 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals' } : {})}
+      />
+    )
+  }
+  if (resource.viewer === 'markdown') return <MarkdownPreview resource={resource} />
+  if (resource.viewer === 'text') return <TextPreview resource={resource} />
+  if (resource.viewer === 'code') return <CodePreview resource={resource} />
+  if (resource.viewer === 'notebook') return <NotebookPreview resource={resource} />
+  if (resource.viewer === 'video') {
+    return (
+      <div className="video-preview">
+        <video src={resource.url} controls preload="metadata" />
+      </div>
+    )
+  }
   return (
-    <section className="resource-viewer">
-      <header className="resource-viewer-toolbar">
-        <div>
-          <span className="type-badge">{resource.type}</span>
-          <h2>{resource.title}</h2>
-          <p>{resource.description || resource.path}</p>
+    <div className="file-preview">
+      <span className="type-badge">{resource.type}</span>
+      <h3>{resource.title}</h3>
+      <p>{resource.description || 'This file is best opened in its native application.'}</p>
+      <a className="primary-button" href={resource.url} target="_blank" rel="noreferrer">
+        Open resource
+      </a>
+    </div>
+  )
+}
+
+function ResourceReader({ resource, onClose }) {
+  const frameRef = useRef(null)
+  const html = isHtmlResource(resource)
+
+  useEffect(() => {
+    function onKey(event) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  function printFrame() {
+    try {
+      frameRef.current?.contentWindow?.focus()
+      frameRef.current?.contentWindow?.print()
+    } catch {
+      window.open(resource.url, '_blank', 'noopener')
+    }
+  }
+
+  return createPortal(
+    <div
+      className="reader-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-label={resource.title}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div className={`reader-window viewer-${resource.viewer}${html ? ' is-html' : ''}`}>
+        <header className="reader-chrome">
+          <span className="reader-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <div className="reader-addr">
+            <span className="type-badge">{resource.type}</span>
+            <strong title={resource.path}>{resource.title}</strong>
+          </div>
+          <div className="reader-actions">
+            {html && (
+              <button type="button" className="reader-btn" onClick={printFrame} title="Print this sheet">
+                Print
+              </button>
+            )}
+            <a className="reader-btn" href={resource.url} target="_blank" rel="noreferrer" title="Open in a new browser tab">
+              New tab ↗
+            </a>
+            <button type="button" className="reader-btn reader-close" onClick={onClose} aria-label="Close reader">
+              ✕
+            </button>
+          </div>
+        </header>
+        <div className="reader-body">
+          <ResourcePreview resource={resource} frameRef={frameRef} />
         </div>
-        <a className="secondary-button" href={resource.url} target="_blank" rel="noreferrer">
-          Open
-        </a>
-      </header>
-
-      {resource.viewer === 'image' && (
-        <div className="image-preview">
-          <img src={resource.url} alt={resource.title} />
-        </div>
-      )}
-
-      {resource.viewer === 'frame' && (
-        <iframe className="document-preview" title={resource.title} src={resource.url} />
-      )}
-
-      {resource.viewer === 'markdown' && <MarkdownPreview resource={resource} />}
-
-      {resource.viewer === 'text' && <TextPreview resource={resource} />}
-
-      {resource.viewer === 'notebook' && <NotebookPreview resource={resource} />}
-
-      {resource.viewer === 'video' && (
-        <div className="video-preview">
-          <video src={resource.url} controls preload="metadata" />
-        </div>
-      )}
-
-      {(resource.viewer === 'file' || resource.viewer === 'external') && (
-        <div className="file-preview">
-          <span className="type-badge">{resource.type}</span>
-          <h3>{resource.title}</h3>
-          <p>{resource.description || 'This file is best opened in its native application.'}</p>
-          <a className="primary-button" href={resource.url} target="_blank" rel="noreferrer">
-            Open resource
-          </a>
-        </div>
-      )}
-    </section>
+        {resource.description && <footer className="reader-foot">{resource.description}</footer>}
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -417,6 +519,52 @@ function DrillPanel({ module }) {
   )
 }
 
+const MODULE_TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'planning', label: 'Planning' },
+  { id: 'materials', label: 'Materials' },
+]
+
+function ModuleProgressBar({ moduleCards, referenceDate }) {
+  const total = moduleCards.length
+  const done = moduleCards.filter((card) => card.done).length
+  const overdue = moduleCards.filter((card) => !card.done && isOverdue(card, referenceDate)).length
+  const open = Math.max(0, total - done - overdue)
+  const pct = percent(done, total)
+
+  return (
+    <section className="workspace-section module-progress wide">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Big picture</p>
+          <h2>What&apos;s done vs. what&apos;s left</h2>
+        </div>
+        <span className="status-pill">{pct}% done</span>
+      </div>
+      <div className="progress-split" role="img" aria-label={`${done} done, ${open} to do, ${overdue} overdue`}>
+        {done > 0 && <span className="seg done" style={{ flexGrow: done }} title={`${done} done`} />}
+        {open > 0 && <span className="seg open" style={{ flexGrow: open }} title={`${open} to do`} />}
+        {overdue > 0 && <span className="seg overdue" style={{ flexGrow: overdue }} title={`${overdue} overdue`} />}
+        {total === 0 && <span className="seg empty" style={{ flexGrow: 1 }} />}
+      </div>
+      <div className="progress-legend">
+        <span>
+          <i className="dot done" />
+          {done} done
+        </span>
+        <span>
+          <i className="dot open" />
+          {open} to do
+        </span>
+        <span>
+          <i className="dot overdue" />
+          {overdue} overdue
+        </span>
+      </div>
+    </section>
+  )
+}
+
 export function ModuleWorkspace({
   module,
   cards,
@@ -427,7 +575,8 @@ export function ModuleWorkspace({
   moduleNote,
   onModuleNoteChange,
 }) {
-  const [selectedResourceId, setSelectedResourceId] = useState(module.resources[0]?.id ?? '')
+  const [tab, setTab] = useState('overview')
+  const [openResourceId, setOpenResourceId] = useState(null)
   const [resourceQuery, setResourceQuery] = useState('')
   const [activeGroup, setActiveGroup] = useState('all')
 
@@ -450,8 +599,15 @@ export function ModuleWorkspace({
         .includes(query)
     })
   }, [activeGroup, module.resources, resourceQuery])
-  const selectedResource =
-    module.resources.find((resource) => resource.id === selectedResourceId) ?? visibleResources[0] ?? module.resources[0]
+  const groupedResources = useMemo(() => {
+    const map = new Map()
+    for (const resource of visibleResources) {
+      if (!map.has(resource.group)) map.set(resource.group, [])
+      map.get(resource.group).push(resource)
+    }
+    return Array.from(map, ([group, items]) => ({ group, items }))
+  }, [visibleResources])
+  const openResource = module.resources.find((resource) => resource.id === openResourceId) ?? null
   const mat700Inactive = module.id === 'mat700' && !mat700Active
 
   return (
@@ -485,75 +641,28 @@ export function ModuleWorkspace({
         </div>
       )}
 
-      <ModuleStats moduleCards={moduleCards} referenceDate={referenceDate} />
-      <ModuleGuidance module={module} />
+      <div className="module-tabs" role="tablist" aria-label="Module sections">
+        {MODULE_TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={`module-tab${tab === item.id ? ' active' : ''}`}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+            {item.id === 'materials' && <span className="module-tab-count">{module.resources.length}</span>}
+            {item.id === 'planning' && <span className="module-tab-count">{openCards.length}</span>}
+          </button>
+        ))}
+      </div>
 
-      <section className="module-layout">
-        <div className="module-main-column">
-          <section className="workspace-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Rescue cards</p>
-                <h2>Next module actions</h2>
-              </div>
-              <span className="status-pill">{openCards.length} open</span>
-            </div>
-            <div className="focus-list">
-              {nextCards.length > 0 ? (
-                nextCards.map((card) => <CardSummary key={card.id} card={card} {...actions} />)
-              ) : (
-                <p className="empty-state">No open cards for this module.</p>
-              )}
-            </div>
-            {doneCards.length > 0 && (
-              <details className="done-details">
-                <summary>{doneCards.length} done cards</summary>
-                <div className="focus-list">
-                  {doneCards.slice(0, 12).map((card) => (
-                    <CardSummary key={card.id} card={card} compact {...actions} />
-                  ))}
-                </div>
-              </details>
-            )}
-          </section>
-
-          <section className="resource-browser">
-            <div className="resource-browser-sidebar">
-              <div className="resource-search">
-                <label className="search-field">
-                  <span>Find resource</span>
-                  <input
-                    type="search"
-                    value={resourceQuery}
-                    onChange={(event) => setResourceQuery(event.target.value)}
-                    placeholder="Search notes, formulas, labs, papers"
-                  />
-                </label>
-                <select value={activeGroup} onChange={(event) => setActiveGroup(event.target.value)}>
-                  {groups.map((group) => (
-                    <option key={group} value={group}>
-                      {group === 'all' ? 'All groups' : group}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="study-resource-list">
-                {visibleResources.map((resource) => (
-                  <ResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    selected={selectedResource?.id === resource.id}
-                    onSelect={setSelectedResourceId}
-                  />
-                ))}
-                {visibleResources.length === 0 && <p className="empty-state">No matching resources.</p>}
-              </div>
-            </div>
-            <ResourceViewer resource={selectedResource} />
-          </section>
-        </div>
-
-        <aside className="module-side-column">
+      {tab === 'overview' && (
+        <div className="module-panel">
+          <ModuleStats moduleCards={moduleCards} referenceDate={referenceDate} />
+          <ModuleProgressBar moduleCards={moduleCards} referenceDate={referenceDate} />
+          <ModuleGuidance module={module} />
           <section className="workspace-section">
             <div className="section-heading">
               <div>
@@ -568,34 +677,121 @@ export function ModuleWorkspace({
               placeholder="Fast lookup paths, formulas, traps, or the next repair target."
             />
           </section>
+        </div>
+      )}
 
-          <section className="workspace-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Timeline</p>
-                <h2>Upcoming dated cards</h2>
+      {tab === 'planning' && (
+        <div className="module-panel module-layout">
+          <div className="module-main-column">
+            <section className="workspace-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Rescue cards</p>
+                  <h2>Next module actions</h2>
+                </div>
+                <span className="status-pill">{openCards.length} open</span>
               </div>
-            </div>
-            <div className="timeline-list">
-              {openCards
-                .filter((card) => getCardDate(card))
-                .slice(0, 8)
-                .map((card) => (
-                  <button key={card.id} type="button" className="timeline-item" onClick={() => actions.onOpen(card.id)}>
-                    <span>{formatDate(getCardDate(card))}</span>
-                    <strong>{card.title}</strong>
-                    <small>{hours(card.estimatedHours)} / {card.priority}</small>
-                  </button>
-                ))}
-              {openCards.filter((card) => getCardDate(card)).length === 0 && (
-                <p className="empty-state">No dated open cards.</p>
+              <div className="focus-list">
+                {nextCards.length > 0 ? (
+                  nextCards.map((card) => <CardSummary key={card.id} card={card} {...actions} />)
+                ) : (
+                  <p className="empty-state">No open cards for this module.</p>
+                )}
+              </div>
+              {doneCards.length > 0 && (
+                <details className="done-details">
+                  <summary>{doneCards.length} done cards</summary>
+                  <div className="focus-list">
+                    {doneCards.slice(0, 12).map((card) => (
+                      <CardSummary key={card.id} card={card} compact {...actions} />
+                    ))}
+                  </div>
+                </details>
               )}
+            </section>
+
+            <DrillPanel module={module} />
+          </div>
+
+          <aside className="module-side-column">
+            <section className="workspace-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Timeline</p>
+                  <h2>Upcoming dated cards</h2>
+                </div>
+              </div>
+              <div className="timeline-list">
+                {openCards
+                  .filter((card) => getCardDate(card))
+                  .slice(0, 8)
+                  .map((card) => (
+                    <button key={card.id} type="button" className="timeline-item" onClick={() => actions.onOpen(card.id)}>
+                      <span>{formatDate(getCardDate(card))}</span>
+                      <strong>{card.title}</strong>
+                      <small>{hours(card.estimatedHours)} / {card.priority}</small>
+                    </button>
+                  ))}
+                {openCards.filter((card) => getCardDate(card)).length === 0 && (
+                  <p className="empty-state">No dated open cards.</p>
+                )}
+              </div>
+            </section>
+          </aside>
+        </div>
+      )}
+
+      {tab === 'materials' && (
+        <div className="module-panel">
+          <section className="resource-browser">
+            <div className="resource-browser-bar">
+              <label className="search-field">
+                <span>Find resource</span>
+                <input
+                  type="search"
+                  value={resourceQuery}
+                  onChange={(event) => setResourceQuery(event.target.value)}
+                  placeholder="Search notes, formulas, labs, papers"
+                />
+              </label>
+              <label className="search-field">
+                <span>Group</span>
+                <select value={activeGroup} onChange={(event) => setActiveGroup(event.target.value)}>
+                  {groups.map((group) => (
+                    <option key={group} value={group}>
+                      {group === 'all' ? 'All groups' : group}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="resource-count">{visibleResources.length} files</span>
+            </div>
+            <div className="materials-groups">
+              {groupedResources.map(({ group, items }) => (
+                <section key={group} className="material-group">
+                  <div className="material-group-head">
+                    <h3>{group}</h3>
+                    <span className="material-group-count">{items.length}</span>
+                  </div>
+                  <div className="study-resource-grid">
+                    {items.map((resource) => (
+                      <ResourceCard
+                        key={resource.id}
+                        resource={resource}
+                        selected={openResourceId === resource.id}
+                        onSelect={setOpenResourceId}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+              {visibleResources.length === 0 && <p className="empty-state">No matching resources.</p>}
             </div>
           </section>
-        </aside>
-      </section>
+        </div>
+      )}
 
-      <DrillPanel module={module} />
+      {openResource && <ResourceReader resource={openResource} onClose={() => setOpenResourceId(null)} />}
     </div>
   )
 }

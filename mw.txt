@@ -1,0 +1,14 @@
+✘ [ERROR] Unexpected end of file before a closing "div" tag
+
+    src/components/ModuleWorkspace.jsx:606:7:
+      606 │        
+          │        ^
+          ╵        </div>
+
+  The opening "div" tag is here:
+
+    src/components/ModuleWorkspace.jsx:596:13:
+      596 │             <div className="study-resource-grid">
+          ╵              ~~~
+
+1 error

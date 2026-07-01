@@ -20,6 +20,14 @@ export function AppIntro({
       <div className="intro-aurora" aria-hidden="true" />
 
       <div className="intro-card">
+        <img
+          className="intro-hero"
+          src="/intro-hero.jpg"
+          alt=""
+          onError={(event) => {
+            event.currentTarget.style.display = 'none'
+          }}
+        />
         <header className="intro-head">
           <span className="intro-mark">
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -31,6 +39,14 @@ export function AppIntro({
             <p className="eyebrow">Summer Rescue Campaign 2026</p>
             <p className="intro-uni">Cardiff University · MSc Data Science &amp; Analytics</p>
           </div>
+          <img
+            className="intro-crest"
+            src="/cardiff-logo.svg"
+            alt="Cardiff University"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none'
+            }}
+          />
         </header>
 
         <h1 className="intro-title">
