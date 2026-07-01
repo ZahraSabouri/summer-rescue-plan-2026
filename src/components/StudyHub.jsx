@@ -32,7 +32,7 @@ function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen 
   return (
     <article className={`module-command-card ${inactiveInsurance ? 'is-muted' : ''}`}>
       <div className="module-card-visual">
-        <img src={module.visual.url} alt="" loading="lazy" />
+        <img src={(module.hero ?? module.visual).url} alt="" loading="lazy" />
       </div>
       <div className="module-card-body">
         <p className="eyebrow">{module.code}</p>
@@ -121,7 +121,7 @@ export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, s
               onClick={() => setActiveView(module.viewId)}
               style={{ '--module-accent': `var(${module.accent})` }}
             >
-              <img src={module.visual.url} alt="" loading="lazy" />
+              <img src={(module.hero ?? module.visual).url} alt="" loading="lazy" />
               <span>{module.label}</span>
             </button>
           ))}
@@ -181,53 +181,6 @@ export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, s
         />
       </section>
 
-      <section className="hub-split">
-        <section className="hub-queue quality-panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Quality control</p>
-              <h2>Why this stays useful</h2>
-            </div>
-          </div>
-          <div className="quality-list">
-            <article>
-              <strong>One source of truth</strong>
-              <span>The rescue cards still drive dates, status, evidence, hours, and completion.</span>
-            </article>
-            <article>
-              <strong>Low switching cost</strong>
-              <span>Each module page combines cards, resources, drills, and notes in one view.</span>
-            </article>
-            <article>
-              <strong>Exam-output bias</strong>
-              <span>Resources are organised around notebooks, formulas, question banks, and timed templates.</span>
-            </article>
-          </div>
-        </section>
-
-        <section className="hub-queue quality-panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Portable app</p>
-              <h2>Self-contained resources</h2>
-            </div>
-          </div>
-          <div className="quality-list">
-            <article>
-              <strong>No legacy app dependency</strong>
-              <span>Module navigation lives inside this React app instead of old standalone pages.</span>
-            </article>
-            <article>
-              <strong>App-local assets</strong>
-              <span>Referenced PDFs, HTML notes, notebooks, images, and docs are served from `public/study-assets`.</span>
-            </article>
-            <article>
-              <strong>GitHub clone ready</strong>
-              <span>The app can be moved with its public assets and still load the study materials it references.</span>
-            </article>
-          </div>
-        </section>
-      </section>
     </div>
   )
 }

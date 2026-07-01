@@ -50,14 +50,23 @@ export function codeLanguage(path) {
 }
 
 export function isYouTube(url = '') {
-  return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/i.test(url)
+  return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|playlist\?)|youtu\.be\/)/i.test(url)
 }
 
 export function youtubeEmbedUrl(url = '') {
+  if (/PASTE_/i.test(url)) return null
+
+  const listMatch = url.match(/[?&]list=([\w-]+)/i)
+  if (listMatch) return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}`
+
   const match = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/i,
   )
   return match ? `https://www.youtube.com/embed/${match[1]}` : null
+}
+
+export function isPlaceholderResourceUrl(url = '') {
+  return /PASTE_/i.test(url)
 }
 
 export function fileType(path) {

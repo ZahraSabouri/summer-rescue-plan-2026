@@ -3,11 +3,12 @@ import './App.css'
 import { AddCardDialog } from './components/AddCardDialog'
 import { AppIntro } from './components/AppIntro'
 import { CardDetailDrawer } from './components/CardDetailDrawer'
+import { CommandPalette } from './components/CommandPalette'
 import { FilterBar } from './components/FilterBar'
 import { MusicPopover } from './components/MusicPopover'
 import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
-import { ModuleWorkspace } from './components/ModuleWorkspace'
+import { ModuleWorkspace, ResourceReader } from './components/ModuleWorkspace'
 import { ProgressView } from './components/ProgressView'
 import { StudyHub } from './components/StudyHub'
 import {
@@ -20,8 +21,9 @@ import {
   WeekView,
 } from './components/TrackerViews'
 import { baseCards, campaignMeta } from './data/baseCards'
+import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, VIEW_OPTIONS } from './data/constants'
-import { STUDY_MODULE_MAP } from './data/studyModules'
+import { STUDY_MODULES, STUDY_MODULE_MAP } from './data/studyModules'
 import { useTrackerState } from './state/useTrackerState'
 import {
   chooseBackupHandle,
@@ -32,6 +34,9 @@ import {
   writeBackupHandle,
 } from './utils/fileBackup'
 import { deriveStats, filterCards, sortCards } from './utils/progress'
+import { generateNotifications } from './utils/notifications'
+
+const ENRICHED_BASE_CARDS = attachCardResourceLinks(baseCards, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
 
@@ -59,6 +64,14 @@ const VIEW_META = {
   admin: { title: 'Admin & Dates', subtitle: 'Exam logistics and date watch.' },
 }
 
+const VALID_VIEW_IDS = new Set(Object.keys(VIEW_META))
+
+function viewFromHash() {
+  if (typeof window === 'undefined') return 'hub'
+  const value = window.location.hash.replace(/^#\/?/, '').trim()
+  return VALID_VIEW_IDS.has(value) ? value : 'hub'
+}
+
 function Icon({ name }) {
   const p = {
     fill: 'none',
@@ -67,7 +80,7 @@ function Icon({ name }) {
     strokeLinecap: 'round',
     strokeLinejoin: 'round',
   }
-  let body = null
+  let body
   switch (name) {
     case 'brand':
       body = (
@@ -278,11 +291,30 @@ function buildTrackerBackupPayload(state, snapshots, exportedAt) {
   }
 }
 
+function backupDoneCount(rawState) {
+  const cardStates = rawState?.cards && typeof rawState.cards === 'object' ? rawState.cards : {}
+  const addedCards = Array.isArray(rawState?.addedCards) ? rawState.addedCards : []
+  let done = 0
+
+  for (const baseCard of ENRICHED_BASE_CARDS) {
+    const cardState = cardStates[baseCard.id] ?? {}
+    if (cardState.done || cardState.status === 'Done') done += 1
+  }
+  for (const card of addedCards) {
+    const cardState = cardStates[card.id] ?? {}
+    if (cardState.done || cardState.status === 'Done' || card.status === 'Done') done += 1
+  }
+  return done
+}
+
 export default function App() {
-  const tracker = useTrackerState(baseCards)
-  const [activeView, setActiveView] = useState('hub')
+  const tracker = useTrackerState(ENRICHED_BASE_CARDS)
+  const [activeView, setActiveView] = useState(() => viewFromHash())
   const [filters, setFilters] = useState(FILTER_DEFAULTS)
   const [selectedCardId, setSelectedCardId] = useState(null)
+  const [activeTimerCardId, setActiveTimerCardId] = useState(null)
+  const [openResourceId, setOpenResourceId] = useState(null)
+  const [commandOpen, setCommandOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [navCollapsed, setNavCollapsed] = useState(() => {
@@ -309,20 +341,21 @@ export default function App() {
     }
   })
   const autosaveSupported = fileBackupSupported()
+  const [assetManifest, setAssetManifest] = useState(null)
   const [autosaveHandle, setAutosaveHandle] = useState(null)
   const [autosaveStatus, setAutosaveStatus] = useState(autosaveSupported ? 'off' : 'unsupported')
   const [autosaveSavedAt, setAutosaveSavedAt] = useState(null)
   const [autosaveDetail, setAutosaveDetail] = useState('')
   const autosaveTimerRef = useRef(null)
   const autosaveRunRef = useRef(0)
+  const saveNowRef = useRef(null)
+  const addNotificationsRef = useRef(tracker.addNotifications)
 
   const referenceDate = tracker.state.settings.referenceDate
   const mat700Active = tracker.state.settings.mat700Active
   const theme = tracker.state.settings.theme ?? 'light'
   const referenceDateRef = useRef(referenceDate)
-  referenceDateRef.current = referenceDate
   const updateSettingsRef = useRef(tracker.updateSettings)
-  updateSettingsRef.current = tracker.updateSettings
   const schedule = useMemo(
     () => ({
       campaignStart: tracker.state.settings.campaignStart,
@@ -334,6 +367,10 @@ export default function App() {
       tracker.state.settings.campaignStart,
       tracker.state.settings.examWindowStart,
     ],
+  )
+  const moduleExamDates = useMemo(
+    () => tracker.state.settings.moduleExamDates ?? {},
+    [tracker.state.settings.moduleExamDates],
   )
   const lastExportedAt = tracker.state.settings.lastExportedAt
   const lastBackupAt =
@@ -351,12 +388,50 @@ export default function App() {
       : autosaveHandle
         ? 'Change autosave file'
         : 'Choose autosave file'
+  const saveButtonLabel =
+    autosaveStatus === 'writing'
+      ? 'Saving...'
+      : !unsavedSinceBackup && lastBackupAt
+        ? `Saved ${formatExportStamp(lastBackupAt)}`
+        : 'Save'
+  const saveButtonDetail = !autosaveSupported
+    ? 'Exports JSON'
+    : autosaveHandle
+      ? backupStatusText
+      : 'Choose file once'
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = theme
     }
   }, [theme])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/study-assets-manifest.json')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((manifest) => {
+        if (!cancelled) setAssetManifest(manifest)
+      })
+      .catch(() => {
+        if (!cancelled) setAssetManifest(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    referenceDateRef.current = referenceDate
+  }, [referenceDate])
+
+  useEffect(() => {
+    updateSettingsRef.current = tracker.updateSettings
+  }, [tracker.updateSettings])
+
+  useEffect(() => {
+    addNotificationsRef.current = tracker.addNotifications
+  }, [tracker.addNotifications])
 
   useEffect(() => {
     try {
@@ -367,7 +442,23 @@ export default function App() {
   }, [navCollapsed])
 
   useEffect(() => {
-    setNavOpen(false)
+    const id = window.setTimeout(() => setNavOpen(false), 0)
+    return () => window.clearTimeout(id)
+  }, [activeView])
+
+  useEffect(() => {
+    function onHashChange() {
+      setActiveView(viewFromHash())
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  useEffect(() => {
+    const nextHash = `#/${activeView}`
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash)
+    }
   }, [activeView])
 
   // Keep "today" live so overdue cards update automatically (advances forward only;
@@ -475,25 +566,81 @@ export default function App() {
     [tracker.cards, referenceDate, mat700Active],
   )
   const selectedCard = tracker.cards.find((card) => card.id === selectedCardId)
+  const activeTimerCard = tracker.cards.find((card) => card.id === activeTimerCardId) ?? null
+  const allResources = useMemo(
+    () =>
+      STUDY_MODULES.flatMap((module) =>
+        module.resources.map((resource) => ({
+          ...resource,
+          moduleId: module.id,
+          moduleGroup: module.moduleGroup,
+          moduleTitle: module.title,
+        })),
+      ),
+    [],
+  )
+  const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
   const isStudyView = ['hub', 'aml', 'time-series', 'mat700'].includes(activeView)
 
   const viewMeta = VIEW_META[activeView] ?? { title: LABEL_BY_ID[activeView] ?? 'View', subtitle: '' }
   const doneCount = useMemo(() => tracker.cards.filter((card) => card.done).length, [tracker.cards])
   const totalCount = tracker.cards.length || 1
   const donePct = Math.round((doneCount / totalCount) * 100)
+  const examTarget = useMemo(() => {
+    const moduleTargets = [
+      ['aml', 'Applied ML', moduleExamDates.aml],
+      ['time-series', 'Time Series', moduleExamDates['time-series']],
+      ['mat700', 'MAT700', moduleExamDates.mat700],
+    ]
+      .filter(([, , date]) => date)
+      .sort((a, b) => a[2].localeCompare(b[2]))
+    if (moduleTargets.length > 0) {
+      const [, label, date] = moduleTargets.find(([, , date]) => date >= referenceDate) ?? moduleTargets[0]
+      return { label, date }
+    }
+    return { label: 'exam window', date: schedule.examWindowStart }
+  }, [moduleExamDates, referenceDate, schedule.examWindowStart])
+
   const examCountdown = useMemo(() => {
-    if (!schedule.examWindowStart || !referenceDate) return null
+    if (!examTarget.date || !referenceDate) return null
     const from = new Date(referenceDate)
-    const to = new Date(schedule.examWindowStart)
+    const to = new Date(examTarget.date)
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null
     return Math.round((to - from) / 86400000)
-  }, [referenceDate, schedule.examWindowStart])
+  }, [examTarget.date, referenceDate])
+
+  useEffect(() => {
+    addNotificationsRef.current?.(
+      generateNotifications({
+        cards: tracker.cards,
+        referenceDate,
+        examCountdown,
+        unsavedSinceBackup,
+        lastBackupAt,
+        mat700Active,
+        campaignStart: schedule.campaignStart,
+        createdAt: tracker.state.createdAt,
+      }),
+    )
+  }, [
+    examCountdown,
+    lastBackupAt,
+    mat700Active,
+    referenceDate,
+    schedule.campaignStart,
+    tracker.cards,
+    tracker.state.createdAt,
+    unsavedSinceBackup,
+  ])
 
   const actions = {
     onOpen: setSelectedCardId,
     onStatusChange: tracker.setStatus,
     onToggleDone: tracker.toggleDone,
     onHoursChange: tracker.setActualHours,
+    onReschedule: tracker.rescheduleCard,
+    onStartSession: setActiveTimerCardId,
+    referenceDate,
   }
 
   function downloadBackup(exportedAt) {
@@ -545,12 +692,69 @@ export default function App() {
     }
   }
 
+  async function saveNow() {
+    if (!autosaveSupported) {
+      exportBackup()
+      return
+    }
+
+    if (!autosaveHandle) {
+      setMessage('Pick a file once. The app will keep saving to it automatically.')
+      await connectAutosave()
+      return
+    }
+
+    const savedAt = new Date().toISOString()
+    setAutosaveStatus('writing')
+    try {
+      const hasPermission = await requestBackupPermission(autosaveHandle)
+      if (!hasPermission) throw new Error('File permission was not granted.')
+      await writeBackupHandle(autosaveHandle, buildTrackerBackupPayload(tracker.state, tracker.snapshots, savedAt))
+      setAutosaveSavedAt(savedAt)
+      setAutosaveStatus('saved')
+      setAutosaveDetail(`Saved ${formatExportStamp(savedAt)} to ${autosaveHandle.name ?? 'backup file'}`)
+      setMessage('Saved file copy.')
+    } catch (error) {
+      console.error(error)
+      setAutosaveStatus('error')
+      setAutosaveDetail(`Save failed: ${error.message}`)
+      setMessage('Save failed.')
+    }
+  }
+
+  useEffect(() => {
+    saveNowRef.current = saveNow
+  })
+
+  useEffect(() => {
+    function onSaveShortcut(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        saveNowRef.current?.()
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setCommandOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onSaveShortcut)
+    return () => window.removeEventListener('keydown', onSaveShortcut)
+  }, [])
+
   async function importBackup(event) {
     const file = event.target.files?.[0]
     if (!file) return
 
     try {
       const payload = JSON.parse(await file.text())
+      const incoming = payload?.state ?? payload
+      const incomingDone = backupDoneCount(incoming)
+      const currentDone = tracker.cards.filter((card) => card.done).length
+      const exportedAt = payload?.exportedAt ?? incoming?.settings?.lastExportedAt ?? incoming?.updatedAt
+      const confirmed = window.confirm(
+        `Import this tracker backup?\n\nBackup: ${incomingDone} done cards, exported ${formatExportStamp(exportedAt)}.\nCurrent: ${currentDone} done cards.\n\nThis replaces the current local tracker state.`,
+      )
+      if (!confirmed) return
       tracker.importTrackerState(payload)
       setSelectedCardId(null)
       setMessage('Backup imported.')
@@ -560,6 +764,16 @@ export default function App() {
     } finally {
       event.target.value = ''
     }
+  }
+
+  function openResource(resourceId) {
+    setOpenResourceId(resourceId)
+    tracker.markResourceOpened(resourceId)
+  }
+
+  function completeFocusSession(cardId, minutes) {
+    tracker.addFocusSession(cardId, minutes)
+    setMessage(`Logged ${minutes} min focus session.`)
   }
 
   function resetTracker() {
@@ -596,6 +810,11 @@ export default function App() {
             setActiveView={setActiveView}
             moduleNote={tracker.state.moduleNotes?.[activeView] ?? ''}
             onModuleNoteChange={tracker.setModuleNote}
+            moduleExamDate={moduleExamDates[activeView] ?? ''}
+            resourceProgress={tracker.state.resourceProgress}
+            recentResourceIds={tracker.state.recentResourceIds}
+            onResourceOpen={tracker.markResourceOpened}
+            onResourceReviewedToggle={tracker.toggleResourceProgress}
           />
         )
     }
@@ -639,13 +858,23 @@ export default function App() {
     }
     if (activeView === 'evidence') return <EvidenceView cards={visibleCards} actions={actions} />
     if (activeView === 'rescue') {
+      const rescueCards = Array.from(
+        new Map([...visibleCards, ...stats.overdueCards].map((card) => [card.id, card])).values(),
+      )
       return (
         <FocusView
           eyebrow="Recovery"
           title="Rescue Lane"
           description="Sunday buffers, slipped-card cleanup, and protected recovery blocks."
-          cards={visibleCards}
+          cards={rescueCards}
           actions={actions}
+          referenceDate={referenceDate}
+          onRescheduleAllOverdue={() =>
+            tracker.rescheduleCards(
+              stats.overdueCards.map((card) => card.id),
+              referenceDate,
+            )
+          }
         />
       )
     }
@@ -678,7 +907,7 @@ export default function App() {
     return (
       <AppIntro
         countdown={examCountdown}
-        examDate={schedule.examWindowStart}
+        examDate={examTarget.date}
         progressPct={donePct}
         doneCount={doneCount}
         totalCount={totalCount}
@@ -741,7 +970,7 @@ export default function App() {
         <div className="sidebar-foot">
           <div className="sidebar-crest">
             <img
-              src="/cardiff-logo.svg"
+              src="/cardiff-logo.png"
               alt="Cardiff University"
               onError={(event) => {
                 event.currentTarget.style.display = 'none'
@@ -788,26 +1017,37 @@ export default function App() {
 
           <div className="topbar-right">
             {examCountdown != null && (
-              <div className={`countdown-chip${examCountdown <= 21 ? ' urgent' : ''}`} title={`Exam window starts ${schedule.examWindowStart}`}>
+              <div className={`countdown-chip${examCountdown <= 21 ? ' urgent' : ''}`} title={`${examTarget.label} date ${examTarget.date}`}>
                 <strong>{examCountdown > 0 ? examCountdown : examCountdown === 0 ? '0' : Math.abs(examCountdown)}</strong>
-                <span>{examCountdown > 0 ? 'days to exams' : examCountdown === 0 ? 'exam day' : 'days into exams'}</span>
+                <span>{examCountdown > 0 ? `days to ${examTarget.label}` : examCountdown === 0 ? 'exam day' : 'days after exam'}</span>
               </div>
             )}
-            <span className={`backup-status topbar-backup${unsavedSinceBackup ? ' warn' : ''}`}>{backupStatusText}</span>
+            <button
+              type="button"
+              className={`save-button${unsavedSinceBackup ? ' warn' : ''}${autosaveStatus === 'writing' ? ' saving' : ''}`}
+              onClick={saveNow}
+              title={autosaveDetail || backupStatusText}
+            >
+              <strong>{saveButtonLabel}</strong>
+              <span>{saveButtonDetail}</span>
+            </button>
             <button type="button" className="primary-button" onClick={() => setAddDialogOpen(true)}>
               <Icon name="plus" />
               <span>Add card</span>
             </button>
-            <StudyTimer />
-            <MusicPopover />
+            <StudyTimer
+              activeCard={activeTimerCard}
+              onCompleteSession={completeFocusSession}
+              onClearActive={() => setActiveTimerCardId(null)}
+            />
+            <MusicPopover theme={theme} />
             <NotificationCenter
-              cards={tracker.cards}
+              notifications={tracker.state.notifications}
               referenceDate={referenceDate}
-              examCountdown={examCountdown}
-              unsavedSinceBackup={unsavedSinceBackup}
-              mat700Active={mat700Active}
               onGoView={setActiveView}
               onOpenCard={setSelectedCardId}
+              onSetRead={tracker.setNotificationRead}
+              onMarkAllRead={tracker.markAllNotificationsRead}
             />
             <button
               type="button"
@@ -828,6 +1068,15 @@ export default function App() {
           <div className="toast" role="status">
             <span>{message}</span>
             <button type="button" className="text-button" onClick={() => setMessage('')}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {!tracker.state.settings.saveHintDismissed && (
+          <div className="save-hint" role="status">
+            <span>Your progress autosaves in this browser. Click Save to also keep a file copy in your campaign folder.</span>
+            <button type="button" className="text-button" onClick={() => tracker.updateSettings({ saveHintDismissed: true })}>
               Dismiss
             </button>
           </div>
@@ -877,6 +1126,36 @@ export default function App() {
                   <span>Exam start</span>
                   <input type="date" value={schedule.examWindowStart} onChange={(event) => tracker.updateSettings({ examWindowStart: event.target.value })} />
                 </label>
+                <label>
+                  <span>Applied ML exam</span>
+                  <input
+                    type="date"
+                    value={moduleExamDates.aml ?? ''}
+                    onChange={(event) =>
+                      tracker.updateSettings({ moduleExamDates: { ...moduleExamDates, aml: event.target.value } })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Time Series exam</span>
+                  <input
+                    type="date"
+                    value={moduleExamDates['time-series'] ?? ''}
+                    onChange={(event) =>
+                      tracker.updateSettings({ moduleExamDates: { ...moduleExamDates, 'time-series': event.target.value } })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>MAT700 exam</span>
+                  <input
+                    type="date"
+                    value={moduleExamDates.mat700 ?? ''}
+                    onChange={(event) =>
+                      tracker.updateSettings({ moduleExamDates: { ...moduleExamDates, mat700: event.target.value } })
+                    }
+                  />
+                </label>
               </div>
               <label className="toggle-field">
                 <input type="checkbox" checked={mat700Active} onChange={(event) => tracker.updateSettings({ mat700Active: event.target.checked })} />
@@ -916,6 +1195,9 @@ export default function App() {
                 <span>{sortCards(tracker.cards).filter((card) => card.done).length} done</span>
                 <span>{tracker.state.addedCards.length} added</span>
                 <span>3 module workspaces</span>
+                <span>
+                  Assets {assetManifest?.syncedAt ? `synced ${formatExportStamp(assetManifest.syncedAt)}` : 'not stamped'}
+                </span>
               </div>
             </div>
           </div>
@@ -925,15 +1207,26 @@ export default function App() {
       <CardDetailDrawer
         key={selectedCard?.id ?? 'closed-card-drawer'}
         card={selectedCard}
+        resources={allResources}
+        referenceDate={referenceDate}
         onClose={() => setSelectedCardId(null)}
         onStatusChange={tracker.setStatus}
         onToggleDone={tracker.toggleDone}
         onChecklistToggle={tracker.toggleChecklistItem}
+        onChecklistAdd={tracker.addChecklistItem}
+        onChecklistUpdate={tracker.updateChecklistItem}
+        onChecklistDelete={tracker.deleteChecklistItem}
         onHoursChange={tracker.setActualHours}
         onEvidenceChange={tracker.setEvidence}
         onAddNote={tracker.addNote}
         onDeleteNote={tracker.deleteNote}
         onSaveDetails={tracker.updateCardDetails}
+        onDeleteCard={tracker.deleteCard}
+        onStartSession={setActiveTimerCardId}
+        onReschedule={tracker.rescheduleCard}
+        onOpenResource={openResource}
+        onAddResource={tracker.addCardResource}
+        onRemoveResource={tracker.removeCardResource}
       />
 
       <AddCardDialog
@@ -944,6 +1237,19 @@ export default function App() {
         }}
         onAddCard={tracker.addCard}
       />
+
+      <CommandPalette
+        open={commandOpen}
+        views={VIEW_OPTIONS}
+        cards={tracker.cards}
+        resources={allResources}
+        onClose={() => setCommandOpen(false)}
+        onGoView={setActiveView}
+        onOpenCard={setSelectedCardId}
+        onOpenResource={openResource}
+      />
+
+      {activeResource && <ResourceReader resource={activeResource} onClose={() => setOpenResourceId(null)} />}
     </div>
   )
 }

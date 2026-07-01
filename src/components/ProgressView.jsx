@@ -14,7 +14,7 @@ import {
   buildHoursSeries,
   buildPace,
 } from '../utils/history'
-import { formatDate, groupBy, isTrackableCard } from '../utils/progress'
+import { formatDate, groupBy, isTrackableCard, sumHours } from '../utils/progress'
 
 const MODULE_COLORS = {
   'Applied ML': '--chart-aml',
@@ -38,6 +38,70 @@ const GRAINS = [
 function rate(value) {
   const number = Number(value || 0)
   return Number.isInteger(number) ? String(number) : number.toFixed(1)
+}
+
+function moduleTargets(mat700Active) {
+  return mat700Active
+    ? { 'Applied ML': 40, 'Time Series': 35, MAT700: 25 }
+    : { 'Applied ML': 52, 'Time Series': 48 }
+}
+
+function PrioritySplitGuardrail({ cards, mat700Active }) {
+  const targets = moduleTargets(mat700Active)
+  const rows = Object.entries(targets).map(([module, target]) => {
+    const moduleCards = cards.filter((card) => card.moduleGroup === module)
+    return {
+      module,
+      target,
+      actualHours: sumHours(moduleCards, 'actualHours'),
+      plannedHours: sumHours(moduleCards, 'estimatedHours'),
+      color: moduleColor(module),
+    }
+  })
+  const loggedTotal = rows.reduce((sum, row) => sum + row.actualHours, 0)
+  const plannedTotal = rows.reduce((sum, row) => sum + row.plannedHours, 0)
+  const basis = loggedTotal > 0 ? 'logged' : 'planned'
+  const total = loggedTotal > 0 ? loggedTotal : plannedTotal
+  const withShare = rows.map((row) => ({
+    ...row,
+    share: total ? Math.round(((loggedTotal > 0 ? row.actualHours : row.plannedHours) / total) * 100) : 0,
+  }))
+  const drift = withShare
+    .map((row) => ({ ...row, diff: row.share - row.target }))
+    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))[0]
+
+  return (
+    <section className="workspace-section priority-split">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Priority split</p>
+          <h2>Target vs {basis} effort</h2>
+        </div>
+        {drift && Math.abs(drift.diff) >= 8 && (
+          <span className="status-pill amber">
+            {drift.module} {drift.diff > 0 ? '+' : ''}{drift.diff} pts
+          </span>
+        )}
+      </div>
+      <div className="priority-split-bars">
+        {withShare.map((row) => (
+          <div key={row.module} className="priority-split-row">
+            <div>
+              <strong>{row.module}</strong>
+              <span>Target {row.target}% / actual {row.share}%</span>
+            </div>
+            <div className="priority-bar" aria-hidden="true">
+              <span className="target" style={{ width: `${row.target}%`, background: `var(${row.color})` }} />
+              <span className="actual" style={{ width: `${row.share}%`, background: `var(${row.color})` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="chart-caption">
+        Uses logged hours once any are recorded; otherwise it compares planned estimated hours against the campaign split.
+      </p>
+    </section>
+  )
 }
 
 export function ProgressView({ cards, snapshots, referenceDate, mat700Active, schedule }) {
@@ -99,6 +163,8 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
         </div>
         <DonutRing value={pace.done} total={pace.total} sublabel="done" color={pace.onTrack ? '--chart-ts' : '--chart-mat700'} />
       </section>
+
+      <PrioritySplitGuardrail cards={scopedCards} mat700Active={mat700Active} />
 
       <section className="workspace-section">
         <div className="section-heading with-toggle">

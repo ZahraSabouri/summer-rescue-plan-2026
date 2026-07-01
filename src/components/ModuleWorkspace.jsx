@@ -8,7 +8,7 @@ import {
   sortCards,
   sumHours,
 } from '../utils/progress'
-import { codeLanguage, isYouTube, youtubeEmbedUrl } from '../utils/resourceLinks.js'
+import { codeLanguage, isPlaceholderResourceUrl, isYouTube, youtubeEmbedUrl } from '../utils/resourceLinks.js'
 import { CardSummary } from './CardSummary'
 
 function percent(done, total) {
@@ -271,18 +271,83 @@ function NotebookPreview({ resource }) {
 }
 
 
-function ResourceCard({ resource, selected, onSelect }) {
+const GROUP_ORDER = {
+  aml: [
+    'Study plan',
+    'Study notes',
+    'Session 1',
+    'Session 2',
+    'Session 3',
+    'Session 4',
+    'Session 5',
+    'Weekly maps',
+    'Video lectures',
+    'Project',
+    'Project figures',
+    'Supplementary reading',
+    'Python support',
+    'Python bootcamp exercises',
+  ],
+  'time-series': [
+    'Study plan',
+    'Study packs',
+    'Quick reference',
+    'Past papers',
+    'Exam-like exercises',
+    'Exam-like solutions',
+    'Lecture notes',
+    'Lecture notes with gaps',
+    'Video walkthroughs',
+    'Visual maps',
+  ],
+  mat700: [
+    'Study plan',
+    'Formula sheets',
+    'Lecture slides',
+    'Lecture notes',
+    'Question banks',
+    'Past papers',
+    'Tutorials',
+    'Images',
+    'Derivation notes',
+    'Transcripts',
+    'Module admin',
+    'Planning',
+  ],
+}
+
+function groupRank(moduleId, group) {
+  const order = GROUP_ORDER[moduleId] ?? []
+  const index = order.indexOf(group)
+  return index === -1 ? 999 : index
+}
+
+function collapseGroupByDefault(group, items) {
+  return items.length >= 12 || /python|bootcamp|transcripts|images/i.test(group)
+}
+
+function ResourceCard({ resource, selected, reviewed, onSelect, onToggleReviewed = () => {} }) {
+  const placeholder = isPlaceholderResourceUrl(resource.url)
   return (
-    <button
-      type="button"
-      className={`study-resource-card ${selected ? 'selected' : ''} ${resource.priority === 'high' ? 'high' : ''}`}
-      onClick={() => onSelect(resource.id)}
-    >
-      <span className="type-badge">{resource.type}</span>
-      <strong>{resource.title}</strong>
-      <small>{resource.group}</small>
-      <p>{resource.description || resource.path}</p>
-    </button>
+    <article className={`study-resource-card ${selected ? 'selected' : ''} ${resource.priority === 'high' ? 'high' : ''} ${placeholder ? 'placeholder' : ''}`}>
+      <button type="button" className="resource-card-open" onClick={() => onSelect(resource.id)}>
+        <span className="type-badge">{resource.type}</span>
+        <strong>{resource.title}</strong>
+        <small>{resource.group}</small>
+        <p>{placeholder ? 'Paste the real YouTube URL in studyModules.js to enable this slot.' : resource.description || resource.path}</p>
+      </button>
+      <label className="resource-reviewed">
+        <input
+          type="checkbox"
+          checked={reviewed}
+          onChange={(event) => {
+            event.stopPropagation()
+            onToggleReviewed(resource.id)
+          }}
+        />
+        <span>Reviewed</span>
+      </label>
+    </article>
   )
 }
 
@@ -291,6 +356,16 @@ function isHtmlResource(resource) {
 }
 
 function ResourcePreview({ resource, frameRef }) {
+  if (isPlaceholderResourceUrl(resource.url)) {
+    return (
+      <div className="file-preview">
+        <span className="type-badge">{resource.type}</span>
+        <h3>{resource.title}</h3>
+        <p>Paste the real video or playlist URL into `studyModules.js` to activate this AML video slot.</p>
+      </div>
+    )
+  }
+
   if (resource.viewer === 'youtube' || isYouTube(resource.url)) {
     const embed = youtubeEmbedUrl(resource.url)
     if (embed) {
@@ -349,7 +424,7 @@ function ResourcePreview({ resource, frameRef }) {
   )
 }
 
-function ResourceReader({ resource, onClose }) {
+export function ResourceReader({ resource, onClose }) {
   const frameRef = useRef(null)
   const html = isHtmlResource(resource)
 
@@ -574,6 +649,11 @@ export function ModuleWorkspace({
   setActiveView,
   moduleNote,
   onModuleNoteChange,
+  moduleExamDate,
+  resourceProgress = {},
+  recentResourceIds = [],
+  onResourceOpen,
+  onResourceReviewedToggle,
 }) {
   const [tab, setTab] = useState('overview')
   const [openResourceId, setOpenResourceId] = useState(null)
@@ -599,16 +679,39 @@ export function ModuleWorkspace({
         .includes(query)
     })
   }, [activeGroup, module.resources, resourceQuery])
+  const startHereResources = useMemo(
+    () => module.resources.filter((resource) => resource.priority === 'high').slice(0, 10),
+    [module.resources],
+  )
+  const recentResources = useMemo(
+    () =>
+      recentResourceIds
+        .map((id) => module.resources.find((resource) => resource.id === id))
+        .filter(Boolean)
+        .slice(0, 8),
+    [module.resources, recentResourceIds],
+  )
   const groupedResources = useMemo(() => {
     const map = new Map()
     for (const resource of visibleResources) {
       if (!map.has(resource.group)) map.set(resource.group, [])
       map.get(resource.group).push(resource)
     }
-    return Array.from(map, ([group, items]) => ({ group, items }))
-  }, [visibleResources])
+    return Array.from(map, ([group, items]) => ({ group, items })).sort(
+      (a, b) => groupRank(module.id, a.group) - groupRank(module.id, b.group) || a.group.localeCompare(b.group),
+    )
+  }, [module.id, visibleResources])
   const openResource = module.resources.find((resource) => resource.id === openResourceId) ?? null
   const mat700Inactive = module.id === 'mat700' && !mat700Active
+
+  function selectResource(resourceId) {
+    setOpenResourceId(resourceId)
+    onResourceOpen?.(resourceId)
+  }
+
+  function reviewedCount(items) {
+    return items.filter((resource) => resourceProgress[resource.id]).length
+  }
 
   return (
     <div className="module-workspace" style={{ '--module-accent': `var(${module.accent})` }}>
@@ -617,6 +720,7 @@ export function ModuleWorkspace({
           <p className="eyebrow">{module.code}</p>
           <h1>{module.title}</h1>
           <p>{module.examShape}</p>
+          {moduleExamDate && <span className="module-exam-chip">Exam date: {formatDate(moduleExamDate)}</span>}
           <div className="hub-command-strip">
             <button type="button" className="primary-button" onClick={() => setActiveView('week')}>
               Week queue
@@ -630,7 +734,7 @@ export function ModuleWorkspace({
           </div>
         </div>
         <div className="module-hero-visual">
-          <img src={module.visual.url} alt="" />
+          <img src={(module.hero ?? module.visual).url} alt="" />
         </div>
       </section>
 
@@ -767,23 +871,67 @@ export function ModuleWorkspace({
               <span className="resource-count">{visibleResources.length} files</span>
             </div>
             <div className="materials-groups">
-              {groupedResources.map(({ group, items }) => (
-                <section key={group} className="material-group">
+              {startHereResources.length > 0 && (
+                <section className="material-start-here">
                   <div className="material-group-head">
-                    <h3>{group}</h3>
-                    <span className="material-group-count">{items.length}</span>
+                    <h3>Start here</h3>
+                    <span className="material-group-count">{reviewedCount(startHereResources)}/{startHereResources.length}</span>
                   </div>
+                  <div className="study-resource-grid pinned">
+                    {startHereResources.map((resource) => (
+                      <ResourceCard
+                        key={resource.id}
+                        resource={resource}
+                        selected={openResourceId === resource.id}
+                        reviewed={Boolean(resourceProgress[resource.id])}
+                        onSelect={selectResource}
+                        onToggleReviewed={onResourceReviewedToggle}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {recentResources.length > 0 && (
+                <section className="material-start-here recent">
+                  <div className="material-group-head">
+                    <h3>Recently opened</h3>
+                    <span className="material-group-count">{recentResources.length}</span>
+                  </div>
+                  <div className="study-resource-grid pinned">
+                    {recentResources.map((resource) => (
+                      <ResourceCard
+                        key={resource.id}
+                        resource={resource}
+                        selected={openResourceId === resource.id}
+                        reviewed={Boolean(resourceProgress[resource.id])}
+                        onSelect={selectResource}
+                        onToggleReviewed={onResourceReviewedToggle}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {groupedResources.map(({ group, items }) => (
+                <details key={group} className="material-group" open={!collapseGroupByDefault(group, items)}>
+                  <summary className="material-group-head">
+                    <h3>{group}</h3>
+                    <span className="material-group-count">{reviewedCount(items)}/{items.length}</span>
+                  </summary>
                   <div className="study-resource-grid">
                     {items.map((resource) => (
                       <ResourceCard
                         key={resource.id}
                         resource={resource}
                         selected={openResourceId === resource.id}
-                        onSelect={setOpenResourceId}
+                        reviewed={Boolean(resourceProgress[resource.id])}
+                        onSelect={selectResource}
+                        onToggleReviewed={onResourceReviewedToggle}
                       />
                     ))}
                   </div>
-                </section>
+                </details>
               ))}
               {visibleResources.length === 0 && <p className="empty-state">No matching resources.</p>}
             </div>

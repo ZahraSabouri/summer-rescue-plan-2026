@@ -32,6 +32,29 @@ function local(moduleKey, group, title, path, options = {}) {
   }
 }
 
+function remote(moduleKey, group, title, url, options = {}) {
+  return {
+    id: options.id ?? `${moduleKey}-${slug(group)}-${slug(title)}`,
+    moduleKey,
+    group,
+    title,
+    path: url,
+    type: options.type ?? fileType(url),
+    viewer: options.viewer ?? viewerFor(url),
+    url,
+    description: options.description ?? '',
+    tags: options.tags ?? [],
+    priority: options.priority ?? 'normal',
+  }
+}
+
+function hero(file) {
+  const base = import.meta.env?.BASE_URL || '/'
+  return {
+    url: `${base}module-heroes/${file}`,
+  }
+}
+
 const amlVisual = local(
   'aml',
   'Project figures',
@@ -383,6 +406,49 @@ const amlSupplementaryResources = [
   }),
 ]
 
+const amlVideoLectureResources = [
+  remote('aml', 'Video lectures', 'Session 1 - workflow and Lab 1 walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_1_PLAYLIST_ID', {
+    id: 'aml-video-session-1',
+    description: 'Paste the recommended Session 1 video or playlist URL here.',
+    tags: ['video', 'session 1'],
+    priority: 'high',
+    type: 'YOUTUBE',
+    viewer: 'youtube',
+  }),
+  remote('aml', 'Video lectures', 'Session 2 - preprocessing walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_2_PLAYLIST_ID', {
+    id: 'aml-video-session-2',
+    description: 'Paste the recommended Session 2 video or playlist URL here.',
+    tags: ['video', 'session 2', 'preprocessing'],
+    priority: 'high',
+    type: 'YOUTUBE',
+    viewer: 'youtube',
+  }),
+  remote('aml', 'Video lectures', 'Session 3 - model evaluation walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_3_PLAYLIST_ID', {
+    id: 'aml-video-session-3',
+    description: 'Paste the recommended Session 3 video or playlist URL here.',
+    tags: ['video', 'session 3', 'evaluation'],
+    priority: 'high',
+    type: 'YOUTUBE',
+    viewer: 'youtube',
+  }),
+  remote('aml', 'Video lectures', 'Session 4 - classification walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_4_PLAYLIST_ID', {
+    id: 'aml-video-session-4',
+    description: 'Paste the recommended Session 4 video or playlist URL here.',
+    tags: ['video', 'session 4', 'classification'],
+    priority: 'high',
+    type: 'YOUTUBE',
+    viewer: 'youtube',
+  }),
+  remote('aml', 'Video lectures', 'Session 5 - ensemble learning walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_5_PLAYLIST_ID', {
+    id: 'aml-video-session-5',
+    description: 'Paste the recommended Session 5 video or playlist URL here.',
+    tags: ['video', 'session 5', 'ensembles'],
+    priority: 'high',
+    type: 'YOUTUBE',
+    viewer: 'youtube',
+  }),
+]
+
 export const STUDY_MODULES = [
   {
     id: 'aml',
@@ -394,6 +460,7 @@ export const STUDY_MODULES = [
     subtitle: 'Notebook-first recovery, open-book command pack, and project evidence.',
     examShape: 'Open-book class-test style work: fast navigation, lab reconstruction, model choice, and leakage-safe reasoning.',
     accent: '--chart-aml',
+    hero: hero('aml.svg'),
     visual: amlVisual,
     objectives: [
       'Run each lab clean before expanding notes.',
@@ -508,6 +575,7 @@ export const STUDY_MODULES = [
         tags: ['project', 'pipeline'],
       }),
       ...amlWeeklyMapResources,
+      ...amlVideoLectureResources,
       local('aml', 'Python support', 'Python bootcamp information', 'Python Bootcamp/Python Bootcamp Information.pdf', {
         description: 'Fallback support if syntax, NumPy, or pandas slows lab execution.',
         tags: ['python', 'support'],
@@ -548,6 +616,7 @@ export const STUDY_MODULES = [
     subtitle: 'Formula-first paper practice: packs, templates, R snippets, and mock mapping.',
     examShape: 'Two-hour mathematical exam: definitions, proofs, ARMA calculations, spectral methods, forecasting, and R-style workflows.',
     accent: '--chart-ts',
+    hero: hero('time-series.svg'),
     visual: timeSeriesVisual,
     objectives: [
       'Convert each pack into formulas, worked examples, and closed-book recall.',
@@ -697,6 +766,7 @@ export const STUDY_MODULES = [
     subtitle: 'Insurance lane: high-yield notes, question banks, formulas, and papers.',
     examShape: 'Written mathematical/data-mining exam: definitions, short proofs, TF-IDF, similarity, PageRank, clustering, boosting, and evaluation metrics.',
     accent: '--chart-mat700',
+    hero: hero('mat700.svg'),
     visual: mat700Visual,
     objectives: [
       'Keep MAT700 as insurance until the result confirms whether it stays active.',

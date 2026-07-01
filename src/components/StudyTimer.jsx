@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const MODE_META = {
   focus: { label: 'Focus', accent: 'var(--accent)' },
@@ -37,7 +37,7 @@ function chime() {
   }
 }
 
-export function StudyTimer() {
+export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState('focus')
   const [durations, setDurations] = useState({ focus: 25, short: 5, long: 15 })
@@ -46,31 +46,56 @@ export function StudyTimer() {
   const [sessions, setSessions] = useState(0)
   const intervalRef = useRef(null)
   const wrapRef = useRef(null)
+  const sessionElapsedRef = useRef(0)
 
   const total = durations[mode] * 60
   const progress = total > 0 ? 1 - remaining / total : 0
   const R = 52
   const CIRC = 2 * Math.PI * R
 
+  const logActiveSession = useCallback(() => {
+    if (!activeCard || sessionElapsedRef.current < 60) {
+      sessionElapsedRef.current = 0
+      return
+    }
+    const minutes = Math.round(sessionElapsedRef.current / 60)
+    sessionElapsedRef.current = 0
+    onCompleteSession?.(activeCard.id, minutes)
+  }, [activeCard, onCompleteSession])
+
+  useEffect(() => {
+    if (!activeCard) return
+    const id = window.setTimeout(() => {
+      setOpen(true)
+      setMode('focus')
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [activeCard])
+
   useEffect(() => {
     if (!running) return undefined
     intervalRef.current = window.setInterval(() => {
+      if (mode === 'focus' && activeCard) sessionElapsedRef.current += 1
       setRemaining((r) => (r <= 1 ? 0 : r - 1))
     }, 1000)
     return () => window.clearInterval(intervalRef.current)
-  }, [running])
+  }, [activeCard, mode, running])
 
   useEffect(() => {
     if (remaining !== 0 || !running) return
-    setRunning(false)
-    chime()
-    const completedFocus = mode === 'focus'
-    const nextCount = completedFocus ? sessions + 1 : sessions
-    if (completedFocus) setSessions(nextCount)
-    const next = completedFocus ? (nextCount % 4 === 0 ? 'long' : 'short') : 'focus'
-    setMode(next)
-    setRemaining(durations[next] * 60)
-  }, [remaining, running, mode, sessions, durations])
+    const id = window.setTimeout(() => {
+      setRunning(false)
+      chime()
+      const completedFocus = mode === 'focus'
+      const nextCount = completedFocus ? sessions + 1 : sessions
+      if (completedFocus) logActiveSession()
+      if (completedFocus) setSessions(nextCount)
+      const next = completedFocus ? (nextCount % 4 === 0 ? 'long' : 'short') : 'focus'
+      setMode(next)
+      setRemaining(durations[next] * 60)
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [durations, logActiveSession, mode, remaining, running, sessions])
 
   useEffect(() => {
     function onDocClick(event) {
@@ -81,11 +106,13 @@ export function StudyTimer() {
   }, [open])
 
   function selectMode(m) {
+    if (mode === 'focus' && m !== 'focus') logActiveSession()
     setMode(m)
     setRemaining(durations[m] * 60)
     setRunning(false)
   }
   function reset() {
+    logActiveSession()
     setRemaining(durations[mode] * 60)
     setRunning(false)
   }
@@ -99,6 +126,14 @@ export function StudyTimer() {
   }
 
   const accent = MODE_META[mode].accent
+  const sessionsToday = (activeCard?.focusSessions ?? []).filter(
+    (session) => session.at?.slice(0, 10) === new Date().toISOString().slice(0, 10),
+  ).length
+
+  function toggleRunning() {
+    if (running) logActiveSession()
+    setRunning((value) => !value)
+  }
 
   return (
     <div className="timer-wrap" ref={wrapRef}>
@@ -134,6 +169,17 @@ export function StudyTimer() {
             ))}
           </div>
 
+          {activeCard && (
+            <div className="timer-card-link">
+              <span>Linked card</span>
+              <strong>{activeCard.number}. {activeCard.title}</strong>
+              <em>{sessionsToday} linked today</em>
+              <button type="button" className="text-button" onClick={onClearActive}>
+                Clear
+              </button>
+            </div>
+          )}
+
           <div className="timer-dial">
             <svg viewBox="0 0 120 120" width="150" height="150">
               <circle className="timer-track" cx="60" cy="60" r={R} fill="none" strokeWidth="8" />
@@ -157,9 +203,9 @@ export function StudyTimer() {
 
           <div className="timer-controls">
             <button type="button" className="secondary-button" onClick={reset}>
-              Reset
+              {activeCard ? 'Log & reset' : 'Reset'}
             </button>
-            <button type="button" className="primary-button timer-go" onClick={() => setRunning((v) => !v)}>
+            <button type="button" className="primary-button timer-go" onClick={toggleRunning}>
               {running ? 'Pause' : 'Start'}
             </button>
           </div>

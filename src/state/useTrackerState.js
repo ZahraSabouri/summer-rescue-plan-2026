@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isTrackableCard, todayString } from '../utils/progress'
 
-const STORAGE_KEY = 'summer-rescue-tracker-state-v2'
+export const STORAGE_KEY = 'summer-rescue-tracker-state-v2'
 const STATE_VERSION = 2
 const LEGACY_MODULE_NOTE_PREFIX = 'summer-rescue-module-note-'
 const LEGACY_MODULE_NOTE_SUFFIX = '-v1'
@@ -26,6 +26,9 @@ function createInitialState() {
     cards: {},
     addedCards: [],
     moduleNotes: {},
+    notifications: {},
+    resourceProgress: {},
+    recentResourceIds: [],
     snapshots: {},
     settings: {
       referenceDate: todayString(),
@@ -34,11 +37,57 @@ function createInitialState() {
       campaignStart: DEFAULT_CAMPAIGN_START,
       campaignEnd: DEFAULT_CAMPAIGN_END,
       examWindowStart: DEFAULT_EXAM_WINDOW_START,
+      moduleExamDates: {},
       lastExportedAt: null,
+      saveHintDismissed: false,
     },
     createdAt: nowIso(),
     updatedAt: nowIso(),
   }
+}
+
+function checklistId(cardId, index) {
+  return `${cardId}-check-${index}`
+}
+
+function normaliseChecklistItems(cardId, items = []) {
+  return items
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        return {
+          id: checklistId(cardId, index),
+          text: item,
+        }
+      }
+      if (item && typeof item === 'object') {
+        return {
+          id: item.id || checklistId(cardId, index),
+          text: String(item.text ?? '').trim(),
+        }
+      }
+      return null
+    })
+    .filter((item) => item?.text)
+}
+
+function pruneNotifications(notifications) {
+  const entries = Object.values(notifications ?? {})
+  if (entries.length <= 200) return notifications
+
+  const newestFirst = [...entries].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+  const keep = new Set(newestFirst.slice(0, 200).map((item) => item.id))
+  const oldRead = newestFirst
+    .slice(200)
+    .filter((item) => item.read)
+    .map((item) => item.id)
+
+  if (oldRead.length === 0) return notifications
+
+  const next = {}
+  for (const item of entries) {
+    if (keep.has(item.id) || !item.read) next[item.id] = item
+  }
+  return next
 }
 
 function normaliseState(value) {
@@ -52,6 +101,9 @@ function normaliseState(value) {
     cards: value.cards && typeof value.cards === 'object' ? value.cards : {},
     addedCards: Array.isArray(value.addedCards) ? value.addedCards : [],
     moduleNotes: value.moduleNotes && typeof value.moduleNotes === 'object' ? value.moduleNotes : {},
+    notifications: value.notifications && typeof value.notifications === 'object' ? value.notifications : {},
+    resourceProgress: value.resourceProgress && typeof value.resourceProgress === 'object' ? value.resourceProgress : {},
+    recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],
     snapshots: value.snapshots && typeof value.snapshots === 'object' ? value.snapshots : {},
     settings: {
       ...fallback.settings,
@@ -128,9 +180,16 @@ function getCardState(state, cardId) {
 function mergeCard(baseCard, cardState = {}) {
   const edits = cardState.edits ?? {}
   const checklistState = cardState.checklist ?? {}
-  const sourceChecklist = edits.checklist ?? baseCard.checklist ?? []
+  const sourceChecklist = normaliseChecklistItems(baseCard.id, edits.checklist ?? baseCard.checklist ?? [])
   const status = cardState.status ?? edits.status ?? baseCard.status
   const done = Boolean(cardState.done || status === 'Done')
+  const resourceIds = [
+    ...new Set([
+      ...(baseCard.resourceIds ?? []),
+      ...(edits.resourceIds ?? []),
+      ...(cardState.resourceIds ?? []),
+    ]),
+  ].filter((id) => !(cardState.hiddenResourceIds ?? []).includes(id))
 
   return {
     ...baseCard,
@@ -141,12 +200,14 @@ function mergeCard(baseCard, cardState = {}) {
     evidence: cardState.evidence ?? '',
     notes: cardState.notes ?? [],
     activity: cardState.activity ?? [],
+    focusSessions: cardState.focusSessions ?? [],
     userTags: cardState.userTags ?? [],
+    resourceIds,
+    updatedAt: cardState.updatedAt ?? baseCard.updatedAt,
     tags: [...new Set([...(edits.tags ?? baseCard.tags ?? []), ...(cardState.userTags ?? [])])],
     checklist: sourceChecklist.map((item, index) => ({
-      id: `${baseCard.id}-check-${index}`,
-      text: item,
-      done: Boolean(checklistState[index]),
+      ...item,
+      done: Boolean(checklistState[item.id] ?? checklistState[index]),
     })),
   }
 }
@@ -281,6 +342,84 @@ export function useTrackerState(baseCards) {
     }))
   }
 
+  function addNotifications(records) {
+    if (!Array.isArray(records) || records.length === 0) return
+
+    setState((current) => {
+      let changed = false
+      const notifications = { ...(current.notifications ?? {}) }
+
+      for (const record of records) {
+        if (!record?.id || notifications[record.id]) continue
+        notifications[record.id] = {
+          ...record,
+          read: Boolean(record.read),
+        }
+        changed = true
+      }
+
+      if (!changed) return current
+
+      return {
+        ...current,
+        notifications: pruneNotifications(notifications),
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
+  function setNotificationRead(notificationId, read = true) {
+    setState((current) => {
+      const notification = current.notifications?.[notificationId]
+      if (!notification || notification.read === read) return current
+      return {
+        ...current,
+        notifications: {
+          ...(current.notifications ?? {}),
+          [notificationId]: {
+            ...notification,
+            read,
+          },
+        },
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
+  function markAllNotificationsRead() {
+    setState((current) => {
+      const entries = Object.values(current.notifications ?? {})
+      if (!entries.some((notification) => !notification.read)) return current
+      return {
+        ...current,
+        notifications: Object.fromEntries(
+          entries.map((notification) => [
+            notification.id,
+            {
+              ...notification,
+              read: true,
+            },
+          ]),
+        ),
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
+  function markCardNotificationsRead(notifications, cardId) {
+    let changed = false
+    const next = {}
+    for (const [id, notification] of Object.entries(notifications ?? {})) {
+      if (notification.cardId === cardId && !notification.read) {
+        next[id] = { ...notification, read: true }
+        changed = true
+      } else {
+        next[id] = notification
+      }
+    }
+    return changed ? next : notifications
+  }
+
   function markExported(exportedAt = nowIso()) {
     setState((current) => ({
       ...current,
@@ -313,12 +452,18 @@ export function useTrackerState(baseCards) {
         updatedAt: nowIso(),
       }
 
+      const notifications =
+        patch.done || patch.status === 'Done'
+          ? markCardNotificationsRead(current.notifications, cardId)
+          : current.notifications
+
       return withCurrentSnapshot({
         ...current,
         cards: {
           ...current.cards,
           [cardId]: nextCard,
         },
+        notifications,
         updatedAt: nowIso(),
       })
     })
@@ -384,17 +529,18 @@ export function useTrackerState(baseCards) {
           ...current.cards,
           [cardId]: nextCard,
         },
+        notifications: done ? markCardNotificationsRead(current.notifications, cardId) : current.notifications,
         updatedAt: nowIso(),
       })
     })
   }
 
-  function toggleChecklistItem(cardId, index) {
+  function toggleChecklistItem(cardId, itemId) {
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const checklist = {
         ...(currentCard.checklist ?? {}),
-        [index]: !currentCard.checklist?.[index],
+        [itemId]: !currentCard.checklist?.[itemId],
       }
 
       const nextCard = {
@@ -415,9 +561,157 @@ export function useTrackerState(baseCards) {
     })
   }
 
+  function setChecklistItems(cardId, items, action = 'Edited checklist') {
+    const cleanItems = normaliseChecklistItems(cardId, items)
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const validIds = new Set(cleanItems.map((item) => item.id))
+      const checklist = Object.fromEntries(
+        Object.entries(currentCard.checklist ?? {}).filter(([id]) => validIds.has(id)),
+      )
+      const nextCard = {
+        ...currentCard,
+        edits: {
+          ...(currentCard.edits ?? {}),
+          checklist: cleanItems,
+        },
+        checklist,
+        activity: addActivity(currentCard, action),
+        updatedAt: nowIso(),
+      }
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      })
+    })
+  }
+
+  function addChecklistItem(cardId, text) {
+    const value = text.trim()
+    if (!value) return
+    const card = cards.find((item) => item.id === cardId)
+    if (!card) return
+    setChecklistItems(
+      cardId,
+      [
+        ...card.checklist.map((item) => ({ id: item.id, text: item.text })),
+        { id: makeId(`${cardId}-check`), text: value },
+      ],
+      'Added checklist item',
+    )
+  }
+
+  function updateChecklistItem(cardId, itemId, text) {
+    const value = text.trim()
+    if (!value) return
+    const card = cards.find((item) => item.id === cardId)
+    if (!card) return
+    setChecklistItems(
+      cardId,
+      card.checklist.map((item) => ({
+        id: item.id,
+        text: item.id === itemId ? value : item.text,
+      })),
+      'Edited checklist item',
+    )
+  }
+
+  function deleteChecklistItem(cardId, itemId) {
+    const card = cards.find((item) => item.id === cardId)
+    if (!card) return
+    setChecklistItems(
+      cardId,
+      card.checklist
+        .filter((item) => item.id !== itemId)
+        .map((item) => ({ id: item.id, text: item.text })),
+      'Deleted checklist item',
+    )
+  }
+
   function setActualHours(cardId, actualHours) {
     const hours = Math.max(0, Number(actualHours || 0))
     updateCard(cardId, { actualHours: hours }, 'Logged hours', `${hours}h`)
+  }
+
+  function addFocusSession(cardId, minutes) {
+    const elapsedMinutes = Math.max(0, Math.round(Number(minutes || 0)))
+    if (elapsedMinutes < 1) return
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const card = cards.find((item) => item.id === cardId)
+      const roundedHours = Math.max(0.25, Math.round((elapsedMinutes / 60) * 4) / 4)
+      const nextHours = Math.round((Number(card?.actualHours ?? currentCard.actualHours ?? 0) + roundedHours) * 4) / 4
+      const session = {
+        id: makeId('focus'),
+        at: nowIso(),
+        minutes: elapsedMinutes,
+        hours: roundedHours,
+      }
+      const nextCard = {
+        ...currentCard,
+        actualHours: nextHours,
+        focusSessions: [session, ...(currentCard.focusSessions ?? [])].slice(0, 80),
+        activity: addActivity(currentCard, 'Focus session', `${elapsedMinutes} min`),
+        updatedAt: nowIso(),
+      }
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      })
+    })
+  }
+
+  function rescheduleCard(cardId, dueDate) {
+    const card = cards.find((item) => item.id === cardId)
+    if (!card || !dueDate) return
+    updateCardDetails(cardId, {
+      dueDate,
+      dueDateTime: dueDate,
+      startDate: card.startDate && card.startDate > dueDate ? dueDate : card.startDate,
+    })
+    updateCard(cardId, { status: card.status === 'Done' ? 'Done' : 'This Week' }, 'Rescheduled card', dueDate)
+  }
+
+  function rescheduleCards(cardIds, dueDate) {
+    if (!Array.isArray(cardIds) || !dueDate) return
+    setState((current) => {
+      let changed = false
+      const nextCards = { ...current.cards }
+      for (const cardId of cardIds) {
+        const card = cards.find((item) => item.id === cardId)
+        if (!card || card.done) continue
+        const currentCard = getCardState(current, cardId)
+        nextCards[cardId] = {
+          ...currentCard,
+          status: card.status === 'Done' ? 'Done' : 'This Week',
+          edits: {
+            ...(currentCard.edits ?? {}),
+            dueDate,
+            dueDateTime: dueDate,
+            startDate: card.startDate && card.startDate > dueDate ? dueDate : card.startDate,
+          },
+          activity: addActivity(currentCard, 'Rescheduled card', dueDate),
+          updatedAt: nowIso(),
+        }
+        changed = true
+      }
+      if (!changed) return current
+      return withCurrentSnapshot({
+        ...current,
+        cards: nextCards,
+        updatedAt: nowIso(),
+      })
+    })
   }
 
   function setEvidence(cardId, evidence) {
@@ -501,6 +795,96 @@ export function useTrackerState(baseCards) {
     return card.id
   }
 
+  function deleteCard(cardId) {
+    const card = cards.find((item) => item.id === cardId)
+    if (!card?.custom) return false
+    setState((current) => {
+      const nextCards = { ...(current.cards ?? {}) }
+      delete nextCards[cardId]
+      return withCurrentSnapshot({
+        ...current,
+        addedCards: (current.addedCards ?? []).filter((item) => item.id !== cardId),
+        cards: nextCards,
+        notifications: Object.fromEntries(
+          Object.entries(current.notifications ?? {}).map(([id, notification]) => [
+            id,
+            notification.cardId === cardId ? { ...notification, read: true } : notification,
+          ]),
+        ),
+        updatedAt: nowIso(),
+      })
+    })
+    return true
+  }
+
+  function addCardResource(cardId, resourceId) {
+    if (!resourceId) return
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const resourceIds = [...new Set([...(currentCard.resourceIds ?? []), resourceId])]
+      const nextCard = {
+        ...currentCard,
+        resourceIds,
+        hiddenResourceIds: (currentCard.hiddenResourceIds ?? []).filter((id) => id !== resourceId),
+        activity: addActivity(currentCard, 'Linked resource', resourceId),
+        updatedAt: nowIso(),
+      }
+
+      return {
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
+  function removeCardResource(cardId, resourceId) {
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const resourceIds = (currentCard.resourceIds ?? []).filter((id) => id !== resourceId)
+      const nextCard = {
+        ...currentCard,
+        resourceIds,
+        hiddenResourceIds: [...new Set([...(currentCard.hiddenResourceIds ?? []), resourceId])],
+        activity: addActivity(currentCard, 'Unlinked resource', resourceId),
+        updatedAt: nowIso(),
+      }
+
+      return {
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      }
+    })
+  }
+
+  function markResourceOpened(resourceId) {
+    if (!resourceId) return
+    setState((current) => ({
+      ...current,
+      recentResourceIds: [resourceId, ...(current.recentResourceIds ?? []).filter((id) => id !== resourceId)].slice(0, 8),
+      updatedAt: nowIso(),
+    }))
+  }
+
+  function toggleResourceProgress(resourceId) {
+    if (!resourceId) return
+    setState((current) => ({
+      ...current,
+      resourceProgress: {
+        ...(current.resourceProgress ?? {}),
+        [resourceId]: !current.resourceProgress?.[resourceId],
+      },
+      updatedAt: nowIso(),
+    }))
+  }
+
   function importTrackerState(payload) {
     const incoming = payload?.state ?? payload
     setState(withCurrentSnapshot(normaliseState(incoming)))
@@ -516,6 +900,9 @@ export function useTrackerState(baseCards) {
     cards,
     snapshots,
     updateSettings,
+    addNotifications,
+    setNotificationRead,
+    markAllNotificationsRead,
     markExported,
     setModuleNote,
     updateCard,
@@ -523,11 +910,22 @@ export function useTrackerState(baseCards) {
     setStatus,
     toggleDone,
     toggleChecklistItem,
+    addChecklistItem,
+    updateChecklistItem,
+    deleteChecklistItem,
     setActualHours,
+    addFocusSession,
+    rescheduleCard,
+    rescheduleCards,
     setEvidence,
     addNote,
     deleteNote,
     addCard,
+    deleteCard,
+    addCardResource,
+    removeCardResource,
+    markResourceOpened,
+    toggleResourceProgress,
     importTrackerState,
     resetTrackerState,
     storageKey: STORAGE_KEY,

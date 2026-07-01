@@ -41,7 +41,7 @@ export function AppIntro({
           </div>
           <img
             className="intro-crest"
-            src="/cardiff-logo.svg"
+            src="/cardiff-logo.png"
             alt="Cardiff University"
             onError={(event) => {
               event.currentTarget.style.display = 'none'

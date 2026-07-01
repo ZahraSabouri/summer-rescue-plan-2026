@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const appRoot = path.resolve(__dirname, '..')
 const workspaceRoot = path.resolve(appRoot, '../..')
 const publicRoot = path.join(appRoot, 'public', 'study-assets')
+const manifestPath = path.join(appRoot, 'public', 'study-assets-manifest.json')
 
 const SOURCE_FOLDERS = {
   aml: 'CMT307 Applied Machine Learning',
@@ -24,7 +25,12 @@ function uniqueResources() {
   for (const module of STUDY_MODULES) {
     for (const resource of module.resources) {
       const sourceFolder = SOURCE_FOLDERS[resource.moduleKey]
-      if (!sourceFolder || resource.viewer === 'external') continue
+      if (
+        !sourceFolder ||
+        resource.viewer === 'external' ||
+        resource.viewer === 'youtube' ||
+        /^https?:/i.test(resource.url ?? resource.path)
+      ) continue
 
       const key = `${sourceFolder}/${resource.path}`.replace(/\\/g, '/')
       if (seen.has(key)) continue
@@ -102,6 +108,19 @@ async function main() {
   }
 
   console.log(JSON.stringify(summary, null, 2))
+  if (!verifyOnly) {
+    await fs.writeFile(
+      manifestPath,
+      JSON.stringify(
+        {
+          ...summary,
+          syncedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+    )
+  }
   if (missing.length > 0) process.exitCode = 1
 }
 

@@ -1,5 +1,5 @@
 import { STATUS_OPTIONS } from '../data/constants'
-import { checklistDoneCount, checklistPercent, formatDate, hasEvidence } from '../utils/progress'
+import { addDays, checklistDoneCount, checklistPercent, formatDate, hasEvidence } from '../utils/progress'
 
 function cardNumberLabel(number) {
   return typeof number === 'number' ? `#${number}` : number
@@ -12,12 +12,16 @@ export function CardSummary({
   onStatusChange,
   onToggleDone,
   onHoursChange,
+  onReschedule,
+  onStartSession,
+  referenceDate,
 }) {
   const doneItems = checklistDoneCount(card)
   const totalItems = card.checklist.length
   const checklist = checklistPercent(card)
   const evidenceReady = hasEvidence(card)
   const latestNote = card.notes[0]?.text ?? ''
+  const overdue = referenceDate && card.dueDate && card.dueDate < referenceDate && !card.done
 
   return (
     <article className={`work-card ${compact ? 'compact' : ''} ${card.done ? 'is-done' : ''}`}>
@@ -83,6 +87,21 @@ export function CardSummary({
             aria-label={`Actual hours for card ${cardNumberLabel(card.number)}`}
           />
         </label>
+
+        {overdue && (
+          <div className="reschedule-inline" aria-label="Reschedule overdue card">
+            <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
+              Today
+            </button>
+            <button type="button" onClick={() => onReschedule?.(card.id, addDays(referenceDate, 1))}>
+              Tomorrow
+            </button>
+          </div>
+        )}
+
+        <button type="button" className="secondary-button" onClick={() => onStartSession?.(card.id)}>
+          Start
+        </button>
 
         <button type="button" className="secondary-button" onClick={() => onOpen(card.id)}>
           Details

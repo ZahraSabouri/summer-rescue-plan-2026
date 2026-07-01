@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   MODULE_OPTIONS,
   PHASE_OPTIONS,
@@ -7,7 +7,7 @@ import {
   STATUS_OPTIONS,
   TAG_OPTIONS,
 } from '../data/constants'
-import { checklistDoneCount, formatDate } from '../utils/progress'
+import { addDays, checklistDoneCount, formatDate } from '../utils/progress'
 
 function fieldValue(value) {
   return value ?? ''
@@ -44,19 +44,34 @@ function formatStamp(value) {
 
 export function CardDetailDrawer({
   card,
+  resources = [],
+  referenceDate,
   onClose,
   onStatusChange,
   onToggleDone,
   onChecklistToggle,
+  onChecklistAdd,
+  onChecklistUpdate,
+  onChecklistDelete,
   onHoursChange,
   onEvidenceChange,
   onAddNote,
   onDeleteNote,
   onSaveDetails,
+  onDeleteCard,
+  onStartSession,
+  onReschedule,
+  onOpenResource,
+  onAddResource,
+  onRemoveResource,
 }) {
   const [noteDraft, setNoteDraft] = useState('')
+  const [checklistDraft, setChecklistDraft] = useState('')
+  const [checklistText, setChecklistText] = useState({})
   const [evidenceDraft, setEvidenceDraft] = useState(card?.evidence ?? '')
   const [form, setForm] = useState(() => createForm(card))
+  const [resourceQuery, setResourceQuery] = useState('')
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     if (!card) return undefined
@@ -67,10 +82,46 @@ export function CardDetailDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [card, onClose])
 
+  useEffect(() => {
+    if (!card) return
+    const id = window.setTimeout(() => {
+      setEvidenceDraft(card.evidence ?? '')
+      setForm(createForm(card))
+      setChecklistText(Object.fromEntries((card.checklist ?? []).map((item) => [item.id, item.text])))
+      setChecklistDraft('')
+      setResourceQuery('')
+      setEditOpen(false)
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [card])
+
+  const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
+  const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
+  const availableResources = useMemo(() => {
+    if (!card) return []
+    const linked = new Set(card.resourceIds ?? [])
+    const query = resourceQuery.trim().toLowerCase()
+    const restrictToStudyModule = ['Applied ML', 'Time Series', 'MAT700'].includes(card.moduleGroup)
+    return resources
+      .filter((resource) => {
+        if (linked.has(resource.id)) return false
+        if (restrictToStudyModule && resource.moduleGroup !== card.moduleGroup) return false
+        if (!query) return true
+        return [resource.title, resource.group, resource.type, resource.description, ...(resource.tags ?? [])]
+          .join(' ')
+          .toLowerCase()
+          .includes(query)
+      })
+      .slice(0, 8)
+  }, [card, resourceQuery, resources])
+
   if (!card || !form) return null
 
   const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }))
-  const saveDetails = () => {
+  const doneItems = checklistDoneCount(card)
+  const overdue = referenceDate && card.dueDate && card.dueDate < referenceDate && !card.done
+
+  function saveDetails() {
     const tags = form.tags
       .split(',')
       .map((tag) => tag.trim().toLowerCase())
@@ -93,14 +144,24 @@ export function CardDetailDrawer({
       doneCondition: form.doneCondition,
       tags,
     })
+    setEditOpen(false)
   }
 
-  const addNote = () => {
+  function addNote() {
     onAddNote(card.id, noteDraft)
     setNoteDraft('')
   }
 
-  const doneItems = checklistDoneCount(card)
+  function addChecklistItem() {
+    onChecklistAdd(card.id, checklistDraft)
+    setChecklistDraft('')
+  }
+
+  function deleteCustomCard() {
+    const confirmed = window.confirm('Delete this custom card? This cannot be undone.')
+    if (!confirmed) return
+    if (onDeleteCard?.(card.id)) onClose()
+  }
 
   return (
     <div className="drawer-shell" role="presentation">
@@ -146,6 +207,19 @@ export function CardDetailDrawer({
               onChange={(event) => onHoursChange(card.id, event.target.value)}
             />
           </label>
+          <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
+            Start session
+          </button>
+          {overdue && (
+            <div className="reschedule-inline drawer-reschedule">
+              <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
+                Today
+              </button>
+              <button type="button" onClick={() => onReschedule?.(card.id, addDays(referenceDate, 1))}>
+                Tomorrow
+              </button>
+            </div>
+          )}
         </section>
 
         <div className="drawer-grid">
@@ -172,21 +246,83 @@ export function CardDetailDrawer({
             </dl>
           </section>
 
-          <section className="drawer-section">
+          <section className="drawer-section wide">
+            <h3>
+              Resources <span>{linkedResources.length}</span>
+            </h3>
+            <div className="resource-chip-list">
+              {linkedResources.length === 0 && <p className="muted">No linked resources yet.</p>}
+              {linkedResources.map((resource) => (
+                <div key={resource.id} className="resource-chip">
+                  <button type="button" onClick={() => onOpenResource?.(resource.id)}>
+                    <span className="type-badge">{resource.type}</span>
+                    <strong>{resource.title}</strong>
+                  </button>
+                  <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="resource-picker">
+              <input
+                type="search"
+                value={resourceQuery}
+                onChange={(event) => setResourceQuery(event.target.value)}
+                placeholder="Search this module's resources"
+              />
+              <div>
+                {availableResources.map((resource) => (
+                  <button key={resource.id} type="button" onClick={() => onAddResource?.(card.id, resource.id)}>
+                    <span className="type-badge">{resource.type}</span>
+                    <span>{resource.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="drawer-section wide">
             <h3>
               Checklist <span>{doneItems}/{card.checklist.length}</span>
             </h3>
-            <div className="checklist">
-              {card.checklist.map((item, index) => (
-                <label key={item.id}>
+            <div className="checklist editable">
+              {card.checklist.map((item) => (
+                <div key={item.id} className="checklist-edit-row">
                   <input
                     type="checkbox"
                     checked={item.done}
-                    onChange={() => onChecklistToggle(card.id, index)}
+                    onChange={() => onChecklistToggle(card.id, item.id)}
+                    aria-label={`Toggle ${item.text}`}
                   />
-                  <span>{item.text}</span>
-                </label>
+                  <input
+                    value={checklistText[item.id] ?? item.text}
+                    onChange={(event) =>
+                      setChecklistText((current) => ({ ...current, [item.id]: event.target.value }))
+                    }
+                    onBlur={() => {
+                      const next = checklistText[item.id]?.trim()
+                      if (next && next !== item.text) onChecklistUpdate(card.id, item.id, next)
+                    }}
+                  />
+                  <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
+                    Delete
+                  </button>
+                </div>
               ))}
+            </div>
+            <div className="checklist-add">
+              <input
+                value={checklistDraft}
+                onChange={(event) => setChecklistDraft(event.target.value)}
+                placeholder="Add checklist item"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') addChecklistItem()
+                }}
+              />
+              <button type="button" className="secondary-button" onClick={addChecklistItem}>
+                Add item
+              </button>
             </div>
           </section>
 
@@ -207,7 +343,7 @@ export function CardDetailDrawer({
             </button>
           </section>
 
-          <section className="drawer-section wide">
+          <section className="drawer-section">
             <h3>Notes</h3>
             <div className="note-composer">
               <textarea
@@ -241,115 +377,131 @@ export function CardDetailDrawer({
           </section>
 
           <section className="drawer-section wide">
-            <h3>Edit details</h3>
-            <div className="edit-grid">
-              <label>
-                <span>Title</span>
-                <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
-              </label>
-              <label>
-                <span>Module</span>
-                <select value={form.module} onChange={(event) => updateForm('module', event.target.value)}>
-                  {MODULE_OPTIONS.map((module) => (
-                    <option key={module} value={module}>
-                      {module}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Phase</span>
-                <select value={form.phase} onChange={(event) => updateForm('phase', event.target.value)}>
-                  {PHASE_OPTIONS.map((phase) => (
-                    <option key={phase} value={phase}>
-                      {phase}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Priority</span>
-                <select value={form.priority} onChange={(event) => updateForm('priority', event.target.value)}>
-                  {PRIORITY_OPTIONS.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {priority}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Slot</span>
-                <select value={form.slotType} onChange={(event) => updateForm('slotType', event.target.value)}>
-                  {SLOT_OPTIONS.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Slot label</span>
-                <input value={form.slotLabel} onChange={(event) => updateForm('slotLabel', event.target.value)} />
-              </label>
-              <label>
-                <span>Start date</span>
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(event) => updateForm('startDate', event.target.value)}
-                />
-              </label>
-              <label>
-                <span>Due date</span>
-                <input type="date" value={form.dueDate} onChange={(event) => updateForm('dueDate', event.target.value)} />
-              </label>
-              <label>
-                <span>Estimated hours</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.25"
-                  value={form.estimatedHours}
-                  onChange={(event) => updateForm('estimatedHours', event.target.value)}
-                />
-              </label>
-              <label>
-                <span>Tags</span>
-                <input list="known-tags" value={form.tags} onChange={(event) => updateForm('tags', event.target.value)} />
-                <datalist id="known-tags">
-                  {TAG_OPTIONS.map((tag) => (
-                    <option key={tag} value={tag} />
-                  ))}
-                </datalist>
-              </label>
-              <label className="span-2">
-                <span>Description</span>
-                <textarea
-                  rows={4}
-                  value={form.description}
-                  onChange={(event) => updateForm('description', event.target.value)}
-                />
-              </label>
-              <label className="span-2">
-                <span>Evidence requirement</span>
-                <textarea
-                  rows={2}
-                  value={form.evidenceRequirement}
-                  onChange={(event) => updateForm('evidenceRequirement', event.target.value)}
-                />
-              </label>
-              <label className="span-2">
-                <span>Done condition</span>
-                <textarea
-                  rows={2}
-                  value={form.doneCondition}
-                  onChange={(event) => updateForm('doneCondition', event.target.value)}
-                />
-              </label>
-            </div>
-            <button type="button" className="primary-button" onClick={saveDetails}>
-              Save details
-            </button>
+            <h3>
+              Edit details
+              <button type="button" className="secondary-button" onClick={() => setEditOpen((value) => !value)}>
+                {editOpen ? 'Close editor' : 'Edit'}
+              </button>
+            </h3>
+            {editOpen && (
+              <>
+                <div className="edit-grid">
+                  <label>
+                    <span>Title</span>
+                    <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Module</span>
+                    <select value={form.module} onChange={(event) => updateForm('module', event.target.value)}>
+                      {MODULE_OPTIONS.map((module) => (
+                        <option key={module} value={module}>
+                          {module}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Phase</span>
+                    <select value={form.phase} onChange={(event) => updateForm('phase', event.target.value)}>
+                      {PHASE_OPTIONS.map((phase) => (
+                        <option key={phase} value={phase}>
+                          {phase}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Priority</span>
+                    <select value={form.priority} onChange={(event) => updateForm('priority', event.target.value)}>
+                      {PRIORITY_OPTIONS.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {priority}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Slot</span>
+                    <select value={form.slotType} onChange={(event) => updateForm('slotType', event.target.value)}>
+                      {SLOT_OPTIONS.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Slot label</span>
+                    <input value={form.slotLabel} onChange={(event) => updateForm('slotLabel', event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Start date</span>
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(event) => updateForm('startDate', event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Due date</span>
+                    <input type="date" value={form.dueDate} onChange={(event) => updateForm('dueDate', event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Estimated hours</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.25"
+                      value={form.estimatedHours}
+                      onChange={(event) => updateForm('estimatedHours', event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Tags</span>
+                    <input list="known-tags" value={form.tags} onChange={(event) => updateForm('tags', event.target.value)} />
+                    <datalist id="known-tags">
+                      {TAG_OPTIONS.map((tag) => (
+                        <option key={tag} value={tag} />
+                      ))}
+                    </datalist>
+                  </label>
+                  <label className="span-2">
+                    <span>Description</span>
+                    <textarea
+                      rows={4}
+                      value={form.description}
+                      onChange={(event) => updateForm('description', event.target.value)}
+                    />
+                  </label>
+                  <label className="span-2">
+                    <span>Evidence requirement</span>
+                    <textarea
+                      rows={2}
+                      value={form.evidenceRequirement}
+                      onChange={(event) => updateForm('evidenceRequirement', event.target.value)}
+                    />
+                  </label>
+                  <label className="span-2">
+                    <span>Done condition</span>
+                    <textarea
+                      rows={2}
+                      value={form.doneCondition}
+                      onChange={(event) => updateForm('doneCondition', event.target.value)}
+                    />
+                  </label>
+                </div>
+                <div className="drawer-edit-actions">
+                  <button type="button" className="primary-button" onClick={saveDetails}>
+                    Save details
+                  </button>
+                  {card.custom && (
+                    <button type="button" className="ghost-button danger-ghost" onClick={deleteCustomCard}>
+                      Delete custom card
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </section>
 
           <section className="drawer-section wide">
