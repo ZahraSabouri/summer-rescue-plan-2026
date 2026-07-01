@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Tracker JSON backups exported/autosaved by the app (personal progress)
+*tracker-backup*.json
+summer-rescue-tracker-backup-*.json
+
+# Local study materials — large, personal, and university-copyrighted.
+# Kept on disk so the app can read them locally; NOT published to the repo.
+# (Also avoids Windows 260-char "Filename too long" errors on git add.)
+public/study-assets/
+
+# Scratch / sync probe files
+synccheck.txt

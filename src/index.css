@@ -1,0 +1,221 @@
+/* ============================================================
+   Summer Rescue Plan — design tokens
+   "Calm study OS": warm neutrals, one confident teal accent,
+   a terracotta spark for energy. Modern-minimal, editorial type.
+   Every legacy variable name is preserved so components cascade.
+   ============================================================ */
+
+:root {
+  /* --- Surfaces (warm paper) --- */
+  --bg: #f1ede4;
+  --surface: #faf7f0;
+  --panel: #fffdf8;
+  --panel-2: #efe9dd;
+  --input-bg: #fffdf8;
+  --input-ink: #23201a;
+  --chip-bg: #fffdf8;
+  --track: #e6dfd0;
+  --done-bg: #eef5ee;
+
+  /* --- Feedback --- */
+  --toast-bg: #fbf1db;
+  --toast-ink: #7c5514;
+  --success-bg: #ebf5ec;
+  --success-ink: #2f7d51;
+  --success-line: #bcdcc4;
+  --warning-bg: #fbf1db;
+  --warning-ink: #8a5a12;
+  --warning-line: #eccf95;
+
+  /* --- Depth --- */
+  --overlay: rgba(35, 32, 26, 0.32);
+  --drawer-shadow: -26px 0 64px rgba(35, 32, 26, 0.18);
+  --focus-ring: rgba(23, 117, 106, 0.32);
+
+  /* --- Ink + structure --- */
+  --ink: #23201a;
+  --muted: #7b7365;
+  --line: #e6dfd1;
+  --line-strong: #cec5b3;
+
+  /* --- Semantic accents --- */
+  --red: #b0483b;
+  --green: #17756a;
+  --amber: #a9781c;
+  --blue: #3a6ea5;
+
+  /* --- Brand accents --- */
+  --accent: #17756a;
+  --accent-2: #cf7a4d;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --header-grad: linear-gradient(118deg, #17756a 0%, #2a9d8f 52%, #cf7a4d 116%);
+
+  /* --- Shadows --- */
+  --shadow-1: 0 1px 2px rgba(35, 32, 26, 0.05), 0 4px 14px rgba(35, 32, 26, 0.05);
+  --shadow-2: 0 14px 38px rgba(35, 32, 26, 0.13);
+
+  /* --- Charts --- */
+  --chart-1: #17756a;
+  --chart-2: #cf7a4d;
+  --chart-ideal: #b4aa98;
+  --chart-aml: #3a6ea5;
+  --chart-ts: #2a9d8f;
+  --chart-mat700: #c0563f;
+  --chart-project: #8a6bb0;
+  --chart-admin: #a9781c;
+  --chart-health: #cf7a4d;
+  --heat-0: #ece5d7;
+  --heat-1: #cfe7df;
+  --heat-2: #90cdbe;
+  --heat-3: #3ea593;
+  --heat-4: #17756a;
+
+  /* --- Type --- */
+  --font-sans: 'Manrope', 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-serif: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-num: 'Space Grotesk', 'Manrope', system-ui, sans-serif;
+
+  /* --- Radii + rhythm --- */
+  --radius-sm: 9px;
+  --radius: 13px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --sidebar-w: 264px;
+
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv01';
+}
+
+:root[data-theme='dark'] {
+  /* --- Surfaces (warm espresso dark) --- */
+  --bg: #141310;
+  --surface: #1c1a15;
+  --panel: #211e18;
+  --panel-2: #191712;
+  --input-bg: #191712;
+  --input-ink: #ece7dc;
+  --chip-bg: #272319;
+  --track: #322d24;
+  --done-bg: #16241d;
+
+  --toast-bg: #2a2113;
+  --toast-ink: #e6c07f;
+  --success-bg: #14271e;
+  --success-ink: #7fd8b3;
+  --success-line: #2c5c46;
+  --warning-bg: #2a2113;
+  --warning-ink: #e6c07f;
+  --warning-line: #5e4c26;
+
+  --overlay: rgba(9, 8, 6, 0.66);
+  --drawer-shadow: -26px 0 64px rgba(0, 0, 0, 0.55);
+  --focus-ring: rgba(56, 184, 165, 0.34);
+
+  --ink: #ece7dc;
+  --muted: #a49c8c;
+  --line: #322d24;
+  --line-strong: #4a4335;
+
+  --red: #e0776a;
+  --green: #38b8a5;
+  --amber: #e0b264;
+  --blue: #7fa9d8;
+
+  --accent: #38b8a5;
+  --accent-2: #e59a6b;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --header-grad: linear-gradient(118deg, #38b8a5 0%, #6fc9bb 52%, #e59a6b 116%);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.42);
+  --shadow-2: 0 16px 42px rgba(0, 0, 0, 0.5);
+
+  --chart-1: #38b8a5;
+  --chart-2: #e59a6b;
+  --chart-ideal: #6b6456;
+  --chart-aml: #7fa9d8;
+  --chart-ts: #38b8a5;
+  --chart-mat700: #e0776a;
+  --chart-project: #b39ae0;
+  --chart-admin: #e0b264;
+  --chart-health: #e59a6b;
+  --heat-0: #221f18;
+  --heat-1: #173a33;
+  --heat-2: #1f6a5c;
+  --heat-3: #2fa08d;
+  --heat-4: #6ad8c6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(120% 90% at 100% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
+    radial-gradient(120% 80% at -10% 0%, color-mix(in srgb, var(--accent-2) 6%, transparent), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-weight: 450;
+  letter-spacing: 0.005em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* Refined scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

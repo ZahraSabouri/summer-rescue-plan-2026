@@ -1,0 +1,233 @@
+import { STUDY_MODULES } from '../data/studyModules'
+import {
+  addDays,
+  formatDate,
+  getCardDate,
+  isBetween,
+  isOverdue,
+  sortCards,
+  sumHours,
+} from '../utils/progress'
+import { CardSummary } from './CardSummary'
+
+function percent(done, total) {
+  if (!total) return 0
+  return Math.round((done / total) * 100)
+}
+
+function hours(value) {
+  const number = Number(value || 0)
+  return Number.isInteger(number) ? `${number}h` : `${number.toFixed(1)}h`
+}
+
+function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen }) {
+  const moduleCards = cards.filter((card) => card.moduleGroup === module.moduleGroup)
+  const openCards = sortCards(moduleCards.filter((card) => !card.done))
+  const dueSoonEnd = addDays(referenceDate, 7)
+  const dueSoon = openCards.filter((card) => isBetween(getCardDate(card), referenceDate, dueSoonEnd))
+  const overdue = openCards.filter((card) => isOverdue(card, referenceDate))
+  const done = moduleCards.filter((card) => card.done).length
+  const inactiveInsurance = module.id === 'mat700' && !mat700Active
+
+  return (
+    <article className={`module-command-card ${inactiveInsurance ? 'is-muted' : ''}`}>
+      <div className="module-card-visual">
+        <img src={module.visual.url} alt="" loading="lazy" />
+      </div>
+      <div className="module-card-body">
+        <p className="eyebrow">{module.code}</p>
+        <h2>{module.title}</h2>
+        <p>{module.subtitle}</p>
+        <div className="module-stat-row" aria-label={`${module.title} progress`}>
+          <span>{moduleCards.length} cards</span>
+          <span>{percent(done, moduleCards.length)}% done</span>
+          <span>{hours(sumHours(moduleCards, 'estimatedHours'))} planned</span>
+          <span>{dueSoon.length} due next 7d</span>
+          {overdue.length > 0 && <span className="danger">{overdue.length} overdue</span>}
+        </div>
+        {inactiveInsurance && <p className="module-insurance-note">Insurance lane is switched off in planner settings.</p>}
+      </div>
+      <div className="module-card-actions">
+        <button type="button" className="primary-button" onClick={() => onOpen(module.viewId)}>
+          Open workspace
+        </button>
+        <button type="button" className="secondary-button" onClick={() => onOpen('week')}>
+          Week queue
+        </button>
+      </div>
+    </article>
+  )
+}
+
+function CompactQueue({ title, eyebrow, cards, empty, actions }) {
+  return (
+    <section className="hub-queue">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">{eyebrow}</p>
+          <h2>{title}</h2>
+        </div>
+      </div>
+      <div className="mini-card-list">
+        {cards.length > 0 ? (
+          sortCards(cards).map((card) => <CardSummary key={card.id} card={card} compact {...actions} />)
+        ) : (
+          <p className="empty-state">{empty}</p>
+        )}
+      </div>
+    </section>
+  )
+}
+
+export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, setActiveView }) {
+  const activeCards = mat700Active ? cards : cards.filter((card) => card.moduleGroup !== 'MAT700')
+  const openCards = activeCards.filter((card) => !card.done)
+  const overdueCards = openCards.filter((card) => isOverdue(card, referenceDate))
+  const todayCards = openCards.filter((card) => getCardDate(card) === referenceDate)
+  const nextSevenEnd = addDays(referenceDate, 7)
+  const nextCards = openCards.filter((card) => isBetween(getCardDate(card), referenceDate, nextSevenEnd))
+
+  return (
+    <div className="study-hub">
+      <section className="super-hero">
+        <div className="super-hero-copy">
+          <p className="eyebrow">Summer Rescue Campaign 2026</p>
+          <h1>Unified study cockpit</h1>
+          <p>
+            One place for the rescue tracker, module workspaces, local resources, evidence logging, and the weekly
+            execution queue.
+          </p>
+          <div className="hub-command-strip" aria-label="Primary study commands">
+            <button type="button" className="primary-button" onClick={() => setActiveView('dashboard')}>
+              Planner dashboard
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setActiveView('week')}>
+              This week
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setActiveView('progress')}>
+              Progress
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setActiveView('evidence')}>
+              Evidence
+            </button>
+          </div>
+        </div>
+        <div className="super-hero-media" aria-label="Module resource previews">
+          {STUDY_MODULES.map((module) => (
+            <button
+              key={module.id}
+              type="button"
+              className="preview-tile"
+              onClick={() => setActiveView(module.viewId)}
+              style={{ '--module-accent': `var(${module.accent})` }}
+            >
+              <img src={module.visual.url} alt="" loading="lazy" />
+              <span>{module.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="hub-metrics" aria-label="Super app metrics">
+        <article>
+          <span>Open cards</span>
+          <strong>{stats.notDone}</strong>
+          <p>{hours(stats.estimatedHours - stats.loggedHours)} estimated hours still unlogged.</p>
+        </article>
+        <article>
+          <span>Due today</span>
+          <strong>{todayCards.length}</strong>
+          <p>{formatDate(referenceDate)} execution queue.</p>
+        </article>
+        <article>
+          <span>Next 7 days</span>
+          <strong>{nextCards.length}</strong>
+          <p>Cards dated through {formatDate(nextSevenEnd)}.</p>
+        </article>
+        <article>
+          <span>Overdue</span>
+          <strong>{overdueCards.length}</strong>
+          <p>Use Rescue Lane instead of silent drift.</p>
+        </article>
+      </section>
+
+      <section className="module-command-grid" aria-label="Module workspaces">
+        {STUDY_MODULES.map((module) => (
+          <ModuleCommandCard
+            key={module.id}
+            module={module}
+            cards={cards}
+            referenceDate={referenceDate}
+            mat700Active={mat700Active}
+            onOpen={setActiveView}
+          />
+        ))}
+      </section>
+
+      <section className="hub-split">
+        <CompactQueue
+          eyebrow="Execute"
+          title="Due today"
+          cards={todayCards.slice(0, 5)}
+          empty="No cards due today."
+          actions={actions}
+        />
+        <CompactQueue
+          eyebrow="Control"
+          title="Overdue or at risk"
+          cards={overdueCards.slice(0, 5)}
+          empty="No overdue cards."
+          actions={actions}
+        />
+      </section>
+
+      <section className="hub-split">
+        <section className="hub-queue quality-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Quality control</p>
+              <h2>Why this stays useful</h2>
+            </div>
+          </div>
+          <div className="quality-list">
+            <article>
+              <strong>One source of truth</strong>
+              <span>The rescue cards still drive dates, status, evidence, hours, and completion.</span>
+            </article>
+            <article>
+              <strong>Low switching cost</strong>
+              <span>Each module page combines cards, resources, drills, and notes in one view.</span>
+            </article>
+            <article>
+              <strong>Exam-output bias</strong>
+              <span>Resources are organised around notebooks, formulas, question banks, and timed templates.</span>
+            </article>
+          </div>
+        </section>
+
+        <section className="hub-queue quality-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Portable app</p>
+              <h2>Self-contained resources</h2>
+            </div>
+          </div>
+          <div className="quality-list">
+            <article>
+              <strong>No legacy app dependency</strong>
+              <span>Module navigation lives inside this React app instead of old standalone pages.</span>
+            </article>
+            <article>
+              <strong>App-local assets</strong>
+              <span>Referenced PDFs, HTML notes, notebooks, images, and docs are served from `public/study-assets`.</span>
+            </article>
+            <article>
+              <strong>GitHub clone ready</strong>
+              <span>The app can be moved with its public assets and still load the study materials it references.</span>
+            </article>
+          </div>
+        </section>
+      </section>
+    </div>
+  )
+}

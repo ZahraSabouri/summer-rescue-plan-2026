@@ -1,0 +1,176 @@
+# Summer Rescue Plan
+
+A calm, single-page study **command center** for the 2026 summer exam-recovery campaign — built for the
+**Cardiff University · MSc Data Science & Analytics** summer exams window. It unifies a planning tracker, three
+module workspaces, progress analytics, an evidence log, and a built-in study timer into one local-first app.
+
+> Cardiff University branding here is a plain text credit only. To add the official crest, drop an image into
+> `public/` and reference it from `src/components/AppIntro.jsx` and the sidebar brand in `src/App.jsx`.
+
+---
+
+## Table of contents
+
+1. [What it does](#what-it-does)
+2. [Tech stack](#tech-stack)
+3. [Getting started](#getting-started)
+4. [Project structure](#project-structure)
+5. [Data model & storage](#data-model--storage)
+6. [Feature guide (how to use)](#feature-guide-how-to-use)
+7. [Design system](#design-system)
+8. [Privacy & the repo](#privacy--the-repo)
+9. [Known notes & roadmap](#known-notes--roadmap)
+
+---
+
+## What it does
+
+The campaign runs three exam lanes, each with its own workspace and priority weight:
+
+| Lane | Module | Focus | Weight |
+| --- | --- | --- | --- |
+| Applied ML | CMT307 | Lab-first, practical — the priority module | 40% |
+| Time Series | MAT508 | Repeated exam-template drills | 35% |
+| Data Mining | MAT700 (*Mathematical Methods for Data Mining*) | Kept warm as insurance | 25% |
+
+Everything is driven by a card-based tracker (planning tasks with status, checklist, evidence, notes, and
+logged hours) plus curated study resources surfaced per module.
+
+## Tech stack
+
+- **React 19** + **Vite 8** (dev server, build) — plain `.jsx`, no TypeScript.
+- **Plain CSS with design tokens** (`src/index.css` variables + `src/App.css`) — no Tailwind/CSS framework.
+- **Google Fonts**: Fraunces (serif display), Manrope (UI), Space Grotesk (numerals). Loaded via `<link>` in
+  `index.html`; falls back to system fonts if offline.
+- **No backend, no database.** All state lives in the browser (`localStorage`) with optional file-based backup
+  via the File System Access API.
+- **Zero runtime dependencies** beyond `react` / `react-dom`. Charts, icons, and the timer are hand-built SVG —
+  nothing to audit or update.
+
+## Getting started
+
+```bash
+npm install
+npm run dev        # start the dev server (http://localhost:5173)
+npm run build      # production build into dist/
+npm run preview    # preview the production build
+npm run lint       # ESLint
+npm run assets:sync    # copy curated study resources into public/study-assets
+npm run assets:verify  # check every referenced asset exists
+```
+
+> **Build on Windows.** `node_modules` holds platform-native binaries (Vite/Rolldown). If the folder was set
+> up on Windows, run install/build there rather than in a Linux shell.
+
+## Project structure
+
+```
+summer-rescue-plan-app/
+├─ index.html                 # entry HTML + web-font links
+├─ src/
+│  ├─ main.jsx                # React root
+│  ├─ App.jsx                 # shell: sidebar nav, topbar, intro gate, view router
+│  ├─ App.css                 # component + layout styles (design-token driven)
+│  ├─ index.css               # design tokens (light/dark), base styles, fonts
+│  ├─ components/
+│  │  ├─ AppIntro.jsx         # landing / mission-briefing screen
+│  │  ├─ StudyTimer.jsx       # Pomodoro timer popover (focus/short/long)
+│  │  ├─ StudyHub.jsx         # cross-module home
+│  │  ├─ ModuleWorkspace.jsx  # per-module hub + resource browser
+│  │  ├─ TrackerViews.jsx     # Planner, Columns, Table, Week, Analytics, Evidence, Focus
+│  │  ├─ ProgressView.jsx     # burn-up, pace, heatmap, module rings
+│  │  ├─ Charts.jsx           # dependency-free themed SVG charts
+│  │  ├─ CardDetailDrawer.jsx # edit a card (status/checklist/notes/hours/evidence)
+│  │  ├─ AddCardDialog.jsx    # create a card
+│  │  └─ FilterBar.jsx        # filter controls for tracker views
+│  ├─ data/
+│  │  ├─ baseCards.js         # seed planning cards (generated from trello_import.csv)
+│  │  ├─ studyModules.js      # module definitions + curated resource lists
+│  │  └─ constants.js         # view options, statuses, modules, filters
+│  ├─ state/useTrackerState.js# reducer/hooks over localStorage
+│  └─ utils/                  # progress math, activity history, file backup, links
+└─ public/study-assets/       # local copies of the resources the app links to
+```
+
+## Data model & storage
+
+- **Cards** (`src/data/baseCards.js`): each has `id`, `title`, `module` / `moduleGroup`, `phase`, `priority`,
+  `status`, `done`, `checklist`, `evidence`, `notes`, `estimateHours` / `actualHours`, `tags`, and dates.
+- **Persistence**: `localStorage["summer-rescue-tracker-state-v2"]` holds all progress — card overrides, added
+  cards, settings, and daily snapshots. Nothing leaves the machine.
+- Additional UI keys: `srp-nav-collapsed` (sidebar), `srp-skip-intro` (landing screen).
+- **Backups**: *Export JSON* downloads a full snapshot; *Import JSON* restores one; *Choose autosave file*
+  (Chromium browsers) writes changes to a file you pick, automatically. *Reset* exports first, then clears.
+
+> `moduleGroup: "MAT700"` is the internal key used for filtering and must stay as-is; the module is only
+> *displayed* as "Data Mining" / "Mathematical Methods for Data Mining".
+
+## Feature guide (how to use)
+
+**Landing screen** — on load you get a mission briefing with the exam countdown, campaign progress, and the
+three lanes. Click a lane to jump straight in, *Enter workspace* for the full app, or tick *Skip this screen
+next time*.
+
+**Sidebar** — grouped navigation (Study / Planning / Board / Focus). Collapse it with the button at the
+bottom (state is remembered); on narrow screens it becomes a slide-out menu. The footer shows live campaign
+progress.
+
+**Topbar** — the current view's title, an **exam countdown** (turns red inside three weeks), your backup
+status, *Add card*, the **study timer**, a light/dark toggle, and *Settings*.
+
+**Study timer** — a Pomodoro popover: Focus / Short break / Long break, adjustable lengths, start/pause/reset,
+a session counter (a long break is suggested every 4th focus), and a soft chime when a block ends. The
+remaining time shows on the topbar button while running, so it keeps going as you move around the app.
+
+**Views**
+
+- *Study Hub* — cross-module overview and quick actions.
+- *Applied ML / Time Series / Data Mining* — each module's objectives, operating rules, action cards, a
+  resource browser (notes, formula sheets, past papers), and a scratchpad.
+- *Planner* — pace banner, pipeline, and this week at a glance.
+- *Progress* — burn-up vs. ideal pace (Day/Week/Month), hours-per-period, per-module rings, activity heatmap.
+- *Analytics* — charts, module mix, and stats.
+- *Columns / Table / Week* — Kanban, dense grid, and 7-day plan of the same cards.
+- *Evidence* — proof-of-work outputs.
+- *Rescue Lane / Project Ship / Admin & Dates* — focused lanes for recovery buffers, the group project, and
+  exam logistics.
+
+**Cards** — click any card title to open the drawer and edit status, tick checklist items, log hours, attach
+evidence, and add notes. *Add card* creates new ones. Use the filter bar (non-study views) to slice by module,
+phase, priority, status, slot, tag, or date.
+
+**Settings** — planning dates, campaign window, exam start, the *Data Mining module active* toggle (drop the
+lane if you pass MAT700), and all backup/data actions.
+
+## Design system
+
+- **Themes**: warm-paper light + espresso dark, both defined as CSS variables in `src/index.css`
+  (`:root` and `:root[data-theme='dark']`). Every component reads these tokens, so theming is automatic.
+- **Accents**: teal `--accent` (calm/primary) + terracotta `--accent-2` (energy). Per-module chart colors in
+  `--chart-*`.
+- **Type**: `--font-serif` (headings/numerals), `--font-sans` (UI), `--font-num` (metrics/timer).
+- **Layout**: the content area is a CSS **container**, so cards reflow based on the *content* width — the
+  sidebar never squeezes content off-screen.
+
+## Privacy & the repo
+
+Personal material is kept out of version control via `.gitignore`:
+
+- Tracker JSON backups (`*tracker-backup*.json`).
+- The private strategy PDFs (emergency / exam study plans). These are no longer surfaced in the app either.
+
+If any of these were committed before, untrack them once with:
+
+```bash
+git rm -r --cached --ignore-unmatch "public/study-assets/**/*Emergency Exam Study Plan*.pdf" "summer-rescue-tracker-backup-*.json"
+```
+
+**Portability rule**: keep `public/study-assets` with the app; it must not depend on sibling module folders at
+runtime.
+
+## Known notes & roadmap
+
+- Filter/Add-card dropdowns still list the raw value `MAT700`; the label→value split is intentional so
+  filtering keeps working. A display-label map in `FilterBar.jsx` / `AddCardDialog.jsx` would prettify it.
+- Ideas not yet built: richer in-app viewer for HTML study resources; per-card timers that log hours
+  automatically; keyboard command palette.
