@@ -11,6 +11,9 @@ import { StudyTimer } from './components/StudyTimer'
 import { ModuleWorkspace, ResourceReader } from './components/ModuleWorkspace'
 import { ProgressView } from './components/ProgressView'
 import { StudyHub } from './components/StudyHub'
+import { TodayView } from './components/TodayView'
+import { Celebration } from './components/Celebration'
+import { ImportPreviewDialog } from './components/ImportPreviewDialog'
 import {
   AnalyticsView,
   BoardView,
@@ -33,21 +36,23 @@ import {
   requestBackupPermission,
   writeBackupHandle,
 } from './utils/fileBackup'
-import { deriveStats, filterCards, sortCards } from './utils/progress'
+import { deriveStats, filterCards, sortCards, sumHours } from './utils/progress'
 import { generateNotifications } from './utils/notifications'
+import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
 const ENRICHED_BASE_CARDS = attachCardResourceLinks(baseCards, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
 
 const NAV_GROUPS = [
-  { label: 'Study', items: ['hub', 'aml', 'time-series', 'mat700'] },
+  { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'mat700'] },
   { label: 'Planning', items: ['dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
   { label: 'Focus', items: ['rescue', 'project', 'admin'] },
 ]
 
 const VIEW_META = {
+  today: { title: 'Today', subtitle: 'Your mission control — best next moves, streak, and split.' },
   hub: { title: 'Study Hub', subtitle: 'Command center for the whole rescue campaign.' },
   dashboard: { title: 'Planner', subtitle: 'Pace, pipeline, and this week at a glance.' },
   progress: { title: 'Progress', subtitle: 'Trajectory, streaks, and burn-down.' },
@@ -67,9 +72,9 @@ const VIEW_META = {
 const VALID_VIEW_IDS = new Set(Object.keys(VIEW_META))
 
 function viewFromHash() {
-  if (typeof window === 'undefined') return 'hub'
+  if (typeof window === 'undefined') return 'today'
   const value = window.location.hash.replace(/^#\/?/, '').trim()
-  return VALID_VIEW_IDS.has(value) ? value : 'hub'
+  return VALID_VIEW_IDS.has(value) ? value : 'today'
 }
 
 function Icon({ name }) {
@@ -87,6 +92,14 @@ function Icon({ name }) {
         <>
           <path {...p} d="M12 3c3.6 2.8 5.6 5.6 5.6 9.2A5.6 5.6 0 0 1 6.4 12.2c0-1.5.5-2.8 1.4-4" />
           <path {...p} d="M12 21v-8" />
+        </>
+      )
+      break
+    case 'today':
+      body = (
+        <>
+          <circle {...p} cx="12" cy="13" r="6" />
+          <path {...p} d="M12 10.5V13l2 2M12 3v2M4.6 5.6 6 7M19.4 5.6 18 7" />
         </>
       )
       break
@@ -317,6 +330,9 @@ export default function App() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [message, setMessage] = useState('')
+  const [celebrateSeed, setCelebrateSeed] = useState(0)
+  const [pendingImport, setPendingImport] = useState(null)
+  const [safetyCopies, setSafetyCopies] = useState([])
   const [navCollapsed, setNavCollapsed] = useState(() => {
     try {
       return localStorage.getItem('srp-nav-collapsed') === '1'
@@ -580,10 +596,36 @@ export default function App() {
     [],
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
-  const isStudyView = ['hub', 'aml', 'time-series', 'mat700'].includes(activeView)
+  const isStudyView = ['today', 'hub', 'aml', 'time-series', 'mat700'].includes(activeView)
 
   const viewMeta = VIEW_META[activeView] ?? { title: LABEL_BY_ID[activeView] ?? 'View', subtitle: '' }
   const doneCount = useMemo(() => tracker.cards.filter((card) => card.done).length, [tracker.cards])
+
+  // Celebrate completions: any path that increases the done count fires a
+  // confetti burst (skipped on mount, collapses under prefers-reduced-motion).
+  const prevDoneRef = useRef(null)
+  useEffect(() => {
+    if (prevDoneRef.current != null && doneCount > prevDoneRef.current) {
+      setCelebrateSeed(Date.now())
+    }
+    prevDoneRef.current = doneCount
+  }, [doneCount])
+
+  // Rolling daily safety copy of the tracker state (localStorage, last ~5 days).
+  const trackerRef = useRef({ state: tracker.state, snapshots: tracker.snapshots })
+  useEffect(() => {
+    trackerRef.current = { state: tracker.state, snapshots: tracker.snapshots }
+  })
+  useEffect(() => {
+    function record() {
+      const { state, snapshots } = trackerRef.current
+      recordRollingBackup(buildTrackerBackupPayload(state, snapshots, new Date().toISOString()))
+      setSafetyCopies(listRollingBackups())
+    }
+    record()
+    const id = window.setInterval(record, 60 * 60 * 1000)
+    return () => window.clearInterval(id)
+  }, [])
   const totalCount = tracker.cards.length || 1
   const donePct = Math.round((doneCount / totalCount) * 100)
   const examTarget = useMemo(() => {
@@ -741,29 +783,74 @@ export default function App() {
     return () => window.removeEventListener('keydown', onSaveShortcut)
   }, [])
 
+  function summariseTrackerPayload(payload) {
+    const raw = payload?.state ?? payload ?? {}
+    const cardStates = raw.cards && typeof raw.cards === 'object' ? raw.cards : {}
+    const hours = Object.values(cardStates).reduce(
+      (sum, cardState) => sum + Number(cardState?.actualHours ?? 0),
+      0,
+    )
+    return {
+      done: backupDoneCount(raw),
+      added: Array.isArray(raw.addedCards) ? raw.addedCards.length : 0,
+      hours: Math.round(hours * 10) / 10,
+      snapshotDays: Object.keys(raw.snapshots ?? {}).length,
+      exportedAt: formatExportStamp(
+        payload?.exportedAt ?? raw?.settings?.lastExportedAt ?? raw?.updatedAt,
+      ),
+    }
+  }
+
+  const currentSummary = useMemo(
+    () => ({
+      done: doneCount,
+      added: tracker.state.addedCards.length,
+      hours: Math.round(sumHours(tracker.cards, 'actualHours') * 10) / 10,
+      snapshotDays: Object.keys(tracker.snapshots ?? {}).length,
+    }),
+    [doneCount, tracker.cards, tracker.snapshots, tracker.state.addedCards.length],
+  )
+
   async function importBackup(event) {
     const file = event.target.files?.[0]
     if (!file) return
 
     try {
       const payload = JSON.parse(await file.text())
-      const incoming = payload?.state ?? payload
-      const incomingDone = backupDoneCount(incoming)
-      const currentDone = tracker.cards.filter((card) => card.done).length
-      const exportedAt = payload?.exportedAt ?? incoming?.settings?.lastExportedAt ?? incoming?.updatedAt
-      const confirmed = window.confirm(
-        `Import this tracker backup?\n\nBackup: ${incomingDone} done cards, exported ${formatExportStamp(exportedAt)}.\nCurrent: ${currentDone} done cards.\n\nThis replaces the current local tracker state.`,
-      )
-      if (!confirmed) return
-      tracker.importTrackerState(payload)
-      setSelectedCardId(null)
-      setMessage('Backup imported.')
+      setPendingImport({
+        payload,
+        sourceName: file.name,
+        incoming: summariseTrackerPayload(payload),
+      })
     } catch (error) {
       console.error(error)
       setMessage('Import failed: choose a valid tracker JSON export.')
     } finally {
       event.target.value = ''
     }
+  }
+
+  function restoreSafetyCopy(day) {
+    const payload = readRollingBackup(day)
+    if (!payload) {
+      setMessage('That safety copy could not be read.')
+      return
+    }
+    setPendingImport({
+      payload,
+      sourceName: `Daily safety copy · ${day}`,
+      incoming: summariseTrackerPayload(payload),
+    })
+  }
+
+  function confirmPendingImport() {
+    if (!pendingImport) return
+    downloadBackup(new Date().toISOString())
+    tracker.importTrackerState(pendingImport.payload)
+    setSelectedCardId(null)
+    setPendingImport(null)
+    setSettingsOpen(false)
+    setMessage('Current state backed up, then import applied.')
   }
 
   function openResource(resourceId) {
@@ -786,6 +873,20 @@ export default function App() {
   }
 
   function renderView() {
+    if (activeView === 'today') {
+      return (
+        <TodayView
+          cards={tracker.cards}
+          snapshots={tracker.snapshots}
+          referenceDate={referenceDate}
+          mat700Active={mat700Active}
+          actions={actions}
+          examCountdown={examCountdown}
+          examLabel={examTarget.label}
+          onOpenCard={setSelectedCardId}
+        />
+      )
+    }
     if (activeView === 'hub') {
       return (
         <StudyHub
@@ -1085,7 +1186,9 @@ export default function App() {
         {!isStudyView && <FilterBar filters={filters} setFilters={setFilters} resultCount={visibleCards.length} />}
 
         <section className="view-shell" aria-label="Active planner view">
-          {renderView()}
+          <div className="view-anim" key={activeView}>
+            {renderView()}
+          </div>
         </section>
       </main>
 
@@ -1189,6 +1292,28 @@ export default function App() {
             </div>
 
             <div className="settings-section">
+              <h3>Daily safety copies</h3>
+              <p className="muted">
+                Kept automatically in this browser. Restoring shows a preview first and backs up your
+                current state.
+              </p>
+              {safetyCopies.length === 0 ? (
+                <p className="muted">No safety copies yet — one is written each day you open the app.</p>
+              ) : (
+                <ul className="safety-copy-list">
+                  {safetyCopies.map((copy) => (
+                    <li key={copy.day}>
+                      <span>{copy.day}</span>
+                      <button type="button" className="secondary-button" onClick={() => restoreSafetyCopy(copy.day)}>
+                        Restore
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="settings-section">
               <h3>Snapshot</h3>
               <div className="settings-stat-row">
                 <span>{campaignMeta.cardCount} campaign cards</span>
@@ -1250,6 +1375,17 @@ export default function App() {
       />
 
       {activeResource && <ResourceReader resource={activeResource} onClose={() => setOpenResourceId(null)} />}
+
+      <Celebration trigger={celebrateSeed} />
+
+      <ImportPreviewDialog
+        open={Boolean(pendingImport)}
+        sourceName={pendingImport?.sourceName ?? ''}
+        incoming={pendingImport?.incoming ?? {}}
+        current={currentSummary}
+        onCancel={() => setPendingImport(null)}
+        onConfirm={confirmPendingImport}
+      />
     </div>
   )
 }

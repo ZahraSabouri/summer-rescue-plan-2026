@@ -48,6 +48,7 @@ export const TAG_OPTIONS = [
 ]
 
 export const VIEW_OPTIONS = [
+  { id: 'today', label: 'Today' },
   { id: 'hub', label: 'Study Hub' },
   { id: 'dashboard', label: 'Planner' },
   { id: 'progress', label: 'Progress' },
