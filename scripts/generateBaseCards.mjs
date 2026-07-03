@@ -129,7 +129,7 @@ function getInitialStatus(record, startDate) {
   if (/waiting|blocked/i.test(sourceList)) return STATUS.waiting
   if (/rescue/i.test(sourceList)) return STATUS.rescue
   if (!startDate) return STATUS.waiting
-  if (startDate <= '2026-07-05') return STATUS.thisWeek
+  if (startDate <= '2026-07-10') return STATUS.thisWeek
   return STATUS.backlog
 }
 
@@ -161,7 +161,7 @@ function parseCard(record) {
   const titleMatch = cardName.match(/^Card\s+(\d+)\s+—\s+(.+)$/)
   const number = titleMatch ? Number(titleMatch[1]) : 'W'
   const title = titleMatch?.[2]?.trim() ?? cardName.trim()
-  const sortOrder = Number.isFinite(number) ? number : 124
+  const sortOrder = Number.isFinite(number) ? number : 999
   const startDate = record['Start Date'] || ''
   const dueDateTime = record['Due Date'] || ''
   const dueDate = dueDateTime.slice(0, 10)
@@ -209,7 +209,7 @@ function buildAdminWatchCard() {
   return {
     id: 'weekly-date-watch',
     number: 'W',
-    sortOrder: 124,
+    sortOrder: 999,
     title: 'Weekly admin/date-watch',
     module: 'Admin',
     moduleGroup: 'Admin',
@@ -244,6 +244,7 @@ const baseCards = toRecords(parseCsv(text)).map(parseCard)
 if (!baseCards.some((card) => card.id === 'weekly-date-watch')) {
   baseCards.push(buildAdminWatchCard())
 }
+const numericCardCount = baseCards.filter((card) => Number.isFinite(card.number)).length
 
 const output = `// Generated from ../trello_import.csv by scripts/generateBaseCards.mjs.
 // This file contains sanitized planning data only. User progress lives in localStorage.
@@ -252,9 +253,9 @@ export const baseCards = ${JSON.stringify(baseCards, null, 2)}
 
 export const campaignMeta = {
   title: 'Summer Rescue Campaign 2026',
-  runway: '2026-07-01 to 2026-08-18',
+  runway: '2026-07-04 to 2026-08-18',
   generatedFrom: 'trello_import.csv',
-  cardCount: 123,
+  cardCount: ${numericCardCount},
   includesWeeklyWatch: true,
 }
 `

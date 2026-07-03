@@ -98,8 +98,8 @@ summer-rescue-plan-app/
 
 - **Cards** (`src/data/baseCards.js`): each has `id`, `title`, `module` / `moduleGroup`, `phase`, `priority`,
   `status`, `done`, `checklist`, `evidence`, `notes`, `estimateHours` / `actualHours`, `tags`, and dates.
-- **Persistence**: `localStorage["summer-rescue-tracker-state-v2"]` holds all progress — card overrides, added
-  cards, settings, and daily snapshots. Nothing leaves the machine.
+- **Persistence**: `localStorage["summer-rescue-tracker-state-v3"]` holds progress for the July 4 reset — card
+  overrides, added cards, settings, and daily snapshots. Nothing leaves the machine.
 - Additional UI keys: `srp-nav-collapsed` (sidebar), `srp-skip-intro` (landing screen).
 - **Backups**: *Export JSON* downloads a full snapshot; *Import JSON* restores one; *Choose autosave file*
   (Chromium browsers) writes changes to a file you pick, automatically. *Reset* exports first, then clears.

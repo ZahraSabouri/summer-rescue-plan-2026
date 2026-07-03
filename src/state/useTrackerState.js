@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isTrackableCard, todayString } from '../utils/progress'
 
-export const STORAGE_KEY = 'summer-rescue-tracker-state-v2'
-const STATE_VERSION = 2
+export const STORAGE_KEY = 'summer-rescue-tracker-state-v3'
+const STATE_VERSION = 3
+const PLAN_RESET_ID = '2026-07-04-reset'
 const LEGACY_MODULE_NOTE_PREFIX = 'summer-rescue-module-note-'
 const LEGACY_MODULE_NOTE_SUFFIX = '-v1'
-const DEFAULT_CAMPAIGN_START = '2026-07-01'
+const DEFAULT_CAMPAIGN_START = '2026-07-04'
 const DEFAULT_CAMPAIGN_END = '2026-08-18'
 const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
 
@@ -31,7 +32,7 @@ function createInitialState() {
     recentResourceIds: [],
     snapshots: {},
     settings: {
-      referenceDate: todayString(),
+      referenceDate: DEFAULT_CAMPAIGN_START,
       mat700Active: true,
       theme: 'light',
       campaignStart: DEFAULT_CAMPAIGN_START,
@@ -40,9 +41,30 @@ function createInitialState() {
       moduleExamDates: {},
       lastExportedAt: null,
       saveHintDismissed: false,
+      planResetId: PLAN_RESET_ID,
     },
     createdAt: nowIso(),
     updatedAt: nowIso(),
+  }
+}
+
+function plainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function resetStateForCurrentPlan(value) {
+  const next = createInitialState()
+  const previousSettings = plainObject(value?.settings)
+
+  return {
+    ...next,
+    moduleNotes: plainObject(value?.moduleNotes),
+    settings: {
+      ...next.settings,
+      theme: previousSettings.theme ?? next.settings.theme,
+      moduleExamDates: plainObject(previousSettings.moduleExamDates),
+      saveHintDismissed: Boolean(previousSettings.saveHintDismissed),
+    },
   }
 }
 
@@ -93,6 +115,10 @@ function pruneNotifications(notifications) {
 function normaliseState(value) {
   const fallback = createInitialState()
   if (!value || typeof value !== 'object') return fallback
+
+  if (value.version !== STATE_VERSION || value.settings?.planResetId !== PLAN_RESET_ID) {
+    return resetStateForCurrentPlan(value)
+  }
 
   return {
     ...fallback,
@@ -278,6 +304,18 @@ function buildDailySnapshot(cards) {
 
 export function useTrackerState(baseCards) {
   const [state, setState] = useState(readStoredState)
+
+  useEffect(() => {
+    if (state.version === STATE_VERSION && state.settings?.planResetId === PLAN_RESET_ID) return undefined
+    const frameId = window.requestAnimationFrame(() => {
+      setState((current) =>
+        current.version === STATE_VERSION && current.settings?.planResetId === PLAN_RESET_ID
+          ? current
+          : resetStateForCurrentPlan(current),
+      )
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [state.settings?.planResetId, state.version])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

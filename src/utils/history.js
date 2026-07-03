@@ -8,7 +8,7 @@
 
 import { addDays, isTrackableCard, toDate } from './progress'
 
-export const CAMPAIGN_START = '2026-07-01'
+export const CAMPAIGN_START = '2026-07-04'
 export const CAMPAIGN_END = '2026-08-18'
 export const EXAM_WINDOW_START = '2026-08-17'
 export const DEFAULT_SCHEDULE = {

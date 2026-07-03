@@ -89,8 +89,8 @@ export function groupBy(items, keyGetter) {
 
 export function sortCards(cards) {
   return [...cards].sort((a, b) => {
-    const dateA = a.dueDate || a.startDate || '9999-12-31'
-    const dateB = b.dueDate || b.startDate || '9999-12-31'
+    const dateA = a.dueDateTime || a.dueDate || a.startDate || '9999-12-31'
+    const dateB = b.dueDateTime || b.dueDate || b.startDate || '9999-12-31'
     if (dateA !== dateB) return dateA.localeCompare(dateB)
     return Number(a.sortOrder ?? 9999) - Number(b.sortOrder ?? 9999)
   })

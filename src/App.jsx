@@ -869,7 +869,7 @@ export default function App() {
     downloadBackup(new Date().toISOString())
     tracker.resetTrackerState()
     setSelectedCardId(null)
-    setMessage('Backup exported, then local tracker reset.')
+    setMessage('Backup exported, then local tracker reset to the July 4 plan.')
   }
 
   function renderView() {

@@ -44,9 +44,14 @@ export function Celebration({ trigger }) {
       return undefined
     }
     if (!trigger) return undefined
-    setBurst({ seed: trigger, pieces: buildPieces(trigger) })
+    const frame = window.requestAnimationFrame(() => {
+      setBurst({ seed: trigger, pieces: buildPieces(trigger) })
+    })
     const id = window.setTimeout(() => setBurst(null), 2100)
-    return () => window.clearTimeout(id)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(id)
+    }
   }, [trigger])
 
   if (!burst || typeof document === 'undefined') return null
