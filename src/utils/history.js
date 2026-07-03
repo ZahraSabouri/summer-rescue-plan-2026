@@ -6,7 +6,7 @@
 //     for the logged-hours curve (which the activity log can't reconstruct
 //     precisely). Builds real day-by-day history as the campaign runs.
 
-import { addDays, isTrackableCard, toDate } from './progress'
+import { addDays, isTrackableCard, localDateString, startOfWeek, toDate } from './progress'
 
 export const CAMPAIGN_START = '2026-07-04'
 export const CAMPAIGN_END = '2026-08-18'
@@ -19,7 +19,11 @@ export const DEFAULT_SCHEDULE = {
 
 function isoDay(value) {
   if (!value) return null
-  return String(value).slice(0, 10)
+  const text = String(value)
+  const day = text.slice(0, 10)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return day
+  const date = new Date(text)
+  return Number.isNaN(date.getTime()) ? day : localDateString(date)
 }
 
 function clampDay(day, min, max) {
@@ -152,12 +156,8 @@ export function bucketSeries(series, grain) {
       label = d.toLocaleDateString('en-GB', { month: 'short' })
     } else {
       // ISO-ish week key by Monday
-      const dow = d.getDay()
-      const offset = dow === 0 ? -6 : 1 - dow
-      const monday = new Date(d)
-      monday.setDate(d.getDate() + offset)
-      key = monday.toISOString().slice(0, 10)
-      label = monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      key = startOfWeek(point.day)
+      label = toDate(key).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     }
     buckets.set(key, { ...point, label })
   }
@@ -195,12 +195,8 @@ export function buildHoursSeries(snapshots, grain = 'day') {
       key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       label = d.toLocaleDateString('en-GB', { month: 'short' })
     } else {
-      const dow = d.getDay()
-      const offset = dow === 0 ? -6 : 1 - dow
-      const monday = new Date(d)
-      monday.setDate(d.getDate() + offset)
-      key = monday.toISOString().slice(0, 10)
-      label = monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      key = startOfWeek(point.day)
+      label = toDate(key).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     }
 
     const existing = buckets.get(key) ?? { day: key, label, logged: 0, cumulative: 0, done: 0 }

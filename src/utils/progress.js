@@ -1,5 +1,9 @@
+export function localDateString(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 export function todayString() {
-  return new Date().toISOString().slice(0, 10)
+  return localDateString(new Date())
 }
 
 export function toDate(dateString) {
@@ -23,7 +27,7 @@ export function addDays(dateString, days) {
   const date = toDate(dateString)
   if (!date) return ''
   date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  return localDateString(date)
 }
 
 export function startOfWeek(dateString) {
@@ -31,7 +35,7 @@ export function startOfWeek(dateString) {
   const day = date.getDay()
   const offset = day === 0 ? -6 : 1 - day
   date.setDate(date.getDate() + offset)
-  return date.toISOString().slice(0, 10)
+  return localDateString(date)
 }
 
 export function getWeekDays(dateString) {

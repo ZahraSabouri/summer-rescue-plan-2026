@@ -3,7 +3,7 @@ import { isTrackableCard, todayString } from '../utils/progress'
 
 export const STORAGE_KEY = 'summer-rescue-tracker-state-v3'
 const STATE_VERSION = 3
-const PLAN_RESET_ID = '2026-07-04-reset'
+const PLAN_RESET_ID = '2026-07-04-reset-local-date'
 const LEGACY_MODULE_NOTE_PREFIX = 'summer-rescue-module-note-'
 const LEGACY_MODULE_NOTE_SUFFIX = '-v1'
 const DEFAULT_CAMPAIGN_START = '2026-07-04'
@@ -32,7 +32,7 @@ function createInitialState() {
     recentResourceIds: [],
     snapshots: {},
     settings: {
-      referenceDate: DEFAULT_CAMPAIGN_START,
+      referenceDate: todayString(),
       mat700Active: true,
       theme: 'light',
       campaignStart: DEFAULT_CAMPAIGN_START,

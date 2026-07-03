@@ -2,15 +2,18 @@
 // Pure functions only — no state, no fabrication. Everything is derived from
 // the activity log, snapshots, and card fields that already exist.
 
-import { addDays, getCardDate, isOverdue, isTrackableCard, sumHours } from './progress'
+import { addDays, getCardDate, isOverdue, isTrackableCard, localDateString, sumHours } from './progress'
 import { completionDay } from './history'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
 function isoDay(value) {
   if (!value) return null
-  const day = String(value).slice(0, 10)
-  return DAY_RE.test(day) ? day : null
+  const text = String(value)
+  const day = text.slice(0, 10)
+  if (DAY_RE.test(text)) return day
+  const date = new Date(text)
+  return Number.isNaN(date.getTime()) ? (DAY_RE.test(day) ? day : null) : localDateString(date)
 }
 
 // ---------------------------------------------------------------------------

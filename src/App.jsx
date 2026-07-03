@@ -36,7 +36,7 @@ import {
   requestBackupPermission,
   writeBackupHandle,
 } from './utils/fileBackup'
-import { deriveStats, filterCards, sortCards, sumHours } from './utils/progress'
+import { deriveStats, filterCards, sortCards, sumHours, todayString } from './utils/progress'
 import { generateNotifications } from './utils/notifications'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
@@ -481,8 +481,7 @@ export default function App() {
   // a manually-set future planning date is respected). Persists via localStorage.
   useEffect(() => {
     function syncToday() {
-      const now = new Date()
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const today = todayString()
       if (today > referenceDateRef.current) updateSettingsRef.current({ referenceDate: today })
     }
     syncToday()

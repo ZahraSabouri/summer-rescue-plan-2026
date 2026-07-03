@@ -1,4 +1,4 @@
-import { addDays, formatDate, getCardDate, toDate } from './progress'
+import { addDays, formatDate, getCardDate, localDateString, toDate } from './progress'
 
 const EXAM_THRESHOLDS = new Set([45, 30, 21, 14, 7, 3, 1])
 
@@ -11,7 +11,10 @@ function dateDiff(fromISO, toISO) {
 
 function isoDate(value) {
   if (!value) return ''
-  return String(value).slice(0, 10)
+  const text = String(value)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text
+  const date = new Date(text)
+  return Number.isNaN(date.getTime()) ? text.slice(0, 10) : localDateString(date)
 }
 
 function latestBlockedStart(card, fallbackDate) {
