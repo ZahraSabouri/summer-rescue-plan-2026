@@ -55,8 +55,10 @@ export function CardDetailDrawer({
   onChecklistDelete,
   onHoursChange,
   onEvidenceAdd,
+  onEvidenceUpdate,
   onEvidenceDelete,
   onAddNote,
+  onNoteUpdate,
   onDeleteNote,
   onSaveDetails,
   onDeleteCard,
@@ -66,12 +68,18 @@ export function CardDetailDrawer({
   onOpenResource,
   onAddResource,
   onRemoveResource,
+  moduleOptions = MODULE_OPTIONS,
+  phaseOptions = PHASE_OPTIONS,
 }) {
   const [noteDraft, setNoteDraft] = useState('')
+  const [noteText, setNoteText] = useState({})
+  const [editingNoteId, setEditingNoteId] = useState(null)
   const [checklistDraft, setChecklistDraft] = useState('')
   const [checklistText, setChecklistText] = useState({})
   const [editingChecklistId, setEditingChecklistId] = useState(null)
   const [evidenceDraft, setEvidenceDraft] = useState('')
+  const [evidenceText, setEvidenceText] = useState({})
+  const [editingEvidenceId, setEditingEvidenceId] = useState(null)
   const [form, setForm] = useState(() => createForm(card))
   const [resourceQuery, setResourceQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
@@ -89,6 +97,11 @@ export function CardDetailDrawer({
     if (!card) return
     const id = window.setTimeout(() => {
       setEvidenceDraft('')
+      setEvidenceText({})
+      setEditingEvidenceId(null)
+      setNoteDraft('')
+      setNoteText({})
+      setEditingNoteId(null)
       setForm(createForm(card))
       setChecklistText(Object.fromEntries((card.checklist ?? []).map((item) => [item.id, item.text])))
       setEditingChecklistId(null)
@@ -157,8 +170,26 @@ export function CardDetailDrawer({
   }
 
   function addNote() {
-    onAddNote(card.id, noteDraft)
+    const value = noteDraft.trim()
+    if (!value) return
+    onAddNote(card.id, value)
     setNoteDraft('')
+  }
+
+  function beginNoteEdit(note) {
+    setNoteText((current) => ({ ...current, [note.id]: note.text }))
+    setEditingNoteId(note.id)
+  }
+
+  function saveNoteEdit(note) {
+    const next = noteText[note.id]?.trim()
+    if (next && next !== note.text) onNoteUpdate(card.id, note.id, next)
+    setEditingNoteId(null)
+  }
+
+  function discardNoteEdit(note) {
+    setNoteText((current) => ({ ...current, [note.id]: note.text }))
+    setEditingNoteId(null)
   }
 
   function addChecklistItem() {
@@ -187,6 +218,22 @@ export function CardDetailDrawer({
     if (!value) return
     onEvidenceAdd(card.id, value)
     setEvidenceDraft('')
+  }
+
+  function beginEvidenceEdit(item) {
+    setEvidenceText((current) => ({ ...current, [item.id]: item.text }))
+    setEditingEvidenceId(item.id)
+  }
+
+  function saveEvidenceEdit(item) {
+    const next = evidenceText[item.id]?.trim()
+    if (next && next !== item.text) onEvidenceUpdate(card.id, item.id, next)
+    setEditingEvidenceId(null)
+  }
+
+  function discardEvidenceEdit(item) {
+    setEvidenceText((current) => ({ ...current, [item.id]: item.text }))
+    setEditingEvidenceId(null)
   }
 
   function deleteCustomCard() {
@@ -226,47 +273,48 @@ export function CardDetailDrawer({
           </button>
         </header>
 
-        <section className="drawer-controls" aria-label="Card controls">
-          <label className="done-toggle">
-            <input type="checkbox" checked={card.done} onChange={() => onToggleDone(card.id)} />
-            <span>Done</span>
-          </label>
-          <label>
-            <span>Status</span>
-            <select value={card.status} onChange={(event) => onStatusChange(card.id, event.target.value)}>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Actual hours</span>
-            <input
-              type="number"
-              min="0"
-              step="0.25"
-              value={card.actualHours}
-              onChange={(event) => onHoursChange(card.id, event.target.value)}
-            />
-          </label>
-          <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
-            Start session
-          </button>
-          {overdue && (
-            <div className="reschedule-inline drawer-reschedule">
-              <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
-                Today
-              </button>
-              <button type="button" onClick={() => onReschedule?.(card.id, addDays(referenceDate, 1))}>
-                Tomorrow
-              </button>
-            </div>
-          )}
-        </section>
+        <div className="detail-drawer-content">
+          <section className="drawer-controls" aria-label="Card controls">
+            <label className="done-toggle">
+              <input type="checkbox" checked={card.done} onChange={() => onToggleDone(card.id)} />
+              <span>Done</span>
+            </label>
+            <label>
+              <span>Status</span>
+              <select value={card.status} onChange={(event) => onStatusChange(card.id, event.target.value)}>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Actual hours</span>
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={card.actualHours}
+                onChange={(event) => onHoursChange(card.id, event.target.value)}
+              />
+            </label>
+            <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
+              Start session
+            </button>
+            {overdue && (
+              <div className="reschedule-inline drawer-reschedule">
+                <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
+                  Today
+                </button>
+                <button type="button" onClick={() => onReschedule?.(card.id, addDays(referenceDate, 1))}>
+                  Tomorrow
+                </button>
+              </div>
+            )}
+          </section>
 
-        <div className="drawer-grid">
+          <div className="drawer-grid">
           <section className="drawer-section wide">
             <h3>Description</h3>
             <p>{card.description}</p>
@@ -401,35 +449,75 @@ export function CardDetailDrawer({
 
           <section className="drawer-section">
             <h3>Evidence</h3>
+            <div className="note-composer">
+              <textarea
+                value={evidenceDraft}
+                onChange={(event) => setEvidenceDraft(event.target.value)}
+                rows={5}
+                placeholder="Add another evidence link or short text"
+              />
+              <button
+                type="button"
+                className="primary-button"
+                onClick={saveEvidence}
+                disabled={!evidenceDraft.trim()}
+              >
+                Save evidence
+              </button>
+            </div>
             <div className="saved-evidence-list" aria-label="Saved evidence">
               {savedEvidenceItems.length === 0 ? (
                 <p className="muted">No evidence saved yet.</p>
               ) : (
-                savedEvidenceItems.map((item, index) => (
-                  <article key={item.id}>
-                    <span>{index + 1}</span>
-                    <p>{item.text}</p>
-                    <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
-                      Delete
-                    </button>
-                  </article>
-                ))
+                savedEvidenceItems.map((item, index) => {
+                  const editing = editingEvidenceId === item.id
+                  return (
+                    <article key={item.id} className={`evidence-item ${editing ? 'editing' : ''}`}>
+                      <span>{index + 1}</span>
+                      {editing ? (
+                        <>
+                          <textarea
+                            value={evidenceText[item.id] ?? item.text}
+                            onChange={(event) =>
+                              setEvidenceText((current) => ({ ...current, [item.id]: event.target.value }))
+                            }
+                            rows={4}
+                          />
+                          <div className="checklist-row-actions">
+                            <button
+                              type="button"
+                              className="primary-button compact-button"
+                              onClick={() => saveEvidenceEdit(item)}
+                              disabled={!evidenceText[item.id]?.trim()}
+                            >
+                              Save
+                            </button>
+                            <button type="button" className="secondary-button compact-button" onClick={() => discardEvidenceEdit(item)}>
+                              Discard
+                            </button>
+                            <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p>{item.text}</p>
+                          <div className="checklist-row-actions">
+                            <button type="button" className="text-button" onClick={() => beginEvidenceEdit(item)}>
+                              Edit
+                            </button>
+                            <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </article>
+                  )
+                })
               )}
             </div>
-            <textarea
-              value={evidenceDraft}
-              onChange={(event) => setEvidenceDraft(event.target.value)}
-              rows={5}
-              placeholder="Add another evidence link or short text"
-            />
-            <button
-              type="button"
-              className="primary-button"
-              onClick={saveEvidence}
-              disabled={!evidenceDraft.trim()}
-            >
-              Save evidence
-            </button>
           </section>
 
           <section className="drawer-section">
@@ -441,27 +529,59 @@ export function CardDetailDrawer({
                 rows={3}
                 placeholder="Add reflection, issue, decision, or next action"
               />
-              <button type="button" className="primary-button" onClick={addNote}>
+              <button type="button" className="primary-button" onClick={addNote} disabled={!noteDraft.trim()}>
                 Add note
               </button>
             </div>
             <div className="notes-list">
               {card.notes.length === 0 && <p className="muted">No notes yet.</p>}
-              {card.notes.map((note) => (
-                <article key={note.id} className="note-item">
-                  <div>
-                    <time>{formatStamp(note.at)}</time>
-                    <p>{note.text}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-button danger"
-                    onClick={() => onDeleteNote(card.id, note.id)}
-                  >
-                    Delete
-                  </button>
-                </article>
-              ))}
+              {card.notes.map((note) => {
+                const editing = editingNoteId === note.id
+                return (
+                  <article key={note.id} className={`note-item ${editing ? 'editing' : ''}`}>
+                    <div>
+                      <time>{formatStamp(note.at)}</time>
+                      {editing ? (
+                        <textarea
+                          value={noteText[note.id] ?? note.text}
+                          onChange={(event) => setNoteText((current) => ({ ...current, [note.id]: event.target.value }))}
+                          rows={3}
+                        />
+                      ) : (
+                        <p>{note.text}</p>
+                      )}
+                    </div>
+                    <div className="checklist-row-actions">
+                      {editing ? (
+                        <>
+                          <button
+                            type="button"
+                            className="primary-button compact-button"
+                            onClick={() => saveNoteEdit(note)}
+                            disabled={!noteText[note.id]?.trim()}
+                          >
+                            Save
+                          </button>
+                          <button type="button" className="secondary-button compact-button" onClick={() => discardNoteEdit(note)}>
+                            Discard
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" className="text-button" onClick={() => beginNoteEdit(note)}>
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="text-button danger"
+                        onClick={() => onDeleteNote(card.id, note.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           </section>
 
@@ -482,7 +602,7 @@ export function CardDetailDrawer({
                   <label>
                     <span>Module</span>
                     <select value={form.module} onChange={(event) => updateForm('module', event.target.value)}>
-                      {MODULE_OPTIONS.map((module) => (
+                      {moduleOptions.map((module) => (
                         <option key={module} value={module}>
                           {module}
                         </option>
@@ -492,7 +612,7 @@ export function CardDetailDrawer({
                   <label>
                     <span>Phase</span>
                     <select value={form.phase} onChange={(event) => updateForm('phase', event.target.value)}>
-                      {PHASE_OPTIONS.map((phase) => (
+                      {phaseOptions.map((phase) => (
                         <option key={phase} value={phase}>
                           {phase}
                         </option>
@@ -611,6 +731,7 @@ export function CardDetailDrawer({
               ))}
             </div>
           </section>
+          </div>
         </div>
       </aside>
     </div>

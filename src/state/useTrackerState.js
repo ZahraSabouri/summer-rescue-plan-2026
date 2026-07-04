@@ -51,6 +51,8 @@ function createInitialState() {
       campaignEnd: DEFAULT_CAMPAIGN_END,
       examWindowStart: DEFAULT_EXAM_WINDOW_START,
       moduleExamDates: {},
+      customModules: [],
+      customPhases: [],
       lastExportedAt: null,
       saveHintDismissed: false,
       planResetId: PLAN_RESET_ID,
@@ -75,6 +77,8 @@ function resetStateForCurrentPlan(value) {
       ...next.settings,
       theme: previousSettings.theme ?? next.settings.theme,
       moduleExamDates: plainObject(previousSettings.moduleExamDates),
+      customModules: Array.isArray(previousSettings.customModules) ? previousSettings.customModules : [],
+      customPhases: Array.isArray(previousSettings.customPhases) ? previousSettings.customPhases : [],
       saveHintDismissed: Boolean(previousSettings.saveHintDismissed),
     },
   }
@@ -962,6 +966,35 @@ export function useTrackerState(baseCards) {
     })
   }
 
+  function updateEvidence(cardId, evidenceId, text) {
+    const value = text.trim()
+    if (!value) return
+
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const entries = normaliseEvidenceEntries(cardId, currentCard)
+      const nextEntries = entries.map((entry) => (entry.id === evidenceId ? { ...entry, text: value } : entry))
+      if (evidenceText(nextEntries) === evidenceText(entries)) return current
+
+      const nextCard = {
+        ...currentCard,
+        evidenceEntries: nextEntries,
+        evidence: evidenceText(nextEntries),
+        activity: addActivity(currentCard, 'Edited evidence'),
+        updatedAt: nowIso(),
+      }
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      })
+    })
+  }
+
   function deleteEvidence(cardId, evidenceId) {
     setState((current) => {
       const currentCard = getCardState(current, cardId)
@@ -1003,6 +1036,34 @@ export function useTrackerState(baseCards) {
         ...currentCard,
         notes: [note, ...(currentCard.notes ?? [])],
         activity: addActivity(currentCard, 'Added note'),
+        updatedAt: nowIso(),
+      }
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      })
+    })
+  }
+
+  function updateNote(cardId, noteId, text) {
+    const value = text.trim()
+    if (!value) return
+
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const notes = currentCard.notes ?? []
+      const nextNotes = notes.map((note) => (note.id === noteId ? { ...note, text: value } : note))
+      if (nextNotes === notes || nextNotes.every((note, index) => note.text === notes[index]?.text)) return current
+
+      const nextCard = {
+        ...currentCard,
+        notes: nextNotes,
+        activity: addActivity(currentCard, 'Edited note'),
         updatedAt: nowIso(),
       }
 
@@ -1204,8 +1265,10 @@ export function useTrackerState(baseCards) {
     rescheduleCards,
     setEvidence,
     addEvidence,
+    updateEvidence,
     deleteEvidence,
     addNote,
+    updateNote,
     deleteNote,
     addCard,
     deleteCard,

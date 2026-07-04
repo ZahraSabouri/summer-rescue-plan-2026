@@ -19,7 +19,13 @@ const emptyCard = {
   tags: '',
 }
 
-export function AddCardDialog({ open, onClose, onAddCard }) {
+export function AddCardDialog({
+  open,
+  onClose,
+  onAddCard,
+  moduleOptions = MODULE_OPTIONS,
+  phaseOptions = PHASE_OPTIONS,
+}) {
   const [form, setForm] = useState(emptyCard)
 
   useEffect(() => {
@@ -63,7 +69,7 @@ export function AddCardDialog({ open, onClose, onAddCard }) {
           <label>
             <span>Module</span>
             <select value={form.module} onChange={(event) => update('module', event.target.value)}>
-              {MODULE_OPTIONS.map((module) => (
+              {moduleOptions.map((module) => (
                 <option key={module} value={module}>
                   {module}
                 </option>
@@ -73,7 +79,7 @@ export function AddCardDialog({ open, onClose, onAddCard }) {
           <label>
             <span>Phase</span>
             <select value={form.phase} onChange={(event) => update('phase', event.target.value)}>
-              {PHASE_OPTIONS.map((phase) => (
+              {phaseOptions.map((phase) => (
                 <option key={phase} value={phase}>
                   {phase}
                 </option>

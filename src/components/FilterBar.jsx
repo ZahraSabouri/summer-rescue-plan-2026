@@ -24,7 +24,13 @@ function SelectFilter({ label, value, onChange, options }) {
   )
 }
 
-export function FilterBar({ filters, setFilters, resultCount }) {
+export function FilterBar({
+  filters,
+  setFilters,
+  resultCount,
+  moduleOptions = MODULE_OPTIONS,
+  phaseOptions = PHASE_OPTIONS,
+}) {
   const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
 
   return (
@@ -43,13 +49,13 @@ export function FilterBar({ filters, setFilters, resultCount }) {
         label="Phase"
         value={filters.phase}
         onChange={(value) => update('phase', value)}
-        options={PHASE_OPTIONS}
+        options={phaseOptions}
       />
       <SelectFilter
         label="Module"
         value={filters.module}
         onChange={(value) => update('module', value)}
-        options={MODULE_OPTIONS}
+        options={moduleOptions}
       />
       <SelectFilter
         label="Priority"

@@ -763,13 +763,17 @@ button:disabled {
   width: min(920px, 100%);
   height: 100%;
   overflow-y: auto;
-  padding: 16px;
   background: var(--panel);
   box-shadow: var(--drawer-shadow);
 }
 
+.detail-drawer {
+  padding: 0;
+}
+
 .add-dialog {
   width: min(760px, 100%);
+  padding: 16px;
 }
 
 .drawer-header {
@@ -779,6 +783,17 @@ button:disabled {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
+}
+
+.detail-drawer > .drawer-header {
+  top: 0;
+  z-index: 12;
+  padding: 16px 16px 12px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--panel) 88%, transparent);
+}
+
+.detail-drawer-content {
+  padding: 16px;
 }
 
 .drawer-header h2 {
@@ -938,6 +953,35 @@ button:disabled {
 
 .note-item p {
   margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.saved-evidence-list textarea,
+.note-item textarea {
+  width: 100%;
+  min-height: 92px;
+}
+
+/* Keep the evidence/notes editors (add + inline edit) at the same size as the
+   text they render, so editing isn't oversized and cramped in the column. */
+.note-composer textarea,
+.saved-evidence-list textarea,
+.note-item textarea {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.saved-evidence-list article.editing,
+.note-item.editing {
+  align-items: start;
+}
+
+.saved-evidence-list article.editing textarea,
+.note-item.editing textarea {
+  min-height: 126px;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .edit-grid {
@@ -3054,6 +3098,61 @@ h1,
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
+}
+.taxonomy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.taxonomy-block,
+.taxonomy-block label,
+.taxonomy-list {
+  display: grid;
+  gap: 8px;
+}
+.taxonomy-block label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.taxonomy-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.taxonomy-add-row input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-ink);
+  padding: 6px 10px;
+}
+.taxonomy-list > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+.taxonomy-list input {
+  min-width: 0;
+  flex: 1;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--input-ink);
+  padding: 5px 8px;
 }
 .toggle-field {
   border-radius: 10px;

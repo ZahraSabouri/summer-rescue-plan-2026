@@ -25,7 +25,7 @@ import {
 } from './components/TrackerViews'
 import { baseCards, campaignMeta } from './data/baseCards'
 import { attachCardResourceLinks } from './data/cardResources'
-import { FILTER_DEFAULTS, VIEW_OPTIONS } from './data/constants'
+import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, VIEW_OPTIONS } from './data/constants'
 import { STUDY_MODULES, STUDY_MODULE_MAP } from './data/studyModules'
 import { useTrackerState } from './state/useTrackerState'
 import {
@@ -43,6 +43,27 @@ import { listRollingBackups, readRollingBackup, recordRollingBackup } from './ut
 const ENRICHED_BASE_CARDS = attachCardResourceLinks(baseCards, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
+
+function cleanCustomOptions(options) {
+  if (!Array.isArray(options)) return []
+  return [...new Set(options.map((option) => String(option).trim()).filter(Boolean))]
+}
+
+function mergeOptions(baseOptions, customOptions) {
+  const seen = new Set()
+  return [...baseOptions, ...cleanCustomOptions(customOptions)].filter((option) => {
+    const key = option.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function optionExists(options, value, except = '') {
+  const normalised = value.toLowerCase()
+  const excluded = except.toLowerCase()
+  return options.some((option) => option.toLowerCase() === normalised && option.toLowerCase() !== excluded)
+}
 
 const NAV_GROUPS = [
   { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
@@ -356,6 +377,10 @@ export default function App() {
   })
   const [navOpen, setNavOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [newModuleName, setNewModuleName] = useState('')
+  const [newPhaseName, setNewPhaseName] = useState('')
+  const [moduleNameEdits, setModuleNameEdits] = useState({})
+  const [phaseNameEdits, setPhaseNameEdits] = useState({})
   const [entered, setEntered] = useState(() => {
     try {
       return localStorage.getItem('srp-skip-intro') === '1'
@@ -401,6 +426,22 @@ export default function App() {
   const moduleExamDates = useMemo(
     () => tracker.state.settings.moduleExamDates ?? {},
     [tracker.state.settings.moduleExamDates],
+  )
+  const customModules = useMemo(
+    () => cleanCustomOptions(tracker.state.settings.customModules),
+    [tracker.state.settings.customModules],
+  )
+  const customPhases = useMemo(
+    () => cleanCustomOptions(tracker.state.settings.customPhases),
+    [tracker.state.settings.customPhases],
+  )
+  const moduleOptions = useMemo(
+    () => mergeOptions(MODULE_OPTIONS, customModules),
+    [customModules],
+  )
+  const phaseOptions = useMemo(
+    () => mergeOptions(PHASE_OPTIONS, customPhases),
+    [customPhases],
   )
   const lastExportedAt = tracker.state.settings.lastExportedAt
   const localFileSavedAt = tracker.localFile.savedAt
@@ -903,6 +944,87 @@ export default function App() {
     setMessage('Current state backed up, then import applied.')
   }
 
+  function addCustomModule() {
+    const value = newModuleName.trim()
+    if (!value || optionExists(moduleOptions, value)) {
+      setNewModuleName('')
+      return
+    }
+    tracker.updateSettings({ customModules: [...customModules, value] })
+    setNewModuleName('')
+  }
+
+  function deleteCustomModule(value) {
+    tracker.updateSettings({ customModules: customModules.filter((module) => module !== value) })
+    setModuleNameEdits((current) => {
+      const next = { ...current }
+      delete next[value]
+      return next
+    })
+    if (filters.module === value) setFilters((current) => ({ ...current, module: 'all' }))
+  }
+
+  function renameCustomModule(oldValue) {
+    const value = (moduleNameEdits[oldValue] ?? oldValue).trim()
+    if (!value || value === oldValue || optionExists(moduleOptions, value, oldValue)) {
+      setModuleNameEdits((current) => ({ ...current, [oldValue]: oldValue }))
+      return
+    }
+    tracker.updateSettings({ customModules: customModules.map((module) => (module === oldValue ? value : module)) })
+    tracker.cards
+      .filter((card) => card.moduleGroup === oldValue)
+      .forEach((card) => tracker.updateCardDetails(card.id, { module: value, moduleGroup: value }))
+    setModuleNameEdits((current) => {
+      const next = { ...current }
+      delete next[oldValue]
+      return next
+    })
+    if (filters.module === oldValue) setFilters((current) => ({ ...current, module: value }))
+  }
+
+  function addCustomPhase() {
+    const value = newPhaseName.trim()
+    if (!value || optionExists(phaseOptions, value)) {
+      setNewPhaseName('')
+      return
+    }
+    tracker.updateSettings({ customPhases: [...customPhases, value] })
+    setNewPhaseName('')
+  }
+
+  function deleteCustomPhase(value) {
+    tracker.updateSettings({ customPhases: customPhases.filter((phase) => phase !== value) })
+    setPhaseNameEdits((current) => {
+      const next = { ...current }
+      delete next[value]
+      return next
+    })
+    if (filters.phase === value) setFilters((current) => ({ ...current, phase: 'all' }))
+  }
+
+  function renameCustomPhase(oldValue) {
+    const value = (phaseNameEdits[oldValue] ?? oldValue).trim()
+    if (!value || value === oldValue || optionExists(phaseOptions, value, oldValue)) {
+      setPhaseNameEdits((current) => ({ ...current, [oldValue]: oldValue }))
+      return
+    }
+    tracker.updateSettings({ customPhases: customPhases.map((phase) => (phase === oldValue ? value : phase)) })
+    tracker.cards
+      .filter((card) => card.phase === oldValue)
+      .forEach((card) =>
+        tracker.updateCardDetails(card.id, {
+          phase: value,
+          phaseId: value.toLowerCase().replace(/\s+/g, '-'),
+        }),
+      )
+    setPhaseNameEdits((current) => {
+      const next = { ...current }
+      delete next[oldValue]
+      return next
+    })
+    if (filters.phase === oldValue) setFilters((current) => ({ ...current, phase: value }))
+  }
+
   function openResource(resourceId) {
     setOpenResourceId(resourceId)
     tracker.markResourceOpened(resourceId)
@@ -1233,7 +1355,15 @@ export default function App() {
           </div>
         )}
 
-        {!isStudyView && <FilterBar filters={filters} setFilters={setFilters} resultCount={visibleCards.length} />}
+        {!isStudyView && (
+          <FilterBar
+            filters={filters}
+            setFilters={setFilters}
+            resultCount={visibleCards.length}
+            moduleOptions={moduleOptions}
+            phaseOptions={phaseOptions}
+          />
+        )}
 
         <section className="view-shell" aria-label="Active planner view">
           <div className="view-anim" key={activeView}>
@@ -1317,6 +1447,108 @@ export default function App() {
             </div>
 
             <div className="settings-section">
+              <h3>Planner taxonomy</h3>
+              <div className="taxonomy-grid">
+                <div className="taxonomy-block">
+                  <label>
+                    <span>New module</span>
+                    <div className="taxonomy-add-row">
+                      <input
+                        value={newModuleName}
+                        onChange={(event) => setNewModuleName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') addCustomModule()
+                        }}
+                        placeholder="Module name"
+                      />
+                      <button type="button" className="secondary-button" onClick={addCustomModule} disabled={!newModuleName.trim()}>
+                        Add
+                      </button>
+                    </div>
+                  </label>
+                  <div className="taxonomy-list" aria-label="Custom modules">
+                    {customModules.length === 0 ? (
+                      <p className="muted">No custom modules yet.</p>
+                    ) : (
+                      customModules.map((module) => (
+                        <span key={module}>
+                          <input
+                            value={moduleNameEdits[module] ?? module}
+                            onChange={(event) =>
+                              setModuleNameEdits((current) => ({ ...current, [module]: event.target.value }))
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') renameCustomModule(module)
+                            }}
+                            aria-label={`Edit ${module}`}
+                          />
+                          <button
+                            type="button"
+                            className="secondary-button compact-button"
+                            onClick={() => renameCustomModule(module)}
+                            disabled={(moduleNameEdits[module] ?? module).trim() === module}
+                          >
+                            Save
+                          </button>
+                          <button type="button" className="text-button danger" onClick={() => deleteCustomModule(module)}>
+                            Delete
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="taxonomy-block">
+                  <label>
+                    <span>New phase</span>
+                    <div className="taxonomy-add-row">
+                      <input
+                        value={newPhaseName}
+                        onChange={(event) => setNewPhaseName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') addCustomPhase()
+                        }}
+                        placeholder="Phase name"
+                      />
+                      <button type="button" className="secondary-button" onClick={addCustomPhase} disabled={!newPhaseName.trim()}>
+                        Add
+                      </button>
+                    </div>
+                  </label>
+                  <div className="taxonomy-list" aria-label="Custom phases">
+                    {customPhases.length === 0 ? (
+                      <p className="muted">No custom phases yet.</p>
+                    ) : (
+                      customPhases.map((phase) => (
+                        <span key={phase}>
+                          <input
+                            value={phaseNameEdits[phase] ?? phase}
+                            onChange={(event) => setPhaseNameEdits((current) => ({ ...current, [phase]: event.target.value }))}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') renameCustomPhase(phase)
+                            }}
+                            aria-label={`Edit ${phase}`}
+                          />
+                          <button
+                            type="button"
+                            className="secondary-button compact-button"
+                            onClick={() => renameCustomPhase(phase)}
+                            disabled={(phaseNameEdits[phase] ?? phase).trim() === phase}
+                          >
+                            Save
+                          </button>
+                          <button type="button" className="text-button danger" onClick={() => deleteCustomPhase(phase)}>
+                            Delete
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
               <h3>Backup &amp; data</h3>
               <p className="muted">{autosaveDetail || backupStatusText}</p>
               <p className="muted">{localFileStatusText}</p>
@@ -1394,8 +1626,10 @@ export default function App() {
         onChecklistDelete={tracker.deleteChecklistItem}
         onHoursChange={tracker.setActualHours}
         onEvidenceAdd={tracker.addEvidence}
+        onEvidenceUpdate={tracker.updateEvidence}
         onEvidenceDelete={tracker.deleteEvidence}
         onAddNote={tracker.addNote}
+        onNoteUpdate={tracker.updateNote}
         onDeleteNote={tracker.deleteNote}
         onSaveDetails={tracker.updateCardDetails}
         onDeleteCard={tracker.deleteCard}
@@ -1408,6 +1642,8 @@ export default function App() {
         onOpenResource={openResource}
         onAddResource={tracker.addCardResource}
         onRemoveResource={tracker.removeCardResource}
+        moduleOptions={moduleOptions}
+        phaseOptions={phaseOptions}
       />
 
       <AddCardDialog
@@ -1417,6 +1653,8 @@ export default function App() {
           if (newCardId) setSelectedCardId(newCardId)
         }}
         onAddCard={tracker.addCard}
+        moduleOptions={moduleOptions}
+        phaseOptions={phaseOptions}
       />
 
       <CommandPalette

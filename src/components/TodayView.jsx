@@ -103,7 +103,7 @@ export function TodayView({
       <section className="today-hero panel" aria-label="Today at a glance">
         <div className="today-hero-main">
           <p className="eyebrow">{formatDate(referenceDate)}</p>
-          <h2 className="today-greeting">{greeting()}, Xar.</h2>
+          <h2 className="today-greeting">{greeting()}, Zahra.</h2>
           <p className="today-line">
             {picks.length === 0
               ? 'Nothing urgent in the queue — pick something from the board or take the win.'
