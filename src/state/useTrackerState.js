@@ -233,6 +233,38 @@ function filterResourceIdsForModule(moduleGroup, resourceIds) {
   })
 }
 
+function normaliseEvidenceEntries(cardId, cardState = {}) {
+  const source = Array.isArray(cardState.evidenceEntries)
+    ? cardState.evidenceEntries
+    : typeof cardState.evidence === 'string' && cardState.evidence.trim()
+      ? [{ id: `${cardId}-evidence-legacy-0`, text: cardState.evidence.trim(), at: cardState.updatedAt ?? '' }]
+      : []
+
+  return source
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        return {
+          id: `${cardId}-evidence-${index}`,
+          text: item.trim(),
+          at: '',
+        }
+      }
+      if (item && typeof item === 'object') {
+        return {
+          id: item.id || `${cardId}-evidence-${index}`,
+          text: String(item.text ?? '').trim(),
+          at: item.at ?? '',
+        }
+      }
+      return null
+    })
+    .filter((item) => item?.text)
+}
+
+function evidenceText(entries) {
+  return entries.map((entry) => entry.text).join('\n\n')
+}
+
 function mergeCard(baseCard, cardState = {}) {
   const edits = cardState.edits ?? {}
   const checklistState = cardState.checklist ?? {}
@@ -240,6 +272,7 @@ function mergeCard(baseCard, cardState = {}) {
   const status = cardState.status ?? edits.status ?? baseCard.status
   const done = Boolean(cardState.done || status === 'Done')
   const moduleGroup = edits.moduleGroup ?? edits.module ?? baseCard.moduleGroup
+  const evidenceEntries = normaliseEvidenceEntries(baseCard.id, cardState)
   const resourceIds = filterResourceIdsForModule(
     moduleGroup,
     [
@@ -257,7 +290,8 @@ function mergeCard(baseCard, cardState = {}) {
     status: done ? 'Done' : status,
     done,
     actualHours: Number(cardState.actualHours ?? 0),
-    evidence: cardState.evidence ?? '',
+    evidence: evidenceText(evidenceEntries),
+    evidenceEntries,
     notes: cardState.notes ?? [],
     activity: cardState.activity ?? [],
     focusSessions: cardState.focusSessions ?? [],
@@ -411,6 +445,9 @@ export function useTrackerState(baseCards) {
             }
             return current
           })
+        } else if (browserStateExistedRef.current) {
+          setState(createInitialState())
+          browserStateExistedRef.current = false
         }
 
         setLocalFile((current) => ({
@@ -891,6 +928,66 @@ export function useTrackerState(baseCards) {
     updateCard(cardId, { evidence }, 'Updated evidence')
   }
 
+  function addEvidence(cardId, text) {
+    const value = text.trim()
+    if (!value) return
+
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const entries = normaliseEvidenceEntries(cardId, currentCard)
+      const nextEntries = [
+        ...entries,
+        {
+          id: makeId(`${cardId}-evidence`),
+          at: nowIso(),
+          text: value,
+        },
+      ]
+      const nextCard = {
+        ...currentCard,
+        evidenceEntries: nextEntries,
+        evidence: evidenceText(nextEntries),
+        activity: addActivity(currentCard, 'Added evidence'),
+        updatedAt: nowIso(),
+      }
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      })
+    })
+  }
+
+  function deleteEvidence(cardId, evidenceId) {
+    setState((current) => {
+      const currentCard = getCardState(current, cardId)
+      const entries = normaliseEvidenceEntries(cardId, currentCard)
+      const nextEntries = entries.filter((entry) => entry.id !== evidenceId)
+      if (nextEntries.length === entries.length) return current
+
+      const nextCard = {
+        ...currentCard,
+        evidenceEntries: nextEntries,
+        evidence: evidenceText(nextEntries),
+        activity: addActivity(currentCard, 'Deleted evidence'),
+        updatedAt: nowIso(),
+      }
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: {
+          ...current.cards,
+          [cardId]: nextCard,
+        },
+        updatedAt: nowIso(),
+      })
+    })
+  }
+
   function addNote(cardId, text) {
     const noteText = text.trim()
     if (!noteText) return
@@ -988,6 +1085,21 @@ export function useTrackerState(baseCards) {
       })
     })
     return true
+  }
+
+  function resetCardState(cardId) {
+    setState((current) => {
+      if (!current.cards?.[cardId]) return current
+
+      const nextCards = { ...(current.cards ?? {}) }
+      delete nextCards[cardId]
+
+      return withCurrentSnapshot({
+        ...current,
+        cards: nextCards,
+        updatedAt: nowIso(),
+      })
+    })
   }
 
   function addCardResource(cardId, resourceId) {
@@ -1091,10 +1203,13 @@ export function useTrackerState(baseCards) {
     rescheduleCard,
     rescheduleCards,
     setEvidence,
+    addEvidence,
+    deleteEvidence,
     addNote,
     deleteNote,
     addCard,
     deleteCard,
+    resetCardState,
     addCardResource,
     removeCardResource,
     markResourceOpened,

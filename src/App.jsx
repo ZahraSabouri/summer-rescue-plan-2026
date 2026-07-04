@@ -492,6 +492,11 @@ export default function App() {
   }, [activeView])
 
   useEffect(() => {
+    const id = window.setTimeout(() => setSelectedCardId(null), 0)
+    return () => window.clearTimeout(id)
+  }, [activeView])
+
+  useEffect(() => {
     function onHashChange() {
       setActiveView(viewFromHash())
     }
@@ -1388,11 +1393,16 @@ export default function App() {
         onChecklistUpdate={tracker.updateChecklistItem}
         onChecklistDelete={tracker.deleteChecklistItem}
         onHoursChange={tracker.setActualHours}
-        onEvidenceChange={tracker.setEvidence}
+        onEvidenceAdd={tracker.addEvidence}
+        onEvidenceDelete={tracker.deleteEvidence}
         onAddNote={tracker.addNote}
         onDeleteNote={tracker.deleteNote}
         onSaveDetails={tracker.updateCardDetails}
         onDeleteCard={tracker.deleteCard}
+        onResetCard={(cardId) => {
+          tracker.resetCardState(cardId)
+          setMessage('Card reset to its original plan.')
+        }}
         onStartSession={setActiveTimerCardId}
         onReschedule={tracker.rescheduleCard}
         onOpenResource={openResource}

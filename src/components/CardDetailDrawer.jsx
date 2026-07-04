@@ -54,11 +54,13 @@ export function CardDetailDrawer({
   onChecklistUpdate,
   onChecklistDelete,
   onHoursChange,
-  onEvidenceChange,
+  onEvidenceAdd,
+  onEvidenceDelete,
   onAddNote,
   onDeleteNote,
   onSaveDetails,
   onDeleteCard,
+  onResetCard,
   onStartSession,
   onReschedule,
   onOpenResource,
@@ -68,7 +70,8 @@ export function CardDetailDrawer({
   const [noteDraft, setNoteDraft] = useState('')
   const [checklistDraft, setChecklistDraft] = useState('')
   const [checklistText, setChecklistText] = useState({})
-  const [evidenceDraft, setEvidenceDraft] = useState(card?.evidence ?? '')
+  const [editingChecklistId, setEditingChecklistId] = useState(null)
+  const [evidenceDraft, setEvidenceDraft] = useState('')
   const [form, setForm] = useState(() => createForm(card))
   const [resourceQuery, setResourceQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
@@ -85,9 +88,10 @@ export function CardDetailDrawer({
   useEffect(() => {
     if (!card) return
     const id = window.setTimeout(() => {
-      setEvidenceDraft(card.evidence ?? '')
+      setEvidenceDraft('')
       setForm(createForm(card))
       setChecklistText(Object.fromEntries((card.checklist ?? []).map((item) => [item.id, item.text])))
+      setEditingChecklistId(null)
       setChecklistDraft('')
       setResourceQuery('')
       setEditOpen(false)
@@ -98,6 +102,10 @@ export function CardDetailDrawer({
   const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
   const resourceModuleGroups = useMemo(() => new Set(resources.map((resource) => resource.moduleGroup)), [resources])
   const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
+  const savedEvidenceItems = useMemo(
+    () => (card?.evidenceEntries?.length ? card.evidenceEntries : card?.evidence ? [{ id: `${card.id}-legacy-evidence`, text: card.evidence }] : []),
+    [card],
+  )
   const availableResources = useMemo(() => {
     if (!card) return []
     const linked = new Set(card.resourceIds ?? [])
@@ -158,14 +166,49 @@ export function CardDetailDrawer({
     setChecklistDraft('')
   }
 
+  function beginChecklistEdit(item) {
+    setChecklistText((current) => ({ ...current, [item.id]: item.text }))
+    setEditingChecklistId(item.id)
+  }
+
+  function saveChecklistEdit(item) {
+    const next = checklistText[item.id]?.trim()
+    if (next && next !== item.text) onChecklistUpdate(card.id, item.id, next)
+    setEditingChecklistId(null)
+  }
+
+  function discardChecklistEdit(item) {
+    setChecklistText((current) => ({ ...current, [item.id]: item.text }))
+    setEditingChecklistId(null)
+  }
+
+  function saveEvidence() {
+    const value = evidenceDraft.trim()
+    if (!value) return
+    onEvidenceAdd(card.id, value)
+    setEvidenceDraft('')
+  }
+
   function deleteCustomCard() {
     const confirmed = window.confirm('Delete this custom card? This cannot be undone.')
     if (!confirmed) return
     if (onDeleteCard?.(card.id)) onClose()
   }
 
+  function resetCard() {
+    const confirmed = window.confirm('Reset this card to its original plan? This clears checklist progress, evidence, notes, activity, resources, hours, status, and edited details for this card.')
+    if (!confirmed) return
+    onResetCard?.(card.id)
+  }
+
   return (
-    <div className="drawer-shell" role="presentation">
+    <div
+      className="drawer-shell"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <aside className="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
         <header className="drawer-header">
           <div>
@@ -288,29 +331,58 @@ export function CardDetailDrawer({
               Checklist <span>{doneItems}/{card.checklist.length}</span>
             </h3>
             <div className="checklist editable">
-              {card.checklist.map((item) => (
-                <div key={item.id} className="checklist-edit-row">
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => onChecklistToggle(card.id, item.id)}
-                    aria-label={`Toggle ${item.text}`}
-                  />
-                  <input
-                    value={checklistText[item.id] ?? item.text}
-                    onChange={(event) =>
-                      setChecklistText((current) => ({ ...current, [item.id]: event.target.value }))
-                    }
-                    onBlur={() => {
-                      const next = checklistText[item.id]?.trim()
-                      if (next && next !== item.text) onChecklistUpdate(card.id, item.id, next)
-                    }}
-                  />
-                  <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
-                    Delete
-                  </button>
-                </div>
-              ))}
+              {card.checklist.map((item) => {
+                const editing = editingChecklistId === item.id
+                return (
+                  <div key={item.id} className={`checklist-edit-row${editing ? ' editing' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={() => onChecklistToggle(card.id, item.id)}
+                      aria-label={`Toggle ${item.text}`}
+                    />
+                    {editing ? (
+                      <>
+                        <input
+                          value={checklistText[item.id] ?? item.text}
+                          onChange={(event) =>
+                            setChecklistText((current) => ({ ...current, [item.id]: event.target.value }))
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') saveChecklistEdit(item)
+                            if (event.key === 'Escape') discardChecklistEdit(item)
+                          }}
+                        />
+                        <div className="checklist-row-actions">
+                          <button type="button" className="secondary-button compact-button" onClick={() => saveChecklistEdit(item)}>
+                            Save
+                          </button>
+                          <button type="button" className="ghost-button compact-button" onClick={() => discardChecklistEdit(item)}>
+                            Discard
+                          </button>
+                          <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className="checklist-text-button" onClick={() => beginChecklistEdit(item)}>
+                          {item.text}
+                        </button>
+                        <div className="checklist-row-actions">
+                          <button type="button" className="secondary-button compact-button" onClick={() => beginChecklistEdit(item)}>
+                            Edit
+                          </button>
+                          <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
             </div>
             <div className="checklist-add">
               <input
@@ -329,16 +401,32 @@ export function CardDetailDrawer({
 
           <section className="drawer-section">
             <h3>Evidence</h3>
+            <div className="saved-evidence-list" aria-label="Saved evidence">
+              {savedEvidenceItems.length === 0 ? (
+                <p className="muted">No evidence saved yet.</p>
+              ) : (
+                savedEvidenceItems.map((item, index) => (
+                  <article key={item.id}>
+                    <span>{index + 1}</span>
+                    <p>{item.text}</p>
+                    <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
+                      Delete
+                    </button>
+                  </article>
+                ))
+              )}
+            </div>
             <textarea
               value={evidenceDraft}
               onChange={(event) => setEvidenceDraft(event.target.value)}
               rows={5}
-              placeholder="Evidence link or short text"
+              placeholder="Add another evidence link or short text"
             />
             <button
               type="button"
               className="primary-button"
-              onClick={() => onEvidenceChange(card.id, evidenceDraft)}
+              onClick={saveEvidence}
+              disabled={!evidenceDraft.trim()}
             >
               Save evidence
             </button>
@@ -506,7 +594,12 @@ export function CardDetailDrawer({
           </section>
 
           <section className="drawer-section wide">
-            <h3>Activity</h3>
+            <h3>
+              Activity
+              <button type="button" className="ghost-button danger-ghost" onClick={resetCard}>
+                Reset card
+              </button>
+            </h3>
             <div className="activity-log">
               {card.activity.length === 0 && <p className="muted">No activity yet.</p>}
               {card.activity.map((entry) => (
