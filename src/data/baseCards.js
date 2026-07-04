@@ -130,6 +130,75 @@ export const baseCards = [
     ]
   },
   {
+    "id": "card-126",
+    "number": 126,
+    "sortOrder": 4.1,
+    "title": "PROJECT — Message group chat: schedule practice-exercise meeting",
+    "module": "Group Project",
+    "moduleGroup": "Group Project",
+    "phase": "Phase 2",
+    "phaseId": "phase-2",
+    "sourceList": "Today",
+    "status": "Today",
+    "priority": "Critical",
+    "slotType": "Flex",
+    "slotLabel": "Sat 4 Jul or Sun 5 Jul (15m)",
+    "startDate": "2026-07-04",
+    "dueDate": "2026-07-04",
+    "dueDateTime": "2026-07-04 21:00",
+    "estimatedHours": 0.25,
+    "description": "Send a short group-chat message to schedule the CMT501 GitLab e-voting practice exercise from the 2 Jul session. Keep it concrete: offer 2-3 slots, state the exercise goal, and ask which Tuesday GitLab repo the team will share.",
+    "checklist": [
+      "Propose 2-3 time slots for a short call/meet this week",
+      "State the goal: GitLab e-voting practice exercise from the 2 Jul session",
+      "Ask whose Tuesday GitLab repo the team will share"
+    ],
+    "evidenceRequirement": "screenshot or copied text of the group-chat message",
+    "doneCondition": "message sent with slots, goal, and repo-owner question",
+    "trackerNotes": "Sources: 2 Jul Student Futures and Teamwork with GitLab transcript around GitLab practice; 2 Jul Team and Project Selections transcript for assessment expectations.",
+    "tags": [
+      "project",
+      "gitlab",
+      "fixed"
+    ]
+  },
+  {
+    "id": "card-127",
+    "number": 127,
+    "sortOrder": 4.2,
+    "title": "PROJECT — Team meeting: plan e-voting GitLab practice",
+    "module": "Group Project",
+    "moduleGroup": "Group Project",
+    "phase": "Phase 2",
+    "phaseId": "phase-2",
+    "sourceList": "This Week",
+    "status": "This Week",
+    "priority": "High",
+    "slotType": "Flex",
+    "slotLabel": "Week of 6 Jul: 1h meeting + up to 2h own issue",
+    "startDate": "2026-07-05",
+    "dueDate": "2026-07-10",
+    "dueDateTime": "2026-07-10 18:00",
+    "estimatedHours": 3,
+    "description": "Run a focused team meeting for the CMT501 e-voting GitLab practice. The aim is process evidence, not building the whole system alone: one shared repo, one small issue per person, branch, merge request, teammate review, and screenshots for report Section 2.",
+    "checklist": [
+      "Pick one member's repo; owner invites everyone",
+      "Create at least 4 issues + milestone \"iteration one\"",
+      "Use the simplest version: one constituency, parties only, capture votes, D'Hondt seat calculation, report",
+      "Assign one small issue per person",
+      "Each person: branch -> implement -> merge request -> teammate reviews/approves -> merge",
+      "Save screenshots of the board and merge requests as direct evidence for report Section 2"
+    ],
+    "evidenceRequirement": "meeting note + GitLab board/MR screenshots + your one small issue branch/MR",
+    "doneCondition": "team has a repo, milestone/issues, one small assignment each, and evidence saved",
+    "trackerNotes": "Sources: Lecture - 02.07.2026 (Student Futures and Teamwork with Gitlab).txt, around 33:00-46:00 and 1:23:00-1:26:00; Lecture - 02.07.2026 (Team and Project Selections).txt.",
+    "tags": [
+      "project",
+      "gitlab",
+      "evidence"
+    ]
+  },
+  {
     "id": "card-005",
     "number": 5,
     "sortOrder": 5,
@@ -3971,6 +4040,6 @@ export const campaignMeta = {
   title: 'Summer Rescue Campaign 2026',
   runway: '2026-07-04 to 2026-08-18',
   generatedFrom: 'trello_import.csv',
-  cardCount: 125,
+  cardCount: 127,
   includesWeeklyWatch: true,
 }

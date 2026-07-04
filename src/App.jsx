@@ -45,7 +45,7 @@ const ENRICHED_BASE_CARDS = attachCardResourceLinks(baseCards, STUDY_MODULES)
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
 
 const NAV_GROUPS = [
-  { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'mat700'] },
+  { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
   { label: 'Planning', items: ['dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
   { label: 'Focus', items: ['rescue', 'project', 'admin'] },
@@ -58,6 +58,7 @@ const VIEW_META = {
   progress: { title: 'Progress', subtitle: 'Trajectory, streaks, and burn-down.' },
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
+  'team-project': { title: 'Team Project', subtitle: 'CMT501 teamwork, GitLab practice, and report evidence.' },
   mat700: { title: 'Mathematical Methods for Data Mining', subtitle: 'Data mining — kept warm as insurance.' },
   board: { title: 'Columns', subtitle: 'Status board across every lane.' },
   table: { title: 'Table', subtitle: 'Dense, editable card grid.' },
@@ -121,6 +122,15 @@ function Icon({ name }) {
       break
     case 'time-series':
       body = <path {...p} d="M3 12h3l2-6 4 12 3-8 1.5 3H21" />
+      break
+    case 'team-project':
+      body = (
+        <>
+          <path {...p} d="M21 8l-9-5-9 5v8l9 5 9-5V8Z" />
+          <path {...p} d="M3 8l9 5 9-5M12 13v8" />
+          <path {...p} d="M8 15l4 2 4-2" />
+        </>
+      )
       break
     case 'mat700':
       body = (
@@ -288,6 +298,10 @@ function formatExportStamp(value) {
   }).format(new Date(value))
 }
 
+function latestStamp(...values) {
+  return values.filter(Boolean).sort().at(-1) ?? null
+}
+
 function buildTrackerBackupPayload(state, snapshots, exportedAt) {
   return {
     exportedAt,
@@ -389,14 +403,27 @@ export default function App() {
     [tracker.state.settings.moduleExamDates],
   )
   const lastExportedAt = tracker.state.settings.lastExportedAt
-  const lastBackupAt =
-    !lastExportedAt ? autosaveSavedAt : !autosaveSavedAt ? lastExportedAt : autosaveSavedAt > lastExportedAt ? autosaveSavedAt : lastExportedAt
+  const localFileSavedAt = tracker.localFile.savedAt
+  const localFileActive = ['ready', 'saved', 'saving'].includes(tracker.localFile.status)
+  const lastBackupAt = latestStamp(lastExportedAt, autosaveSavedAt, localFileSavedAt)
   const unsavedSinceBackup = !lastBackupAt || tracker.state.updatedAt > lastBackupAt
   const backupStatusText = unsavedSinceBackup
     ? 'Unsaved since backup'
-    : autosaveSavedAt === lastBackupAt
+    : localFileSavedAt === lastBackupAt
+      ? `Local file saved ${formatExportStamp(localFileSavedAt)}`
+      : autosaveSavedAt === lastBackupAt
       ? `Autosaved ${formatExportStamp(autosaveSavedAt)}`
       : `Exported ${formatExportStamp(lastExportedAt)}`
+  const localFileStatusText =
+    tracker.localFile.status === 'checking'
+      ? 'Local state file: checking'
+      : tracker.localFile.status === 'unavailable'
+        ? 'Local state file unavailable; browser storage still works.'
+        : tracker.localFile.status === 'error'
+          ? `Local state file error: ${tracker.localFile.error}`
+          : tracker.localFile.status === 'saving'
+            ? `Saving ${tracker.localFile.path}`
+            : `Local state file: ${tracker.localFile.path}`
   const autosaveButtonLabel = !autosaveSupported
     ? 'Autosave unavailable'
     : autosaveStatus === 'connecting'
@@ -405,12 +432,14 @@ export default function App() {
         ? 'Change autosave file'
         : 'Choose autosave file'
   const saveButtonLabel =
-    autosaveStatus === 'writing'
+    tracker.localFile.status === 'saving' || autosaveStatus === 'writing'
       ? 'Saving...'
       : !unsavedSinceBackup && lastBackupAt
         ? `Saved ${formatExportStamp(lastBackupAt)}`
         : 'Save'
-  const saveButtonDetail = !autosaveSupported
+  const saveButtonDetail = localFileActive
+    ? 'Local file'
+    : !autosaveSupported
     ? 'Exports JSON'
     : autosaveHandle
       ? backupStatusText
@@ -595,7 +624,7 @@ export default function App() {
     [],
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
-  const isStudyView = ['today', 'hub', 'aml', 'time-series', 'mat700'].includes(activeView)
+  const isStudyView = ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
 
   const viewMeta = VIEW_META[activeView] ?? { title: LABEL_BY_ID[activeView] ?? 'View', subtitle: '' }
   const doneCount = useMemo(() => tracker.cards.filter((card) => card.done).length, [tracker.cards])
@@ -734,6 +763,23 @@ export default function App() {
   }
 
   async function saveNow() {
+    if (tracker.localFile.status === 'saving') {
+      setMessage('Local file save already running.')
+      return
+    }
+
+    if (tracker.localFile.status !== 'checking' && tracker.localFile.status !== 'unavailable') {
+      try {
+        await tracker.saveLocalFileNow()
+        setMessage(`Saved local tracker file: ${tracker.localFile.path}`)
+        return
+      } catch (error) {
+        console.error(error)
+        setMessage('Local file save failed. Use Export JSON or choose an autosave file as a fallback.')
+        return
+      }
+    }
+
     if (!autosaveSupported) {
       exportBackup()
       return
@@ -898,7 +944,7 @@ export default function App() {
         />
       )
     }
-    if (activeView === 'aml' || activeView === 'time-series' || activeView === 'mat700') {
+    if (STUDY_MODULE_MAP[activeView]) {
       return (
           <ModuleWorkspace
             key={activeView}
@@ -1175,7 +1221,7 @@ export default function App() {
 
         {!tracker.state.settings.saveHintDismissed && (
           <div className="save-hint" role="status">
-            <span>Your progress autosaves in this browser. Click Save to also keep a file copy in your campaign folder.</span>
+            <span>Progress autosaves to the local state file when the dev server is running, and also in this browser. Export JSON remains available in Settings.</span>
             <button type="button" className="text-button" onClick={() => tracker.updateSettings({ saveHintDismissed: true })}>
               Dismiss
             </button>
@@ -1268,6 +1314,7 @@ export default function App() {
             <div className="settings-section">
               <h3>Backup &amp; data</h3>
               <p className="muted">{autosaveDetail || backupStatusText}</p>
+              <p className="muted">{localFileStatusText}</p>
               <div className="settings-actions">
                 <button type="button" className="secondary-button" onClick={exportBackup}>
                   Export JSON

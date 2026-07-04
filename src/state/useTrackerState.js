@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  LOCAL_STATE_FILE_LABEL,
+  readLocalTrackerStateFile,
+  writeLocalTrackerStateFile,
+} from '../utils/localStateFile'
 import { isTrackableCard, todayString } from '../utils/progress'
 
 export const STORAGE_KEY = 'summer-rescue-tracker-state-v3'
@@ -9,6 +14,13 @@ const LEGACY_MODULE_NOTE_SUFFIX = '-v1'
 const DEFAULT_CAMPAIGN_START = '2026-07-04'
 const DEFAULT_CAMPAIGN_END = '2026-08-18'
 const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
+const RESOURCE_PREFIXES_BY_MODULE = {
+  'Applied ML': ['aml-', 'amlPlan-'],
+  'Time Series': ['timeSeries-', 'timeSeriesPlan-'],
+  MAT700: ['mat700-', 'mat700Plan-'],
+  'Group Project': ['teamProject-'],
+}
+const MANAGED_RESOURCE_PREFIXES = Object.values(RESOURCE_PREFIXES_BY_MODULE).flat()
 
 function makeId(prefix = 'item') {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -168,23 +180,31 @@ function clearLegacyModuleNotes() {
   keys.forEach((key) => window.localStorage.removeItem(key))
 }
 
-function readStoredState() {
-  if (typeof window === 'undefined') return createInitialState()
+function readStoredStateSnapshot() {
+  if (typeof window === 'undefined') {
+    return { state: createInitialState(), browserStateExisted: false }
+  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     const state = raw ? normaliseState(JSON.parse(raw)) : createInitialState()
     return {
-      ...state,
-      moduleNotes: {
-        ...readLegacyModuleNotes(),
-        ...(state.moduleNotes ?? {}),
+      state: {
+        ...state,
+        moduleNotes: {
+          ...readLegacyModuleNotes(),
+          ...(state.moduleNotes ?? {}),
+        },
       },
+      browserStateExisted: Boolean(raw),
     }
   } catch (error) {
     console.warn('Could not read tracker state:', error)
     return {
-      ...createInitialState(),
-      moduleNotes: readLegacyModuleNotes(),
+      state: {
+        ...createInitialState(),
+        moduleNotes: readLegacyModuleNotes(),
+      },
+      browserStateExisted: false,
     }
   }
 }
@@ -203,19 +223,33 @@ function getCardState(state, cardId) {
   return state.cards[cardId] ?? {}
 }
 
+function filterResourceIdsForModule(moduleGroup, resourceIds) {
+  const allowedPrefixes = RESOURCE_PREFIXES_BY_MODULE[moduleGroup]
+  if (!allowedPrefixes) return resourceIds
+
+  return resourceIds.filter((id) => {
+    const managed = MANAGED_RESOURCE_PREFIXES.some((prefix) => id.startsWith(prefix))
+    return !managed || allowedPrefixes.some((prefix) => id.startsWith(prefix))
+  })
+}
+
 function mergeCard(baseCard, cardState = {}) {
   const edits = cardState.edits ?? {}
   const checklistState = cardState.checklist ?? {}
   const sourceChecklist = normaliseChecklistItems(baseCard.id, edits.checklist ?? baseCard.checklist ?? [])
   const status = cardState.status ?? edits.status ?? baseCard.status
   const done = Boolean(cardState.done || status === 'Done')
-  const resourceIds = [
-    ...new Set([
-      ...(baseCard.resourceIds ?? []),
-      ...(edits.resourceIds ?? []),
-      ...(cardState.resourceIds ?? []),
-    ]),
-  ].filter((id) => !(cardState.hiddenResourceIds ?? []).includes(id))
+  const moduleGroup = edits.moduleGroup ?? edits.module ?? baseCard.moduleGroup
+  const resourceIds = filterResourceIdsForModule(
+    moduleGroup,
+    [
+      ...new Set([
+        ...(baseCard.resourceIds ?? []),
+        ...(edits.resourceIds ?? []),
+        ...(cardState.resourceIds ?? []),
+      ]),
+    ].filter((id) => !(cardState.hiddenResourceIds ?? []).includes(id)),
+  )
 
   return {
     ...baseCard,
@@ -303,7 +337,43 @@ function buildDailySnapshot(cards) {
 }
 
 export function useTrackerState(baseCards) {
-  const [state, setState] = useState(readStoredState)
+  const [initialSnapshot] = useState(readStoredStateSnapshot)
+  const [state, setState] = useState(initialSnapshot.state)
+  const browserStateExistedRef = useRef(initialSnapshot.browserStateExisted)
+  const localFileTimerRef = useRef(null)
+  const [localFile, setLocalFile] = useState({
+    status: 'checking',
+    savedAt: null,
+    path: LOCAL_STATE_FILE_LABEL,
+    error: '',
+  })
+
+  const withCurrentSnapshot = useCallback(
+    (nextState) => {
+      const snapshotCards = [...baseCards, ...nextState.addedCards].map((card) =>
+        mergeCard(card, nextState.cards[card.id]),
+      )
+      const today = todayString()
+      const snap = buildDailySnapshot(snapshotCards)
+      const existing = nextState.snapshots?.[today]
+      if (
+        existing &&
+        existing.done === snap.done &&
+        existing.total === snap.total &&
+        existing.loggedHours === snap.loggedHours
+      ) {
+        return nextState
+      }
+      return {
+        ...nextState,
+        snapshots: {
+          ...(nextState.snapshots ?? {}),
+          [today]: snap,
+        },
+      }
+    },
+    [baseCards],
+  )
 
   useEffect(() => {
     if (state.version === STATE_VERSION && state.settings?.planResetId === PLAN_RESET_ID) return undefined
@@ -321,6 +391,48 @@ export function useTrackerState(baseCards) {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    let cancelled = false
+
+    readLocalTrackerStateFile()
+      .then((payload) => {
+        if (cancelled) return
+        const incoming = payload?.state ?? payload
+
+        if (incoming) {
+          setState((current) => {
+            const fileState = normaliseState(incoming)
+            const fileUpdatedAt = String(fileState.updatedAt ?? '')
+            const currentUpdatedAt = String(current.updatedAt ?? '')
+            if (!browserStateExistedRef.current || fileUpdatedAt > currentUpdatedAt) {
+              return withCurrentSnapshot(fileState)
+            }
+            return current
+          })
+        }
+
+        setLocalFile((current) => ({
+          ...current,
+          status: 'ready',
+          error: '',
+        }))
+      })
+      .catch((error) => {
+        if (cancelled) return
+        console.warn('Local tracker file unavailable:', error)
+        setLocalFile((current) => ({
+          ...current,
+          status: 'unavailable',
+          error: error.message,
+        }))
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [withCurrentSnapshot])
 
   const cards = useMemo(() => {
     const combinedBaseCards = [...baseCards, ...state.addedCards]
@@ -345,29 +457,52 @@ export function useTrackerState(baseCards) {
     }
   }, [cards, state.snapshots])
 
-  function withCurrentSnapshot(nextState) {
-    const snapshotCards = [...baseCards, ...nextState.addedCards].map((card) =>
-      mergeCard(card, nextState.cards[card.id]),
-    )
-    const today = todayString()
-    const snap = buildDailySnapshot(snapshotCards)
-    const existing = nextState.snapshots?.[today]
-    if (
-      existing &&
-      existing.done === snap.done &&
-      existing.total === snap.total &&
-      existing.loggedHours === snap.loggedHours
-    ) {
-      return nextState
+  const saveLocalFileNow = useCallback(async () => {
+    const exportedAt = nowIso()
+    setLocalFile((current) => ({ ...current, status: 'saving', error: '' }))
+
+    try {
+      const result = await writeLocalTrackerStateFile({
+        exportedAt,
+        app: 'summer-rescue-plan-app',
+        state: {
+          ...state,
+          snapshots,
+        },
+      })
+      setLocalFile((current) => ({
+        ...current,
+        status: 'saved',
+        savedAt: result.savedAt ?? exportedAt,
+        error: '',
+      }))
+      return result
+    } catch (error) {
+      setLocalFile((current) => ({
+        ...current,
+        status: 'error',
+        error: error.message,
+      }))
+      throw error
     }
-    return {
-      ...nextState,
-      snapshots: {
-        ...(nextState.snapshots ?? {}),
-        [today]: snap,
-      },
+  }, [snapshots, state])
+
+  useEffect(() => {
+    const canWrite = localFile.status === 'ready' || localFile.status === 'saved'
+    const savedAt = localFile.savedAt ?? ''
+    if (!canWrite || (savedAt && state.updatedAt <= savedAt)) return undefined
+
+    if (localFileTimerRef.current) window.clearTimeout(localFileTimerRef.current)
+    localFileTimerRef.current = window.setTimeout(() => {
+      saveLocalFileNow().catch(() => {
+        /* status already records the failure */
+      })
+    }, 800)
+
+    return () => {
+      if (localFileTimerRef.current) window.clearTimeout(localFileTimerRef.current)
     }
-  }
+  }, [localFile.savedAt, localFile.status, saveLocalFileNow, state.updatedAt])
 
   function updateSettings(patch) {
     setState((current) => ({
@@ -966,6 +1101,8 @@ export function useTrackerState(baseCards) {
     toggleResourceProgress,
     importTrackerState,
     resetTrackerState,
+    localFile,
+    saveLocalFileNow,
     storageKey: STORAGE_KEY,
   }
 }

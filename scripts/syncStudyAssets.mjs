@@ -13,6 +13,7 @@ const SOURCE_FOLDERS = {
   aml: 'CMT307 Applied Machine Learning',
   timeSeries: 'MA4508 Time Series',
   mat700: 'MAT700 Mathematical Methods for Data Mining',
+  teamProject: 'CMT501 Team Project',
   amlPlan: 'Summer_Rescue_Campaign_2026/Module_Plans/CMT307',
   timeSeriesPlan: 'Summer_Rescue_Campaign_2026/Module_Plans/MAT508',
   mat700Plan: 'Summer_Rescue_Campaign_2026/Module_Plans/MAT700',

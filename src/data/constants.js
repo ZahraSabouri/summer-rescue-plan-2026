@@ -45,6 +45,7 @@ export const TAG_OPTIONS = [
   'evidence',
   'fixed',
   'date-watch',
+  'gitlab',
 ]
 
 export const VIEW_OPTIONS = [
@@ -54,6 +55,7 @@ export const VIEW_OPTIONS = [
   { id: 'progress', label: 'Progress' },
   { id: 'aml', label: 'Applied ML' },
   { id: 'time-series', label: 'Time Series' },
+  { id: 'team-project', label: 'Team Project' },
   { id: 'mat700', label: 'Data Mining' },
   { id: 'board', label: 'Columns' },
   { id: 'table', label: 'Table' },

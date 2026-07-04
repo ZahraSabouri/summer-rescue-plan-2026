@@ -96,12 +96,13 @@ export function CardDetailDrawer({
   }, [card])
 
   const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
+  const resourceModuleGroups = useMemo(() => new Set(resources.map((resource) => resource.moduleGroup)), [resources])
   const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
   const availableResources = useMemo(() => {
     if (!card) return []
     const linked = new Set(card.resourceIds ?? [])
     const query = resourceQuery.trim().toLowerCase()
-    const restrictToStudyModule = ['Applied ML', 'Time Series', 'MAT700'].includes(card.moduleGroup)
+    const restrictToStudyModule = resourceModuleGroups.has(card.moduleGroup)
     return resources
       .filter((resource) => {
         if (linked.has(resource.id)) return false
@@ -113,7 +114,7 @@ export function CardDetailDrawer({
           .includes(query)
       })
       .slice(0, 8)
-  }, [card, resourceQuery, resources])
+  }, [card, resourceModuleGroups, resourceQuery, resources])
 
   if (!card || !form) return null
 

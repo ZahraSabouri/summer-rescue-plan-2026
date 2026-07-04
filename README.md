@@ -1,8 +1,8 @@
 # Summer Rescue Plan
 
 A calm, single-page study **command center** for the 2026 summer exam-recovery campaign — built for the
-**Cardiff University · MSc Data Science & Analytics** summer exams window. It unifies a planning tracker, three
-module workspaces, progress analytics, an evidence log, and a built-in study timer into one local-first app.
+**Cardiff University · MSc Data Science & Analytics** summer exams window. It unifies a planning tracker, CMT501
+project work, module workspaces, progress analytics, an evidence log, and a built-in study timer into one local-first app.
 
 > Cardiff University branding uses an **original placeholder crest** at `public/cardiff-logo.svg` (not an
 > official mark). To show the real logo, replace that single file — keep the same name — with Cardiff's
@@ -27,12 +27,13 @@ module workspaces, progress analytics, an evidence log, and a built-in study tim
 
 ## What it does
 
-The campaign runs three exam lanes, each with its own workspace and priority weight:
+The campaign runs three exam lanes plus a CMT501 project workspace:
 
 | Lane | Module | Focus | Weight |
 | --- | --- | --- | --- |
 | Applied ML | CMT307 | Lab-first, practical — the priority module | 40% |
 | Time Series | MAT508 | Repeated exam-template drills | 35% |
+| Team Project | CMT501 | GitLab teamwork, e-voting practice, and report evidence | Project |
 | Data Mining | MAT700 (*Mathematical Methods for Data Mining*) | Kept warm as insurance | 25% |
 
 Everything is driven by a card-based tracker (planning tasks with status, checklist, evidence, notes, and
@@ -44,8 +45,8 @@ logged hours) plus curated study resources surfaced per module.
 - **Plain CSS with design tokens** (`src/index.css` variables + `src/App.css`) — no Tailwind/CSS framework.
 - **Google Fonts**: Fraunces (serif display), Manrope (UI), Space Grotesk (numerals). Loaded via `<link>` in
   `index.html`; falls back to system fonts if offline.
-- **No backend, no database.** All state lives in the browser (`localStorage`) with optional file-based backup
-  via the File System Access API.
+- **Local-first storage.** When served by Vite, tracker state autosaves to `local-data/summer-rescue-tracker-state.json`
+  and mirrors into browser `localStorage`; optional JSON export/import and Chromium file autosave remain available.
 - **Zero runtime dependencies** beyond `react` / `react-dom`. Charts, icons, and the timer are hand-built SVG —
   nothing to audit or update.
 
@@ -89,7 +90,7 @@ summer-rescue-plan-app/
 │  │  ├─ baseCards.js         # seed planning cards (generated from trello_import.csv)
 │  │  ├─ studyModules.js      # module definitions + curated resource lists
 │  │  └─ constants.js         # view options, statuses, modules, filters
-│  ├─ state/useTrackerState.js# reducer/hooks over localStorage
+│  ├─ state/useTrackerState.js# reducer/hooks over local file + localStorage
 │  └─ utils/                  # progress math, activity history, file backup, links
 └─ public/study-assets/       # local copies of the resources the app links to
 ```
@@ -98,20 +99,23 @@ summer-rescue-plan-app/
 
 - **Cards** (`src/data/baseCards.js`): each has `id`, `title`, `module` / `moduleGroup`, `phase`, `priority`,
   `status`, `done`, `checklist`, `evidence`, `notes`, `estimateHours` / `actualHours`, `tags`, and dates.
-- **Persistence**: `localStorage["summer-rescue-tracker-state-v3"]` holds progress for the July 4 reset — card
-  overrides, added cards, settings, and daily snapshots. Nothing leaves the machine.
+- **Persistence**: the Vite dev/preview server writes `local-data/summer-rescue-tracker-state.json` automatically.
+  The browser also mirrors the same state to `localStorage["summer-rescue-tracker-state-v3"]` for fast startup and
+  offline resilience. Nothing leaves the machine.
 - Additional UI keys: `srp-nav-collapsed` (sidebar), `srp-skip-intro` (landing screen).
 - **Backups**: *Export JSON* downloads a full snapshot; *Import JSON* restores one; *Choose autosave file*
   (Chromium browsers) writes changes to a file you pick, automatically. *Reset* exports first, then clears.
+- **Daily safety copies**: the app keeps the latest few daily snapshots in browser `localStorage` so a bad import or
+  accidental reset can be previewed and restored.
 
 > `moduleGroup: "MAT700"` is the internal key used for filtering and must stay as-is; the module is only
 > *displayed* as "Data Mining" / "Mathematical Methods for Data Mining".
 
 ## Feature guide (how to use)
 
-**Landing screen** — on load you get a mission briefing with the exam countdown, campaign progress, and the
-three lanes. Click a lane to jump straight in, *Enter workspace* for the full app, or tick *Skip this screen
-next time*.
+**Landing screen** — on load you get a mission briefing with the exam countdown, campaign progress, the exam
+lanes, and Team Project. Click a lane to jump straight in, *Enter workspace* for the full app, or tick *Skip
+this screen next time*.
 
 **Sidebar** — grouped navigation (Study / Planning / Board / Focus). Collapse it with the button at the
 bottom (state is remembered); on narrow screens it becomes a slide-out menu. The footer shows live campaign

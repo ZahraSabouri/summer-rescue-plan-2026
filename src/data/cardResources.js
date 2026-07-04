@@ -27,6 +27,7 @@ function uniqueLimited(ids, limit = 10) {
 function moduleForCard(card, modules) {
   if (card.moduleGroup === 'Applied ML') return modules.find((module) => module.id === 'aml')
   if (card.moduleGroup === 'Time Series') return modules.find((module) => module.id === 'time-series')
+  if (card.moduleGroup === 'Group Project') return modules.find((module) => module.id === 'team-project')
   if (card.moduleGroup === 'MAT700') return modules.find((module) => module.id === 'mat700')
   return null
 }
@@ -135,6 +136,28 @@ function mat700Links(card, resources, text) {
   return uniqueLimited(ids)
 }
 
+function teamProjectLinks(card, resources, text) {
+  const ids = []
+
+  if (includesAny(text, ['2 jul', '2 july', 'missed', 'catch up', 'assessment expectations', 'project selections'])) {
+    pushMatches(ids, resources, (resource) => resource.group === 'Transcripts' && /2 Jul/i.test(resource.title), 4)
+    pushMatches(ids, resources, (resource) => resource.group === 'Module admin' || resource.group === 'Assessment', 4)
+  }
+  if (includesAny(text, ['gitlab', 'git lab', 'issue', 'milestone', 'merge request', 'branch', 'review', 'repo'])) {
+    pushMatches(ids, resources, (resource) => resource.group === 'Session 2' || /GitLab/i.test(resource.title), 6)
+    pushMatches(ids, resources, (resource) => resource.group === 'Transcripts' && /GitLab|Student Futures/i.test(resource.title), 2)
+  }
+  if (includesAny(text, ['e-voting', 'evoting', 'voting', 'd\'hondt', 'dhondt', 'constituency', 'parties'])) {
+    pushMatches(ids, resources, (resource) => resource.group === 'Practice' || /e-voting|D'Hondt|GitLab/i.test(resource.description), 5)
+    pushMatches(ids, resources, (resource) => resource.group === 'Transcripts' && /GitLab|Teamwork/i.test(resource.title), 2)
+  }
+  if (includesAny(text, ['spidr', 'small issue', 'small increment', 'slice', 'user story'])) {
+    pushMatches(ids, resources, (resource) => /SPIDR|story/i.test(resource.title), 2)
+  }
+
+  return uniqueLimited(ids)
+}
+
 export function attachCardResourceLinks(cards, modules) {
   return cards.map((card) => {
     const module = moduleForCard(card, modules)
@@ -144,6 +167,7 @@ export function attachCardResourceLinks(cards, modules) {
     let resourceIds = []
     if (module.id === 'aml') resourceIds = amlLinks(card, module.resources, text)
     if (module.id === 'time-series') resourceIds = timeSeriesLinks(card, module.resources, text)
+    if (module.id === 'team-project') resourceIds = teamProjectLinks(card, module.resources, text)
     if (module.id === 'mat700') resourceIds = mat700Links(card, module.resources, text)
 
     if (resourceIds.length === 0) return card

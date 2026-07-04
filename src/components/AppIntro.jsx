@@ -1,6 +1,7 @@
 const INTRO_MODULES = [
   { id: 'aml', label: 'Applied ML', desc: 'Lab-first — top priority', accent: '--chart-aml', weight: '40%' },
   { id: 'time-series', label: 'Time Series', desc: 'Exam-template drills', accent: '--chart-ts', weight: '35%' },
+  { id: 'team-project', label: 'Team Project', desc: 'CMT501 GitLab evidence', accent: '--chart-project', weight: 'CMT501' },
   { id: 'mat700', label: 'Data Mining', desc: 'Kept warm as insurance', accent: '--chart-mat700', weight: '25%' },
 ]
 
@@ -55,8 +56,8 @@ export function AppIntro({
           One block at a time.
         </h1>
         <p className="intro-lede">
-          A calm command center for three exam lanes — practise the high-yield material, track every card, and ship
-          your way back to a pass.
+          A calm command center for exam lanes and CMT501 project work — practise the high-yield material, track every
+          card, and ship your way back to a pass.
         </p>
 
         <div className="intro-stats">

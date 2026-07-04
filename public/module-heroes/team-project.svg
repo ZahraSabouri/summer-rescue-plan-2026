@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">CMT501 team project workspace</title>
+  <desc id="desc">A restrained illustration of a GitLab planning board, merge requests, and project evidence.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f3ea"/>
+      <stop offset="0.52" stop-color="#e7f0ed"/>
+      <stop offset="1" stop-color="#efe8f4"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f5f1e9"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#2d2a24" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <rect x="124" y="96" width="952" height="528" rx="34" fill="url(#panel)"/>
+    <rect x="124" y="96" width="952" height="74" rx="34" fill="#2f4f4a"/>
+    <rect x="124" y="138" width="952" height="32" fill="#2f4f4a"/>
+    <circle cx="172" cy="133" r="11" fill="#e0776a"/>
+    <circle cx="208" cy="133" r="11" fill="#e0b264"/>
+    <circle cx="244" cy="133" r="11" fill="#38b8a5"/>
+    <rect x="312" y="121" width="318" height="24" rx="12" fill="#e8eee9" opacity="0.9"/>
+  </g>
+  <g transform="translate(184 214)">
+    <g>
+      <rect width="214" height="318" rx="18" fill="#f1ece2" stroke="#d6cfc1"/>
+      <text x="24" y="43" fill="#5a5249" font-family="Arial, sans-serif" font-size="24" font-weight="700">Backlog</text>
+      <rect x="22" y="72" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="92" width="102" height="12" rx="6" fill="#8a6bb0"/>
+      <rect x="22" y="144" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="164" width="128" height="12" rx="6" fill="#2a9d8f"/>
+      <rect x="22" y="216" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="236" width="92" height="12" rx="6" fill="#cf7a4d"/>
+    </g>
+    <g transform="translate(246 0)">
+      <rect width="214" height="318" rx="18" fill="#f1ece2" stroke="#d6cfc1"/>
+      <text x="24" y="43" fill="#5a5249" font-family="Arial, sans-serif" font-size="24" font-weight="700">Iteration one</text>
+      <rect x="22" y="72" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="92" width="126" height="12" rx="6" fill="#2f4f4a"/>
+      <rect x="22" y="144" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="164" width="116" height="12" rx="6" fill="#2f4f4a"/>
+      <rect x="22" y="216" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="236" width="134" height="12" rx="6" fill="#2f4f4a"/>
+    </g>
+    <g transform="translate(492 0)">
+      <rect width="214" height="318" rx="18" fill="#f1ece2" stroke="#d6cfc1"/>
+      <text x="24" y="43" fill="#5a5249" font-family="Arial, sans-serif" font-size="24" font-weight="700">Review</text>
+      <rect x="22" y="72" width="170" height="54" rx="12" fill="#ffffff" stroke="#ded7cc"/>
+      <rect x="40" y="92" width="108" height="12" rx="6" fill="#8a6bb0"/>
+      <path d="M68 157h94M68 181h65" stroke="#2a9d8f" stroke-width="12" stroke-linecap="round"/>
+      <circle cx="48" cy="169" r="14" fill="#2a9d8f"/>
+    </g>
+    <g transform="translate(738 0)">
+      <rect width="214" height="318" rx="18" fill="#f1ece2" stroke="#d6cfc1"/>
+      <text x="24" y="43" fill="#5a5249" font-family="Arial, sans-serif" font-size="24" font-weight="700">Evidence</text>
+      <rect x="30" y="76" width="154" height="190" rx="16" fill="#ffffff" stroke="#ded7cc"/>
+      <path d="M60 126h94M60 162h94M60 198h68" stroke="#8c8376" stroke-width="12" stroke-linecap="round"/>
+      <path d="M58 246l28 26 68-78" fill="none" stroke="#2a9d8f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>

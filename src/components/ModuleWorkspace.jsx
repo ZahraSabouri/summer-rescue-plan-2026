@@ -300,6 +300,14 @@ const GROUP_ORDER = {
     'Video walkthroughs',
     'Visual maps',
   ],
+  'team-project': [
+    'Module admin',
+    'Assessment',
+    'Session 1',
+    'Session 2',
+    'Transcripts',
+    'Practice',
+  ],
   mat700: [
     'Study plan',
     'Formula sheets',

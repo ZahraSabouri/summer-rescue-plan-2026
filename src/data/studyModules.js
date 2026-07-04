@@ -4,6 +4,7 @@ const MODULE_FOLDERS = {
   aml: 'CMT307 Applied Machine Learning',
   timeSeries: 'MA4508 Time Series',
   mat700: 'MAT700 Mathematical Methods for Data Mining',
+  teamProject: 'CMT501 Team Project',
   amlPlan: 'Summer_Rescue_Campaign_2026/Module_Plans/CMT307',
   timeSeriesPlan: 'Summer_Rescue_Campaign_2026/Module_Plans/MAT508',
   mat700Plan: 'Summer_Rescue_Campaign_2026/Module_Plans/MAT700',
@@ -139,6 +140,117 @@ const mat700PlanResources = [
   local('mat700Plan', 'Study plan', 'MAT700 tutorial priority map', 'MAT700_tutorial_priority_map.md', {
     description: 'Tutorial triage map for high-yield MAT700 practice.',
     tags: ['plan', 'tutorials'],
+  }),
+]
+
+const teamProjectAdminResources = [
+  local('teamProject', 'Module admin', 'CMT501 plan and weekly module map', 'About your module/CMT501Plan and weekly-module-map - Tagged.pdf', {
+    description: 'Module plan and weekly map for CMT501 Team Project.',
+    tags: ['plan', 'weekly map'],
+    priority: 'high',
+  }),
+  local('teamProject', 'Module admin', 'Module description', 'About your module/Module Description.docx', {
+    description: 'Official CMT501 module description document.',
+    tags: ['module description'],
+  }),
+]
+
+const teamProjectAssessmentResources = [
+  local('teamProject', 'Assessment', 'Assessment 1 demo brief', 'Assessment & Feedback/CMT501 Assessment 1 Demo.pdf', {
+    description: 'Assessment 1 demo expectations and marking context.',
+    tags: ['assessment', 'demo'],
+    priority: 'high',
+  }),
+  local('teamProject', 'Assessment', 'Assessment 2 report brief', 'Assessment & Feedback/CMT501 Assessment 2 Report.pdf', {
+    description: 'Assessment 2 report requirements and evidence expectations.',
+    tags: ['assessment', 'report', 'evidence'],
+    priority: 'high',
+  }),
+]
+
+const teamProjectSessionResources = [
+  local('teamProject', 'Session 1', 'Individual Git slides', 'Session 1/Individual Git.pdf', {
+    description: 'Session 1 Git material for individual workflow catch-up.',
+    tags: ['git', 'session 1'],
+  }),
+  local(
+    'teamProject',
+    'Session 1',
+    'SPIDR user-story splitting article',
+    'Session 1/SPIDR_ Five Simple but Powerful Ways to Split User Stories - Mountain Goat Software.pdf',
+    {
+      description: 'Story-splitting reference for keeping project increments small.',
+      tags: ['spidr', 'stories', 'scope'],
+    },
+  ),
+  local('teamProject', 'Session 2', 'Team GitLab slides', 'Session 2/Team Gitlab.pdf', {
+    description: 'Team GitLab workflow material from the 2 July session.',
+    tags: ['gitlab', 'teamwork', 'session 2'],
+    priority: 'high',
+  }),
+  local(
+    'teamProject',
+    'Session 2',
+    'GitLab Flow article',
+    'Session 2/Gitlab Flow - Article about Gitlab Flow. Using branch workflow effectively in Gitlab..pdf',
+    {
+      description: 'Branch workflow reference for issues, merge requests, review, and merge.',
+      tags: ['gitlab', 'branches', 'merge requests'],
+      priority: 'high',
+    },
+  ),
+]
+
+const teamProjectTranscriptResources = [
+  local(
+    'teamProject',
+    'Transcripts',
+    '2 Jul Student Futures and Teamwork with GitLab transcript',
+    'Transcripts/Lecture - 02.07.2026 (Student Futures and Teamwork with Gitlab).txt',
+    {
+      description: 'Transcript covering GitLab teamwork, issue/milestone practice, and the e-voting exercise.',
+      tags: ['2 july', 'gitlab', 'e-voting', 'teamwork'],
+      priority: 'high',
+    },
+  ),
+  local(
+    'teamProject',
+    'Transcripts',
+    '2 Jul Team and Project Selections transcript',
+    'Transcripts/Lecture - 02.07.2026 (Team and Project Selections).txt',
+    {
+      description: 'Transcript covering team/project selection and assessment expectations.',
+      tags: ['2 july', 'project selection', 'assessment'],
+      priority: 'high',
+    },
+  ),
+  local(
+    'teamProject',
+    'Transcripts',
+    '30 Jun Git for Individual Work Part 1 transcript',
+    'Transcripts/Lecture - 30.06.2026 (Git for Individual Work Part 1).txt',
+    {
+      description: 'Earlier Git/GitLab setup transcript for individual workflow recovery.',
+      tags: ['git', 'gitlab', '30 june'],
+    },
+  ),
+  local(
+    'teamProject',
+    'Transcripts',
+    '30 Jun Git for Individual Work Part 2 transcript',
+    'Transcripts/Lecture - 30.06.2026 (Git for Individual Work Part 2).txt',
+    {
+      description: "Earlier Git/GitLab transcript including D'Hondt setup context.",
+      tags: ['git', 'dhondt', '30 june'],
+    },
+  ),
+]
+
+const teamProjectPracticeResources = [
+  local('teamProject', 'Practice', "D'Hondt homework plan", 'dhondt-homework-plan.md', {
+    description: "Small-increment D'Hondt calculator plan that can seed the e-voting practice issue.",
+    tags: ['dhondt', 'practice', 'e-voting'],
+    priority: 'high',
   }),
 ]
 
@@ -753,6 +865,63 @@ export const STUDY_MODULES = [
       {
         title: 'Spectral density move',
         detail: 'Start from the inverse Fourier relation, expand any cosine term, then identify which lags survive.',
+      },
+    ],
+  },
+  {
+    id: 'team-project',
+    viewId: 'team-project',
+    moduleGroup: 'Group Project',
+    code: 'CMT501',
+    label: 'Team Project',
+    title: 'Team Project',
+    subtitle: 'GitLab teamwork, small e-voting increments, and report evidence.',
+    examShape: 'Team software project: plan issues and milestones, use branches and merge requests, keep increments small, and capture process evidence for the report.',
+    accent: '--chart-project',
+    hero: hero('team-project.svg'),
+    visual: hero('team-project.svg'),
+    objectives: [
+      'Use CMT501 materials only for CMT501 cards; keep Applied ML project resources separate.',
+      'Turn GitLab practice into direct evidence for teamwork/process sections of the report.',
+      'Keep your coding slice small: one issue, one branch, one merge request, one review loop.',
+    ],
+    operatingRules: [
+      'Every meeting or practice block must leave evidence: board screenshot, issue list, merge request, review, or decision note.',
+      'Do not absorb the whole voting system; pick one small issue and make it reviewable.',
+      'Use the 2 July transcripts as the source of truth for GitLab workflow and assessment expectations.',
+    ],
+    resources: [
+      ...teamProjectAdminResources,
+      ...teamProjectAssessmentResources,
+      ...teamProjectSessionResources,
+      ...teamProjectTranscriptResources,
+      ...teamProjectPracticeResources,
+    ],
+    drills: [
+      {
+        title: 'GitLab evidence loop',
+        detail: 'For one small issue, show issue -> branch -> commit -> merge request -> teammate review -> merge.',
+        output: 'Screenshots or links for report Section 2 evidence.',
+      },
+      {
+        title: 'Smallest e-voting slice',
+        detail: "Reduce the exercise to one constituency, parties only, vote capture, D'Hondt calculation, and a short report.",
+        output: 'One milestone and four or more issues.',
+      },
+      {
+        title: 'Meeting agenda closeout',
+        detail: 'End each meeting with repo owner, issue assignments, next meeting slot, and screenshot/evidence owner.',
+        output: 'Short meeting note added to project evidence.',
+      },
+    ],
+    recipes: [
+      {
+        title: 'Practice meeting frame',
+        detail: 'Pick one Tuesday repo, invite everyone, create milestone iteration one, assign one small issue each, then enforce merge-request review.',
+      },
+      {
+        title: "D'Hondt issue frame",
+        detail: 'Input party vote totals and seat count, compute quotients, allocate seats, test the known homework example, and keep UI/report work separate.',
       },
     ],
   },
