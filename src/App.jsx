@@ -475,7 +475,7 @@ export default function App() {
     tracker.localFile.status === 'checking'
       ? 'Local state file: checking'
       : tracker.localFile.status === 'unavailable'
-        ? 'Local state file unavailable; browser storage still works.'
+        ? 'Local state file unavailable; using browser cache fallback.'
         : tracker.localFile.status === 'error'
           ? `Local state file error: ${tracker.localFile.error}`
           : tracker.localFile.status === 'saving'

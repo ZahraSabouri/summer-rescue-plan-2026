@@ -291,7 +291,7 @@ export function BoardView({ cards, actions }) {
             </header>
             <div className="board-card-list">
               {columnCards.map((card) => (
-                <CardSummary key={card.id} card={card} compact {...actions} />
+                <CardSummary key={card.id} card={card} compact board {...actions} />
               ))}
               {columnCards.length === 0 && <p className="empty-state">No cards.</p>}
             </div>

@@ -8,6 +8,7 @@ function cardNumberLabel(number) {
 export function CardSummary({
   card,
   compact = false,
+  board = false,
   onOpen,
   onStatusChange,
   onToggleDone,
@@ -24,7 +25,7 @@ export function CardSummary({
   const overdue = referenceDate && card.dueDate && card.dueDate < referenceDate && !card.done
 
   return (
-    <article className={`work-card ${compact ? 'compact' : ''} ${card.done ? 'is-done' : ''}`}>
+    <article className={`work-card ${compact ? 'compact' : ''} ${board ? 'board-card' : ''} ${card.done ? 'is-done' : ''}`}>
       <div className="work-card-main">
         <div className="work-card-head">
           <span className="card-number">{cardNumberLabel(card.number)}</span>
@@ -41,7 +42,7 @@ export function CardSummary({
           <span>{formatDate(card.dueDate || card.startDate)}</span>
         </div>
 
-        {!compact && (
+        {!compact && !board && (
           <p className="card-preview">
             {latestNote || card.description || card.doneCondition || 'No description recorded.'}
           </p>
@@ -64,29 +65,33 @@ export function CardSummary({
           <span>Done</span>
         </label>
 
-        <select
-          aria-label={`Move card ${cardNumberLabel(card.number)}`}
-          value={card.status}
-          onChange={(event) => onStatusChange(card.id, event.target.value)}
-        >
-          {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
+        {!board && (
+          <>
+            <select
+              aria-label={`Move card ${cardNumberLabel(card.number)}`}
+              value={card.status}
+              onChange={(event) => onStatusChange(card.id, event.target.value)}
+            >
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
 
-        <label className="hours-field">
-          <span>Hours</span>
-          <input
-            type="number"
-            min="0"
-            step="0.25"
-            value={card.actualHours}
-            onChange={(event) => onHoursChange(card.id, event.target.value)}
-            aria-label={`Actual hours for card ${cardNumberLabel(card.number)}`}
-          />
-        </label>
+            <label className="hours-field">
+              <span>Hours</span>
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={card.actualHours}
+                onChange={(event) => onHoursChange(card.id, event.target.value)}
+                aria-label={`Actual hours for card ${cardNumberLabel(card.number)}`}
+              />
+            </label>
+          </>
+        )}
 
         {overdue && (
           <div className="reschedule-inline" aria-label="Reschedule overdue card">

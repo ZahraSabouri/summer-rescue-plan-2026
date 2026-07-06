@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   MODULE_OPTIONS,
   PHASE_OPTIONS,
@@ -8,6 +9,15 @@ import {
   TAG_OPTIONS,
 } from '../data/constants'
 import { addDays, checklistDoneCount, formatDate } from '../utils/progress'
+
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
 
 function fieldValue(value) {
   return value ?? ''
@@ -71,6 +81,7 @@ export function CardDetailDrawer({
   moduleOptions = MODULE_OPTIONS,
   phaseOptions = PHASE_OPTIONS,
 }) {
+  const dialogRef = useRef(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [noteText, setNoteText] = useState({})
   const [editingNoteId, setEditingNoteId] = useState(null)
@@ -86,11 +97,76 @@ export function CardDetailDrawer({
 
   useEffect(() => {
     if (!card) return undefined
+    if (typeof document === 'undefined') return undefined
+
+    const appRoot = document.getElementById('root')
+    const hadInert = appRoot?.hasAttribute('inert') ?? false
+    const previousAriaHidden = appRoot?.getAttribute('aria-hidden')
+    const previousActiveElement =
+      typeof HTMLElement !== 'undefined' && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+
+    appRoot?.setAttribute('inert', '')
+    appRoot?.setAttribute('aria-hidden', 'true')
+    document.body.classList.add('modal-open')
+
+    const focusTimer = window.setTimeout(() => {
+      const focusable = Array.from(dialogRef.current?.querySelectorAll(FOCUSABLE_SELECTOR) ?? []).filter(
+        (element) => element.offsetParent !== null || element === document.activeElement,
+      )
+      ;(focusable[0] ?? dialogRef.current)?.focus()
+    }, 0)
+
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = Array.from(dialog.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
+        (element) => element.offsetParent !== null || element === document.activeElement,
+      )
+
+      if (focusable.length === 0) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const activeElement = document.activeElement
+
+      if (!dialog.contains(activeElement)) {
+        event.preventDefault()
+        first.focus()
+      } else if (event.shiftKey && activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.classList.remove('modal-open')
+      if (appRoot) {
+        if (!hadInert) appRoot.removeAttribute('inert')
+        if (previousAriaHidden === null) appRoot.removeAttribute('aria-hidden')
+        else appRoot.setAttribute('aria-hidden', previousAriaHidden)
+      }
+      previousActiveElement?.focus()
+    }
   }, [card, onClose])
 
   useEffect(() => {
@@ -139,7 +215,7 @@ export function CardDetailDrawer({
       .slice(0, 8)
   }, [card, resourceModuleGroups, resourceQuery, resources])
 
-  if (!card || !form) return null
+  if (!card || !form || typeof document === 'undefined') return null
 
   const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const doneItems = checklistDoneCount(card)
@@ -250,7 +326,7 @@ export function CardDetailDrawer({
     onResetCard?.(card.id)
   }
 
-  return (
+  return createPortal(
     <div
       className="drawer-shell card-detail-shell"
       role="presentation"
@@ -258,7 +334,14 @@ export function CardDetailDrawer({
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <aside className="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <aside
+        ref={dialogRef}
+        className="detail-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="detail-title"
+        tabIndex={-1}
+      >
         <header className="drawer-header">
           <div>
             <p className="eyebrow">Card {card.number}</p>
@@ -407,7 +490,7 @@ export function CardDetailDrawer({
               {card.checklist.map((item) => {
                 const editing = editingChecklistId === item.id
                 return (
-                  <div key={item.id} className={`checklist-edit-row${editing ? ' editing' : ''}`}>
+                  <div key={item.id} className={`checklist-edit-row${editing ? ' editing' : ''}${item.done ? ' is-done' : ''}`}>
                     <input
                       type="checkbox"
                       checked={item.done}
@@ -759,6 +842,7 @@ export function CardDetailDrawer({
           </div>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   )
 }

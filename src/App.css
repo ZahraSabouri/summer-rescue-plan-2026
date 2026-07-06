@@ -5796,3 +5796,134 @@ h1,
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Health-check repairs: modal layer, board density, checklist state ---------- */
+.card-detail-shell {
+  z-index: 80;
+}
+
+.reader-shell {
+  z-index: 90;
+}
+
+.command-shell {
+  z-index: 100;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.checklist-edit-row.is-done {
+  border-color: var(--success-line);
+  background: var(--done-bg);
+}
+
+.checklist-edit-row.is-done input[type='checkbox'] {
+  accent-color: var(--green);
+}
+
+.checklist-edit-row.is-done .checklist-text-button {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.board-view {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 0 2px 8px;
+  scroll-snap-type: x proximity;
+}
+
+.board-column {
+  flex: 0 0 clamp(240px, 22vw, 300px);
+  min-width: 240px;
+  max-width: 300px;
+  max-height: calc(100vh - 170px);
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+.board-card-list {
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.work-card.board-card {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 9px;
+  border-left-width: 3px;
+}
+
+.work-card.board-card .card-number {
+  min-width: 34px;
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.work-card.board-card .card-title-button {
+  font-size: 13.5px;
+  line-height: 1.25;
+}
+
+.work-card.board-card .meta-strip {
+  gap: 5px;
+}
+
+.work-card.board-card .meta-strip span {
+  min-height: 21px;
+  padding: 2px 6px;
+  font-size: 10.5px;
+}
+
+.work-card.board-card .meta-strip span:nth-child(1),
+.work-card.board-card .meta-strip span:nth-child(4) {
+  display: none;
+}
+
+.work-card.board-card .work-card-progress {
+  gap: 5px;
+  font-size: 11px;
+}
+
+.work-card.board-card .work-card-controls {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.work-card.board-card .work-card-controls .done-toggle {
+  margin-right: auto;
+}
+
+.work-card.board-card .work-card-controls > .secondary-button {
+  min-height: 31px;
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.work-card.board-card .reschedule-inline {
+  flex: 1 0 100%;
+}
+
+@media (max-width: 720px) {
+  .board-column {
+    flex-basis: min(82vw, 300px);
+    max-height: none;
+  }
+
+  .board-card-list {
+    max-height: none;
+  }
+}

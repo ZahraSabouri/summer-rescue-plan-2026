@@ -1,22 +1,32 @@
 # Summer Rescue Plan App Health Check
 
 Date: 2026-07-06
-
-Scope: storage architecture, local persistence behavior, data model, resource/module workflow, UI/UX, build health, performance, maintainability, and staged repair plan.
+Audit target: current workspace state after the latest app updates.
 
 ## Executive Summary
 
-The app is not broken at the basic build level. Lint passes, production build passes, and all referenced study assets verify. The main problems are architectural and UX-level:
+The app is healthier than the previous audit. Several important repairs have been started:
 
-- Persistence is a partial local-file solution, not a database-backed local app. It still starts from browser `localStorage` and can leak state between app copies served from the same browser origin.
-- The local file API is implemented as a Vite dev/preview middleware, so it is not a durable backend yet.
-- There is no SQLite database, no append-only task progress log, and no clean separation between durable entities such as modules/resources and progress events such as checklist toggles.
-- Adding resources currently means linking existing static resources, not choosing files and copying them into a module directory.
-- The card detail overlay can render under the sidebar because the sidebar has a higher z-index than the drawer overlay.
-- The "Columns" board is structurally cramped: seven fixed min-width lanes, dense card controls inside each card, and repeated CSS overrides make the final layout hard to reason about.
-- Styling is maintained through a single 5,798-line `App.css` with repeated distant definitions for key components. This is a major source of visual drift.
+- The local API was extracted out of `vite.config.js` into `src/server/localTrackerApi.js`.
+- `/api/health`, `/api/state`, and `/api/events` now exist and respond at runtime.
+- `local-data/progress-log.ndjson` now exists.
+- The state hook now lets the local state file win over browser `localStorage` once the local file loads.
+- The card detail view now uses `createPortal`, adds background inerting, adds Escape handling, and loops Tab focus inside the modal.
+- Checklist completed items now get a checked visual and line-through styling.
+- The Columns view was simplified by removing status and hours controls from board cards.
+- Applied ML now has linked YouTube/video study support and card-level video-plan enrichment.
 
-Recommended direction: keep JSON import/export and "Choose autosave file", but make a local Node API authoritative. Use SQLite for modules/cards/resources/settings and an append-only local log file for progress/card deltas. Browser storage should be downgraded to UI preferences and an optional workspace-keyed cache only.
+The app is still not at the target architecture:
+
+- There is still no SQLite database.
+- The progress log is generic `state.updated` metadata, not a structured task/card delta log.
+- Durable entities such as modules, resources, cards, and settings are still stored in JSON/source files, not database tables.
+- Resource upload into per-module directories is still missing.
+- Browser `localStorage` is still used for the full tracker mirror and rolling safety copies.
+- The CSS remains append-only and hard to reason about: `src/App.css` is now 5,929 lines and still repeats core selectors.
+- There are no automated UI/API/unit tests beyond lint/build checks.
+
+One practical risk: `src/server/` is currently untracked by git. Since `vite.config.js` imports `./src/server/localTrackerApi.js`, the app depends on that untracked file.
 
 ## Verification Run
 
@@ -31,78 +41,140 @@ npm.cmd ls --depth=0
 
 Results:
 
-- `npm.cmd run lint`: pass.
-- `npm.cmd run assets:verify`: pass. 208/208 assets available, total asset size 131.1 MB.
-- `npm.cmd run build`: pass.
-- Build warning: generated JS chunk is 516.18 kB minified, slightly above Vite's 500 kB warning threshold.
-- Dependencies are minimal: React, React DOM, Vite, ESLint tooling. No database package is installed.
-- Local dev server worked at `http://127.0.0.1:5173/`.
-- `GET /api/local-tracker-state` returned the existing local JSON state.
-- Node runtime has built-in SQLite support via `node:sqlite`, so a first SQLite implementation can avoid adding a native dependency.
+- `npm.cmd run lint`: passed.
+- `npm.cmd run assets:verify`: passed. 208/208 assets available. Total size: 131.1 MB.
+- `npm.cmd run build`: passed.
+- Production build output:
+  - CSS: 93.11 kB minified, 16.87 kB gzip.
+  - JS: 523.22 kB minified, 139.30 kB gzip.
+- Vite still warns that a chunk is larger than 500 kB.
+- Dependencies remain minimal: React, React DOM, Vite, ESLint tooling. No database package is installed.
+- Node has built-in `node:sqlite` support available.
+
+Runtime checks:
+
+- `npm.cmd run dev -- --host 127.0.0.1` started on `http://127.0.0.1:5174/` because 5173 was already in use.
+- `GET /api/health`: passed.
+- `GET /api/state`: passed.
+- `GET /api/events`: passed.
+- `GET /`: passed.
+- The audit Vite server was stopped after checks.
 
 Screenshot limitation:
 
-- I attempted a headless Chrome/Edge CDP screenshot pass, but both installed browsers exited immediately under remote debugging and direct screenshot mode produced no file. UI findings below are therefore based on source/CSS analysis plus successful build/runtime endpoint checks.
+- Playwright is still not installed.
+- A direct Chrome headless screenshot attempt exited without producing `.health-check/screenshots/current-board.png`.
+- UI findings below are source/CSS based.
 
-## Current Persistence Inventory
+## Current Git/Workspace State
 
-What exists:
+Current modified files:
 
-- Vite middleware reads/writes `local-data/summer-rescue-tracker-state.json` at `vite.config.js:10`, `vite.config.js:27`, `vite.config.js:36`, `vite.config.js:53`, and `vite.config.js:57`.
-- The browser client calls `/api/local-tracker-state` through `src/utils/localStateFile.js`.
-- The main state hook mirrors all state to `localStorage["summer-rescue-tracker-state-v3"]` at `src/state/useTrackerState.js:9`, `src/state/useTrackerState.js:187`, and `src/state/useTrackerState.js:428`.
-- File System Access autosave exists for Chromium browsers and stores the chosen handle in IndexedDB, not the actual app data, at `src/utils/fileBackup.js`.
-- Rolling daily safety copies are browser-only `localStorage` snapshots at `src/utils/rollingBackup.js`.
-- JSON export/import exists and is intentionally still useful.
+```text
+M src/App.css
+M src/App.jsx
+M src/components/CardDetailDrawer.jsx
+M src/components/CardSummary.jsx
+M src/components/TrackerViews.jsx
+M src/state/useTrackerState.js
+M src/utils/localStateFile.js
+M vite.config.js
+?? src/server/
+```
 
-Local state summary from `local-data/summer-rescue-tracker-state.json`:
+Diff stat for tracked files:
+
+```text
+8 files changed, 346 insertions(+), 121 deletions(-)
+```
+
+The untracked `src/server/` folder is significant. If this change is committed or moved, include it, because Vite now imports it.
+
+## Storage and Backend Audit
+
+What improved:
+
+- `vite.config.js` now delegates local persistence middleware to `localTrackerStatePlugin({ projectRoot })`.
+- `src/server/localTrackerApi.js` centralizes the local API.
+- `/api/state` is now the preferred state endpoint, while `/api/local-tracker-state` is retained for compatibility.
+- `/api/health` reports storage paths and available endpoints.
+- `/api/events` can append and read recent progress events.
+- `src/utils/localStateFile.js` now has `appendLocalProgressEvent`.
+- `useTrackerState` no longer lets a newer browser copy beat the local file after load. The file state is normalized and applied directly.
+
+Current local data:
 
 ```json
 {
-  "exportedAt": "2026-07-06T19:09:57.288Z",
-  "version": 3,
+  "stateFile": "local-data/summer-rescue-tracker-state.json",
+  "progressLog": "local-data/progress-log.ndjson",
   "changedCards": 1,
   "addedCards": 0,
   "notifications": 23,
   "snapshots": 1,
-  "updatedAt": "2026-07-06T19:03:55.997Z"
+  "saveHintDismissed": true
 }
 ```
 
-Main storage problems:
+Current progress log example:
 
-1. Browser storage is still in the boot path.
-   `useTrackerState` starts with `readStoredStateSnapshot()` and only then reads the local file. If the browser copy is newer than the local file, the browser copy wins. This can reintroduce the exact problem you described: app progress can follow the browser origin instead of the folder the app is running from.
+```json
+{
+  "entityType": "tracker",
+  "entityId": "state",
+  "eventType": "state.updated",
+  "payload": {
+    "changedCards": [],
+    "changedSettings": ["saveHintDismissed"],
+    "changedModuleNotes": [],
+    "changedResourceProgress": [],
+    "addedCardsChanged": false,
+    "notificationsChanged": false
+  }
+}
+```
 
-2. The storage key is global to the browser origin.
-   Any copy served from the same origin, for example `127.0.0.1:5173`, can use the same `summer-rescue-tracker-state-v3` browser key.
+Main remaining storage problems:
 
-3. The local file is a whole-state JSON snapshot.
-   Every progress change eventually rewrites the entire tracker state. That is simple, but it does not give you a clean event history, partial recovery, or separation between progress and structural edits.
+1. No SQLite database yet.
+   The app still stores structural data in source files plus one JSON state file.
 
-4. The Vite plugin is not a real backend.
-   It works under Vite dev/preview. It is not a standalone local app service, and it does not cover static hosting or opening built files directly.
+2. Progress log is not yet the desired log.
+   It records generic whole-state diffs, not explicit events such as `checklist_item.toggled`, `card.done_changed`, `card.status_changed`, `hours.logged`, `evidence.added`, or `resource.linked`.
 
-5. Modules/resources/progress are mixed in one state object.
-   Added cards, custom modules, custom phases, resource progress, notifications, settings, notes, evidence, and snapshots all share the same JSON state shape.
+3. The progress log includes non-progress changes.
+   Settings and notification changes can be logged. That is useful for debugging, but it does not match the requested "only task/card changes in the local log file" strategy.
 
-## Recommended Storage Architecture
+4. There is no replay/recovery path.
+   Events are appended, but the app cannot rebuild state from `progress-log.ndjson`.
 
-Use a hybrid local persistence model:
+5. Browser full-state mirror still exists.
+   `useTrackerState` still writes the full state to `localStorage["summer-rescue-tracker-state-v3"]`. The local file wins when available, but browser storage remains a full backup/mirror.
+
+6. First paint can still come from browser storage.
+   The hook initializes from browser state, then reads the local file. This is better than before because the file overwrites it, but it can still briefly render old browser state.
+
+7. `changedObjectKeys` uses `JSON.stringify` across objects on each state change.
+   This is acceptable for now, but it can become expensive as card/resource state grows.
+
+8. Backend request bodies are read fully into memory.
+   Fine for tracker JSON today, but not suitable for future resource/file upload.
+
+## Recommended Storage Target
+
+Keep the hybrid strategy:
 
 ```text
 local-data/
   app.sqlite
   progress-log.ndjson
+  summer-rescue-tracker-state.json
   snapshots/
-    summer-rescue-tracker-state.latest.json
   resources/
     <module-id>/
-      <uploaded files>
-  instance.json
 ```
 
-SQLite should store durable structure:
+SQLite should become authoritative for:
 
 - modules
 - phases
@@ -112,320 +184,201 @@ SQLite should store durable structure:
 - card-resource links
 - module notes
 - settings
-- notifications
 - resource reviewed state
+- notifications, if still needed
 
-Append-only log should store progress/card deltas:
+`progress-log.ndjson` should store typed card/task events only:
 
-- card marked done/not done
-- status changed
-- checklist item toggled
-- actual hours changed
-- focus session added
-- note added/edited/deleted
-- evidence added/edited/deleted
-- card resource linked/unlinked if we consider that card-level progress
+- `card.done_changed`
+- `card.status_changed`
+- `checklist_item.toggled`
+- `checklist_item.added`
+- `checklist_item.edited`
+- `checklist_item.deleted`
+- `hours.logged`
+- `focus_session.completed`
+- `evidence.added`
+- `evidence.edited`
+- `evidence.deleted`
+- `note.added`
+- `note.edited`
+- `note.deleted`
+- `resource.linked`
+- `resource.unlinked`
 
-Module/resource creation, deletion, rename, and uploaded file registration should go to SQLite, not the progress log.
+Module creation/removal/rename and uploaded file registration should go to SQLite, not the progress log.
 
-Browser storage should only store:
+## Resource and Module Workflow Audit
 
-- intro dismissed
-- collapsed sidebar
-- theme if desired
-- last active view
-- optional cache keyed by `local-data/instance.json`, not a global app key
+What exists:
 
-Proposed first schema:
+- Static module/resource definitions remain in `src/data/studyModules.js`.
+- Known resources are served from `public/study-assets`.
+- `scripts/syncStudyAssets.mjs` verifies/copies known resources.
+- Card details can link/unlink existing resources.
+- Module pages can browse/search existing resources and mark them reviewed.
+- Applied ML video resources were added as YouTube remote resources.
+- `src/data/amlVideoPlan.js` enriches Applied ML cards with video support and checklist text.
 
-```sql
-CREATE TABLE modules (
-  id TEXT PRIMARY KEY,
-  code TEXT,
-  title TEXT NOT NULL,
-  module_group TEXT NOT NULL,
-  accent TEXT,
-  hero_path TEXT,
-  exam_shape TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  archived_at TEXT
-);
+What is still missing:
 
-CREATE TABLE phases (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  sort_order INTEGER NOT NULL DEFAULT 0
-);
+- No Add Module wizard with structured fields.
+- No backend endpoint to create a module record.
+- No backend endpoint to create a module resource folder.
+- No file upload/copy API.
+- No resource table.
+- No per-module uploaded-file directory.
+- No conflict handling for duplicate uploaded filenames.
+- No UI to choose local files and copy them into `local-data/resources/<module-id>/`.
 
-CREATE TABLE cards (
-  id TEXT PRIMARY KEY,
-  module_id TEXT,
-  phase_id TEXT,
-  title TEXT NOT NULL,
-  status TEXT NOT NULL,
-  priority TEXT NOT NULL,
-  slot_type TEXT,
-  slot_label TEXT,
-  start_date TEXT,
-  due_date TEXT,
-  estimated_hours REAL DEFAULT 0,
-  description TEXT,
-  evidence_requirement TEXT,
-  done_condition TEXT,
-  custom INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  archived_at TEXT
-);
+Important distinction:
 
-CREATE TABLE checklist_items (
-  id TEXT PRIMARY KEY,
-  card_id TEXT NOT NULL,
-  text TEXT NOT NULL,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  archived_at TEXT
-);
+- The update adds better linked/video resources.
+- It does not implement the requested local upload workflow.
 
-CREATE TABLE resources (
-  id TEXT PRIMARY KEY,
-  module_id TEXT NOT NULL,
-  group_name TEXT,
-  title TEXT NOT NULL,
-  type TEXT,
-  viewer TEXT,
-  storage_path TEXT,
-  original_name TEXT,
-  description TEXT,
-  tags_json TEXT,
-  priority TEXT DEFAULT 'normal',
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  archived_at TEXT
-);
+## UI/UX Audit
 
-CREATE TABLE card_resources (
-  card_id TEXT NOT NULL,
-  resource_id TEXT NOT NULL,
-  hidden INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (card_id, resource_id)
-);
+Fixed or improved:
 
-CREATE TABLE progress_events (
-  id TEXT PRIMARY KEY,
-  occurred_at TEXT NOT NULL,
-  entity_type TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  event_type TEXT NOT NULL,
-  payload_json TEXT NOT NULL
-);
+1. Card modal layering is much better.
+   `CardDetailDrawer.jsx` now uses `createPortal`, and late CSS raises `.card-detail-shell` to `z-index: 80`.
 
-CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-```
+2. Focus handling improved.
+   The card dialog now sets the app root inert, hides it from screen readers, locks body scroll, restores focus, handles Escape, and loops Tab inside the dialog.
 
-Even if `progress_events` is in SQLite, still mirror progress events to `progress-log.ndjson` so the folder contains a human-inspectable recovery trail.
+3. Checklist done visual exists.
+   `.checklist-edit-row.is-done .checklist-text-button` uses line-through styling.
 
-## Resource and Module Workflow Gap
+4. Columns board is less dense.
+   Board cards now use the new `board` prop, hiding status and hours inputs in board mode.
 
-What exists now:
+5. Board layout is more deliberate.
+   Late CSS changes `.board-view` to horizontal flex lanes with scroll snapping and lane max heights.
 
-- Module/resource definitions are static code in `src/data/studyModules.js`.
-- Resource URLs are derived from `public/study-assets/...` through `src/utils/resourceLinks.js`.
-- `scripts/syncStudyAssets.mjs` copies known resources from known source folders into `public/study-assets`.
-- Card details can link or unlink existing resources in `CardDetailDrawer.jsx`.
-- Module workspaces can browse, search, open, and mark existing resources reviewed.
+Remaining UI/UX issues:
 
-What does not exist:
+1. The modal still carries drawer naming and old drawer styles.
+   It works as a modal now, but the component/class names and early CSS still say drawer. This increases future confusion.
 
-- No "Add module" wizard with structured module fields.
-- No backend endpoint to create a module folder.
-- No file upload/copy workflow.
-- No user-added resource database table.
-- No persistent per-module upload directory.
-- No validation around duplicate files, filename conflicts, large files, missing files, or deleted resources.
+2. CSS is still layered by overrides instead of ownership.
+   The final health-check repair block fixes symptoms, but older `.drawer-shell`, `.card-detail-shell`, `.board-view`, `.board-column`, `.work-card`, `.study-resource-card`, and `.module-layout` rules still exist earlier.
 
-Recommended resource flow:
+3. Board cards are improved but still action-heavy.
+   Board cards still show Done, Start, Details, and overdue reschedule actions. That may be fine, but it remains denser than a typical kanban lane.
 
-1. Add module:
-   - title, code, module group, exam date, color/accent, optional hero image
-   - backend creates module row and `local-data/resources/<module-id>/`
+4. Settings remains a drawer overlay with separate modal behavior.
+   Card modal is now more robust than settings. The app should use one modal/overlay layer system.
 
-2. Add resource:
-   - choose one or more files
-   - choose module, group, tags, priority, description
-   - backend copies files into `local-data/resources/<module-id>/`
-   - backend inserts resource rows in SQLite
-   - app serves file content through `/api/resources/:id/file`
+5. Resource reader already has its own portal layer.
+   Card modal, settings, command palette, import dialog, and reader should share explicit z-index tokens rather than scattered numeric values.
 
-3. Link resource to card:
-   - choose from the database resources for that module
-   - write the relationship to SQLite
-   - optionally append a card-level event to `progress-log.ndjson`
+6. Visual verification was not automated.
+   Without Playwright or a working screenshot command, modal layering and responsive board behavior were not pixel-verified.
 
-This avoids relying on `public/` as user-writeable app data.
+## Documentation and Content Issues
 
-## UI/UX Findings
+README is now stale in places:
 
-1. Card detail overlay can sit under the sidebar.
-   CSS evidence: `.drawer-shell` uses `z-index: 20` at `src/App.css:752`, while `.app-sidebar` uses `z-index: 30` at `src/App.css:2542`. The card detail overlay is not portaled to a higher modal layer, so the sidebar can cover it.
+- It still says the state hook is "local file + localStorage", but does not mention `/api/health` or `/api/events`.
+- It still frames persistence as Vite dev/preview writing one JSON file, not the new extracted local API module.
+- It still says daily safety copies are in browser `localStorage`, which remains true, but should now be positioned as secondary.
+- `src/data/baseCards.js` still says user progress lives in `localStorage`; that is now misleading.
 
-2. Card detail is implemented as a drawer, then styled like a modal.
-   `CardDetailDrawer.jsx` renders an `aside.detail-drawer`. The later CSS centers it, but the semantic and layering model is still a drawer. This should become a real modal dialog rendered through `createPortal(document.body)`.
+Encoding/text:
 
-3. The modal has no focus trap or background inerting.
-   Escape closes it, but keyboard focus can still move behind it. This is a usability and accessibility problem.
-
-4. Completed checklist items do not get a clear line-through style.
-   State exists for checklist done toggles, but CSS search found no line-through or checked-state visual for `.checklist-edit-row` / `.checklist-text-button`.
-
-5. The Columns board is cramped by design.
-   `BoardView` renders seven status columns. CSS uses `grid-template-columns: repeat(7, minmax(260px, 1fr))`, so the board wants at least 1,820px before gaps. On normal laptop widths this becomes a horizontal-scroll view with dense controls inside each card.
-
-6. Card controls are too heavy for compact board cards.
-   Each card includes done toggle, status select, hours input, start button, and details button. In columns this creates visual clutter and inconsistent heights. The board should show only key card info and one/two quick actions; detailed editing belongs in the modal.
-
-7. CSS is too large and repeatedly overrides itself.
-   `src/App.css` has 5,798 lines. Key selectors are defined multiple times across the file:
-   - `.work-card`
-   - `.board-column`
-   - `.study-resource-card`
-   - `.resource-browser`
-   - `.module-layout`
-   - `.card-detail-shell`
-
-8. The resource reader has a better layering model than the card detail modal.
-   `ResourceReader` uses `createPortal` and `.reader-shell` has `z-index: 70`. The card modal should use the same modal-layer approach.
-
-9. Module workspaces are feature-rich but visually overloaded.
-   The module pages combine hero, tabs, stats, progress, guidance, scratchpad, card lists, drills, resource browser, and reader. This should be split visually into a quieter workspace hierarchy.
-
-10. Font scale is inconsistent.
-   Several late CSS overrides shrink resource-card text and module headings. That explains the "some places too big, some too small" feeling.
-
-## Functional Findings
-
-- Add card exists.
-- Custom module/custom phase names exist in Settings.
-- Renaming a custom module updates cards using that module.
-- Deleting a custom module only removes the option; cards using that module can become orphaned unless they are reassigned first.
-- Import JSON has a preview and backs up current state before applying.
-- Reset exports a JSON backup first.
-- Resource linking exists, but resource uploading does not.
-- Module notes exist.
-- Resource reviewed tracking exists.
-- Focus timer and focus-session hour logging exist.
-- There is no test suite beyond lint/build.
+- `src/components/ModuleWorkspace.jsx` contains a Unicode close glyph `✕`. This is not broken, but the codebase otherwise mostly uses ASCII. It is acceptable if intentional.
 
 ## Performance and Maintainability
 
-Current load pressure:
+Current size:
 
-- 131.1 MB of study assets under `public/study-assets`.
-- 516.18 kB minified JS bundle.
-- A single large CSS file.
-- Large static arrays for modules/resources/cards included in the client bundle.
-- Resource viewers for Markdown, text, code, notebook, video, image, PDF/HTML are all in one component file.
+- `src/App.css`: 5,929 lines.
+- Build CSS: 93.11 kB minified.
+- Build JS: 523.22 kB minified.
+- Study assets: 131.1 MB.
 
-Recommended performance work:
+Risks:
 
-- Move resource metadata into SQLite/API so it is not all part of the client source bundle.
-- Lazy-load heavy views: analytics, resource reader, module workspace, charts.
-- Split CSS by feature area.
-- Virtualize or paginate resource grids and long card lists if they grow.
+- App CSS continues to grow through late override blocks.
+- All major views and resource rendering logic are still in the main client bundle.
+- Resource metadata and card data remain static imports.
+- Manual Markdown/notebook/text viewers live inside `ModuleWorkspace.jsx`.
+- There are no tests around the new API/event log behavior.
 
-## Repair Plan
+Recommended maintainability work:
 
-### Phase 1: Immediate UI Fixes
+- Split `App.css` by feature or introduce scoped component CSS modules.
+- Move modal/overlay styles into a single layer system.
+- Lazy-load heavy routes/views: analytics, module workspace, resource reader.
+- Split resource viewer code into dedicated components.
+- Add tests for `createLocalTrackerApi`, state import/export, and event-log writes.
 
-Goal: make the existing app usable without changing storage yet.
+## Functional Status Matrix
 
-Tasks:
+| Area | Status | Notes |
+| --- | --- | --- |
+| Lint | Pass | ESLint passes. |
+| Build | Pass with warning | JS chunk exceeds 500 kB. |
+| Asset verification | Pass | 208/208 available. |
+| Local state file | Working | `/api/state` reads JSON state. |
+| Health endpoint | Working | `/api/health` reports local paths. |
+| Event log endpoint | Working | `/api/events` reads existing generic events. |
+| SQLite | Missing | `node:sqlite` is available but unused. |
+| Typed progress log | Partial | Generic `state.updated` only. |
+| Resource upload | Missing | Static/link-only resources. |
+| Card modal above sidebar | Likely fixed | Portal plus higher z-index. Not screenshot-verified. |
+| Checklist line-through | Fixed | CSS and class present. |
+| Board density | Improved | Board mode hides status/hours controls. |
+| Test suite | Missing | No test script. |
+| Docs | Stale | README and baseCards comment need update. |
 
-- Convert card detail from drawer-layer to modal-layer using `createPortal`.
-- Set modal overlay z-index above sidebar, settings, command palette, and below/above reader intentionally.
-- Center the card modal with responsive max width and max height.
-- Add focus trap, Escape close, and background inerting or equivalent.
-- Add checklist checked styling: line-through, muted color, stable row height.
-- Simplify board cards in Columns view.
-- Make board lanes horizontally scroll in a deliberate container, or switch Columns to status tabs/segmented lanes on smaller screens.
-- Consolidate repeated CSS for card, board, modal, module, and resource components.
+## Recommended Next Steps
 
-### Phase 2: Local Backend Boundary
+### Step 1: Stabilize the Current Fixes
 
-Goal: stop treating Vite config as the app backend.
+- Add `src/server/localTrackerApi.js` to git if this is the intended implementation.
+- Update README and stale comments to match `/api/state`, `/api/health`, `/api/events`, and `progress-log.ndjson`.
+- Rename modal classes/components away from drawer terminology when touching that area next.
+- Consolidate the late CSS repair block into the primary component sections.
 
-Tasks:
+### Step 2: Make the Progress Log Typed
 
-- Extract the local file API out of `vite.config.js` into a reusable local server module.
-- Keep Vite middleware during development, but make the API module standalone.
-- Add `/api/health`, `/api/state`, `/api/events`, `/api/resources`, and `/api/files/:resourceId`.
-- Keep JSON export/import unchanged at the UI level.
-- Keep "Choose autosave file" as an optional extra snapshot target.
+- Replace generic `buildProgressEvent(previous, next)` with explicit events emitted by mutation functions.
+- Start with:
+  - `toggleDone`
+  - `setStatus`
+  - `toggleChecklistItem`
+  - `setActualHours`
+  - `addFocusSession`
+  - evidence/note mutations
+  - resource link/unlink
+- Stop logging settings and notification changes to `progress-log.ndjson`.
 
-### Phase 3: SQLite Schema and Migration
+### Step 3: Add SQLite
 
-Goal: make SQLite authoritative for durable structure.
+- Create `local-data/app.sqlite`.
+- Add migration code using `node:sqlite`.
+- Seed from `baseCards`, `studyModules`, and the current JSON state.
+- Keep JSON export/import compatibility.
+- Add a recovery path that can rebuild progress from the SQLite data plus `progress-log.ndjson`.
 
-Tasks:
+### Step 4: Add Module and Resource Upload
 
-- Create `local-data/app.sqlite` using `node:sqlite`.
-- Add schema migrations.
-- Seed from current `baseCards`, `studyModules`, and current JSON state.
-- Import current `local-data/summer-rescue-tracker-state.json` into the database.
-- Preserve the existing JSON shape for export compatibility.
-- Add tests for migration and export equivalence.
+- Add backend file APIs with size limits and safe path handling.
+- Add `local-data/resources/<module-id>/`.
+- Add resource records to SQLite.
+- Build a UI for selecting files, assigning module/group/tags/priority, and copying them into the module directory.
+- Keep existing static resources working during migration.
 
-### Phase 4: Append-Only Progress Log
+### Step 5: Add Tests
 
-Goal: track progress as local events, not only final state.
+- API tests for `/api/health`, `/api/state`, `/api/events`.
+- State tests for local-file precedence over browser state.
+- Event tests for typed log writes.
+- UI smoke tests for card modal, board, settings, add card, import preview, and resource reader.
+- Visual regression checks once Playwright or another browser runner is available.
 
-Tasks:
+## Bottom Line
 
-- Add `local-data/progress-log.ndjson`.
-- On every card/progress mutation, write a SQLite event and append an NDJSON line.
-- Rebuild current progress from database plus events.
-- Add recovery command: replay log into a fresh database.
-- Stop writing full JSON state on every small change; write snapshots periodically and on manual export/save.
-
-### Phase 5: Module and Resource Management
-
-Goal: support real module/resource creation and upload.
-
-Tasks:
-
-- Add structured Add Module dialog.
-- Add module directory creation in backend.
-- Add resource upload endpoint.
-- Copy selected files into `local-data/resources/<module-id>/`.
-- Register resources in SQLite with title/group/type/viewer/tags/priority.
-- Update ModuleWorkspace and CardDetail resource pickers to read from API/database.
-- Add conflict handling for duplicate filenames.
-
-### Phase 6: Test and QA Layer
-
-Goal: make future changes safer.
-
-Tasks:
-
-- Add unit tests for progress reducers and data normalization.
-- Add API integration tests for SQLite and event log writes.
-- Add UI smoke tests for Today, Columns, card modal, Settings, Add Card, Module resources, Import preview.
-- Add visual checks for modal above sidebar and mobile board behavior.
-- Add accessibility checks for modal focus, labels, and keyboard navigation.
-
-## Proposed First Implementation Order
-
-1. Fix card modal layering and checklist done visuals.
-2. Clean Columns view enough that it is usable.
-3. Extract local API from `vite.config.js`.
-4. Add SQLite database with migrations.
-5. Add progress event log.
-6. Add resource upload and module directory workflow.
-7. Move static resources/modules/cards progressively from source files into the database.
-
-This order keeps risk controlled: first fix what you see every day, then change storage with migration safety, then add the richer module/resource workflow.
+The update fixed several visible problems and started the local-backend/event-log direction correctly. The next important work is not more UI patching. It is turning the event log into typed task/card events and introducing SQLite as the source of truth for durable app data.
 

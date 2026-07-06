@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LOCAL_STATE_FILE_LABEL,
+  appendLocalProgressEvent,
   readLocalTrackerStateFile,
   writeLocalTrackerStateFile,
 } from '../utils/localStateFile'
@@ -152,6 +153,49 @@ function normaliseState(value) {
       ...(value.settings && typeof value.settings === 'object' ? value.settings : {}),
     },
     updatedAt: value.updatedAt ?? nowIso(),
+  }
+}
+
+function changedObjectKeys(previous = {}, next = {}) {
+  const keys = new Set([...Object.keys(previous ?? {}), ...Object.keys(next ?? {})])
+  return [...keys].filter((key) => JSON.stringify(previous?.[key] ?? null) !== JSON.stringify(next?.[key] ?? null))
+}
+
+function buildProgressEvent(previous, next) {
+  const changedCards = changedObjectKeys(previous.cards, next.cards)
+  const changedSettings = changedObjectKeys(previous.settings, next.settings)
+  const changedModuleNotes = changedObjectKeys(previous.moduleNotes, next.moduleNotes)
+  const changedResourceProgress = changedObjectKeys(previous.resourceProgress, next.resourceProgress)
+  const addedCardsChanged = JSON.stringify(previous.addedCards ?? []) !== JSON.stringify(next.addedCards ?? [])
+  const notificationsChanged = JSON.stringify(previous.notifications ?? {}) !== JSON.stringify(next.notifications ?? {})
+
+  if (
+    changedCards.length === 0 &&
+    changedSettings.length === 0 &&
+    changedModuleNotes.length === 0 &&
+    changedResourceProgress.length === 0 &&
+    !addedCardsChanged &&
+    !notificationsChanged
+  ) {
+    return null
+  }
+
+  return {
+    id: makeId('event'),
+    occurredAt: next.updatedAt ?? nowIso(),
+    entityType: 'tracker',
+    entityId: 'state',
+    eventType: 'state.updated',
+    payload: {
+      changedCards,
+      changedSettings,
+      changedModuleNotes,
+      changedResourceProgress,
+      addedCardsChanged,
+      notificationsChanged,
+      version: next.version,
+      updatedAt: next.updatedAt,
+    },
   }
 }
 
@@ -379,6 +423,8 @@ export function useTrackerState(baseCards) {
   const [state, setState] = useState(initialSnapshot.state)
   const browserStateExistedRef = useRef(initialSnapshot.browserStateExisted)
   const localFileTimerRef = useRef(null)
+  const progressLogReadyRef = useRef(false)
+  const progressEventStateRef = useRef(initialSnapshot.state)
   const [localFile, setLocalFile] = useState({
     status: 'checking',
     savedAt: null,
@@ -440,20 +486,18 @@ export function useTrackerState(baseCards) {
         const incoming = payload?.state ?? payload
 
         if (incoming) {
-          setState((current) => {
+          setState(() => {
             const fileState = normaliseState(incoming)
-            const fileUpdatedAt = String(fileState.updatedAt ?? '')
-            const currentUpdatedAt = String(current.updatedAt ?? '')
-            if (!browserStateExistedRef.current || fileUpdatedAt > currentUpdatedAt) {
-              return withCurrentSnapshot(fileState)
-            }
-            return current
+            progressEventStateRef.current = fileState
+            return withCurrentSnapshot(fileState)
           })
+          browserStateExistedRef.current = false
         } else if (browserStateExistedRef.current) {
           setState(createInitialState())
           browserStateExistedRef.current = false
         }
 
+        progressLogReadyRef.current = true
         setLocalFile((current) => ({
           ...current,
           status: 'ready',
@@ -463,6 +507,7 @@ export function useTrackerState(baseCards) {
       .catch((error) => {
         if (cancelled) return
         console.warn('Local tracker file unavailable:', error)
+        progressLogReadyRef.current = false
         setLocalFile((current) => ({
           ...current,
           status: 'unavailable',
@@ -474,6 +519,24 @@ export function useTrackerState(baseCards) {
       cancelled = true
     }
   }, [withCurrentSnapshot])
+
+  useEffect(() => {
+    const previous = progressEventStateRef.current
+    progressEventStateRef.current = state
+
+    if (typeof window === 'undefined' || !progressLogReadyRef.current) return undefined
+
+    const event = buildProgressEvent(previous, state)
+    if (!event) return undefined
+
+    const timerId = window.setTimeout(() => {
+      appendLocalProgressEvent(event).catch((error) => {
+        console.warn('Local progress log unavailable:', error)
+      })
+    }, 0)
+
+    return () => window.clearTimeout(timerId)
+  }, [state])
 
   const cards = useMemo(() => {
     const combinedBaseCards = [...baseCards, ...state.addedCards]
