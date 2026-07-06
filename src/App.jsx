@@ -93,10 +93,23 @@ const VIEW_META = {
 
 const VALID_VIEW_IDS = new Set(Object.keys(VIEW_META))
 
-function viewFromHash() {
-  if (typeof window === 'undefined') return 'today'
+function parseAppHash() {
+  if (typeof window === 'undefined') return { view: 'today', resourceId: '' }
   const value = window.location.hash.replace(/^#\/?/, '').trim()
-  return VALID_VIEW_IDS.has(value) ? value : 'today'
+  const [viewPart = '', queryString = ''] = value.split('?')
+  const params = new URLSearchParams(queryString)
+  return {
+    view: VALID_VIEW_IDS.has(viewPart) ? viewPart : 'today',
+    resourceId: params.get('resource') ?? '',
+  }
+}
+
+function viewFromHash() {
+  return parseAppHash().view
+}
+
+function resourceIdFromHash() {
+  return parseAppHash().resourceId
 }
 
 function Icon({ name }) {
@@ -383,9 +396,9 @@ export default function App() {
   const [phaseNameEdits, setPhaseNameEdits] = useState({})
   const [entered, setEntered] = useState(() => {
     try {
-      return localStorage.getItem('srp-skip-intro') === '1'
+      return localStorage.getItem('srp-skip-intro') === '1' || Boolean(resourceIdFromHash())
     } catch {
-      return false
+      return Boolean(resourceIdFromHash())
     }
   })
   const [skipIntro, setSkipIntro] = useState(() => {
@@ -405,6 +418,7 @@ export default function App() {
   const autosaveRunRef = useRef(0)
   const saveNowRef = useRef(null)
   const addNotificationsRef = useRef(tracker.addNotifications)
+  const hashResourceRef = useRef('')
 
   const referenceDate = tracker.state.settings.referenceDate
   const mat700Active = tracker.state.settings.mat700Active
@@ -546,7 +560,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const nextHash = `#/${activeView}`
+    const resourceId = resourceIdFromHash()
+    const resourceQuery = resourceId ? `?resource=${encodeURIComponent(resourceId)}` : ''
+    const nextHash = `#/${activeView}${resourceQuery}`
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, '', nextHash)
     }
@@ -671,6 +687,29 @@ export default function App() {
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
   const isStudyView = ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
+
+  useEffect(() => {
+    function openHashResource() {
+      const resourceId = resourceIdFromHash()
+      if (!resourceId) return
+
+      const resource = allResources.find((item) => item.id === resourceId)
+      if (!resource) return
+
+      if (VALID_VIEW_IDS.has(resource.moduleId) && activeView !== resource.moduleId) {
+        setActiveView(resource.moduleId)
+      }
+
+      if (hashResourceRef.current === resourceId && openResourceId === resourceId) return
+      hashResourceRef.current = resourceId
+      setOpenResourceId(resourceId)
+      tracker.markResourceOpened(resourceId)
+    }
+
+    openHashResource()
+    window.addEventListener('hashchange', openHashResource)
+    return () => window.removeEventListener('hashchange', openHashResource)
+  }, [activeView, allResources, openResourceId, tracker])
 
   const viewMeta = VIEW_META[activeView] ?? { title: LABEL_BY_ID[activeView] ?? 'View', subtitle: '' }
   const doneCount = useMemo(() => tracker.cards.filter((card) => card.done).length, [tracker.cards])
@@ -1028,6 +1067,15 @@ export default function App() {
   function openResource(resourceId) {
     setOpenResourceId(resourceId)
     tracker.markResourceOpened(resourceId)
+  }
+
+  function closeResource() {
+    setOpenResourceId(null)
+    hashResourceRef.current = ''
+    const parsed = parseAppHash()
+    if (parsed.resourceId) {
+      window.history.replaceState(null, '', `#/${VALID_VIEW_IDS.has(parsed.view) ? parsed.view : activeView}`)
+    }
   }
 
   function completeFocusSession(cardId, minutes) {
@@ -1668,7 +1716,7 @@ export default function App() {
         onOpenResource={openResource}
       />
 
-      {activeResource && <ResourceReader resource={activeResource} onClose={() => setOpenResourceId(null)} />}
+      {activeResource && <ResourceReader resource={activeResource} onClose={closeResource} />}
 
       <Celebration trigger={celebrateSeed} />
 

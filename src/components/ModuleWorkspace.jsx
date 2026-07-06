@@ -21,6 +21,22 @@ function hours(value) {
   return Number.isInteger(number) ? `${number}h` : `${number.toFixed(1)}h`
 }
 
+const MODULE_VIEW_BY_KEY = {
+  aml: 'aml',
+  mat700: 'mat700',
+  teamProject: 'team-project',
+  timeSeries: 'time-series',
+}
+
+function resourceAppTabUrl(resource) {
+  if (typeof window === 'undefined' || !resource?.id) return resource?.url ?? '#'
+  const url = new URL(window.location.href)
+  const currentView = url.hash.replace(/^#\/?/, '').split('?')[0]
+  const viewId = resource.moduleId || MODULE_VIEW_BY_KEY[resource.moduleKey] || currentView || 'today'
+  url.hash = `/${viewId}?resource=${encodeURIComponent(resource.id)}`
+  return url.toString()
+}
+
 function useTextResource(resource) {
   const [state, setState] = useState({ url: '', status: 'idle', text: '', error: '' })
   const url = resource?.url ?? ''
@@ -435,6 +451,7 @@ function ResourcePreview({ resource, frameRef }) {
 export function ResourceReader({ resource, onClose }) {
   const frameRef = useRef(null)
   const html = isHtmlResource(resource)
+  const appTabUrl = resourceAppTabUrl(resource)
 
   useEffect(() => {
     function onKey(event) {
@@ -480,8 +497,8 @@ export function ResourceReader({ resource, onClose }) {
                 Print
               </button>
             )}
-            <a className="reader-btn" href={resource.url} target="_blank" rel="noreferrer" title="Open in a new browser tab">
-              New tab ↗
+            <a className="reader-btn" href={appTabUrl} target="_blank" rel="noreferrer" title="Open in a new app tab">
+              New tab
             </a>
             <button type="button" className="reader-btn reader-close" onClick={onClose} aria-label="Close reader">
               ✕

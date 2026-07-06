@@ -250,7 +250,7 @@ export function CardDetailDrawer({
 
   return (
     <div
-      className="drawer-shell"
+      className="drawer-shell card-detail-shell"
       role="presentation"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()

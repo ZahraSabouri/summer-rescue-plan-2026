@@ -35,6 +35,8 @@ function moduleForCard(card, modules) {
 function amlLinks(card, resources, text) {
   const ids = []
 
+  pushMatches(ids, resources, (resource) => resource.group === 'Video lectures', 3)
+
   if (includesAny(text, ['s1', 'lab 1', 'workflow', 'supervised', 'unsupervised'])) {
     pushMatches(ids, resources, (resource) => resource.group === 'Session 1' || /lab 1/i.test(resource.title), 8)
     pushMatches(ids, resources, (resource) => resource.group === 'Study notes' && /lab 1/i.test(resource.title), 2)

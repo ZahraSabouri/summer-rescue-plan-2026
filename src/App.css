@@ -796,6 +796,59 @@ button:disabled {
   padding: 16px;
 }
 
+.card-detail-shell {
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+
+.card-detail-shell .detail-drawer {
+  width: min(1040px, calc(100vw - 36px));
+  height: min(920px, calc(100vh - 36px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  box-shadow: var(--shadow-2);
+}
+
+.card-detail-shell .detail-drawer > .drawer-header {
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.card-detail-shell .detail-drawer-content {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.card-detail-shell .drawer-controls {
+  grid-template-columns: auto minmax(150px, 1fr) minmax(120px, 150px) auto;
+}
+
+.card-detail-shell .drawer-grid {
+  gap: 14px;
+}
+
+.card-detail-shell .drawer-section h3 {
+  margin: 0;
+  align-items: center;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 850;
+}
+
+.card-detail-shell .resource-picker > div {
+  max-height: 220px;
+  overflow: auto;
+}
+
 .drawer-header h2 {
   max-width: 760px;
   font-size: 22px;
@@ -5593,5 +5646,105 @@ h1,
     height: 34px;
     border-radius: 11px;
     font-size: 16px;
+  }
+}
+
+/* ---------- Card modal and module layout polish ---------- */
+.module-workspace .section-heading h2 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.module-tool-section .section-heading h2 {
+  font-size: 16px;
+}
+
+.module-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 14px;
+}
+
+.module-main-column,
+.module-side-column {
+  gap: 14px;
+}
+
+.module-tool-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.module-tool-section {
+  padding: 14px;
+}
+
+.study-resource-grid {
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 12px;
+}
+
+.study-resource-grid.pinned {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+.study-resource-card {
+  min-height: 116px;
+  align-content: start;
+  padding: 11px;
+}
+
+.study-resource-card strong {
+  font-size: 13.5px;
+}
+
+.study-resource-card p {
+  font-size: 12.5px;
+}
+
+.materials-groups {
+  gap: 16px;
+}
+
+.material-group-head h3 {
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (max-width: 980px) {
+  .card-detail-shell .drawer-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .card-detail-shell .drawer-controls .primary-button,
+  .card-detail-shell .drawer-reschedule {
+    grid-column: 1 / -1;
+  }
+
+  .module-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .card-detail-shell {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .card-detail-shell .detail-drawer {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .card-detail-shell .drawer-controls,
+  .card-detail-shell .drawer-grid,
+  .definition-grid,
+  .edit-grid {
+    grid-template-columns: 1fr;
   }
 }

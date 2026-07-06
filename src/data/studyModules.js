@@ -519,42 +519,26 @@ const amlSupplementaryResources = [
 ]
 
 const amlVideoLectureResources = [
-  remote('aml', 'Video lectures', 'Session 1 - workflow and Lab 1 walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_1_PLAYLIST_ID', {
-    id: 'aml-video-session-1',
-    description: 'Paste the recommended Session 1 video or playlist URL here.',
-    tags: ['video', 'session 1'],
+  remote('aml', 'Video lectures', 'Applied Machine Learning Videos playlist', 'https://www.youtube.com/playlist?list=PLHofvQE1VlGtZoAULxcHb7lOsMved0CuM', {
+    id: 'aml-video-applied-ml-playlist',
+    description: 'Predetermined Applied Machine Learning study-plan playlist from the CMT307 rescue plan.',
+    tags: ['video', 'playlist', 'applied machine learning'],
     priority: 'high',
     type: 'YOUTUBE',
     viewer: 'youtube',
   }),
-  remote('aml', 'Video lectures', 'Session 2 - preprocessing walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_2_PLAYLIST_ID', {
-    id: 'aml-video-session-2',
-    description: 'Paste the recommended Session 2 video or playlist URL here.',
-    tags: ['video', 'session 2', 'preprocessing'],
+  remote('aml', 'Video lectures', 'Applied Machine Learning in Python Complete Course', 'https://www.youtube.com/watch?v=dh1lvdp0oCo', {
+    id: 'aml-video-python-complete-course',
+    description: 'Predetermined complete applied-machine-learning Python course video from the CMT307 study plan.',
+    tags: ['video', 'python', 'course'],
     priority: 'high',
     type: 'YOUTUBE',
     viewer: 'youtube',
   }),
-  remote('aml', 'Video lectures', 'Session 3 - model evaluation walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_3_PLAYLIST_ID', {
-    id: 'aml-video-session-3',
-    description: 'Paste the recommended Session 3 video or playlist URL here.',
-    tags: ['video', 'session 3', 'evaluation'],
-    priority: 'high',
-    type: 'YOUTUBE',
-    viewer: 'youtube',
-  }),
-  remote('aml', 'Video lectures', 'Session 4 - classification walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_4_PLAYLIST_ID', {
-    id: 'aml-video-session-4',
-    description: 'Paste the recommended Session 4 video or playlist URL here.',
-    tags: ['video', 'session 4', 'classification'],
-    priority: 'high',
-    type: 'YOUTUBE',
-    viewer: 'youtube',
-  }),
-  remote('aml', 'Video lectures', 'Session 5 - ensemble learning walkthrough', 'https://www.youtube.com/playlist?list=PASTE_AML_SESSION_5_PLAYLIST_ID', {
-    id: 'aml-video-session-5',
-    description: 'Paste the recommended Session 5 video or playlist URL here.',
-    tags: ['video', 'session 5', 'ensembles'],
+  remote('aml', 'Video lectures', 'Caltech CS156 Machine Learning course playlist', 'https://www.youtube.com/playlist?list=PLD63A284B7615313A', {
+    id: 'aml-video-caltech-cs156',
+    description: 'Predetermined Caltech CS156 machine-learning playlist from the CMT307 study plan.',
+    tags: ['video', 'playlist', 'machine learning', 'theory'],
     priority: 'high',
     type: 'YOUTUBE',
     viewer: 'youtube',
