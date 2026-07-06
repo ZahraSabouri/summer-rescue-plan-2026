@@ -135,3 +135,70 @@ test('local resource upload stores metadata and serves the uploaded file', async
     assert.equal(await fileResponse.text(), data)
   })
 })
+
+test('saving state mirrors it into the SQLite store and reports it in db health', async () => {
+  await withApi(async ({ baseUrl }) => {
+    const emptyHealth = await (await fetch(`${baseUrl}/api/db/health`)).json()
+    assert.equal(emptyHealth.ok, true)
+    assert.equal(emptyHealth.available, true)
+    assert.equal(emptyHealth.schemaVersion, 1)
+    assert.equal(emptyHealth.counts.card_progress, 0)
+
+    const writeResponse = await fetch(`${baseUrl}/api/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app: 'summer-rescue-plan-app',
+        state: {
+          version: 3,
+          settings: { theme: 'dark' },
+          cards: {
+            'card-001': { status: 'Done', done: true, actualHours: 3 },
+          },
+        },
+      }),
+    })
+    assert.equal(writeResponse.status, 200)
+    const writeResult = await writeResponse.json()
+    assert.equal(writeResult.dbMirrored, true)
+
+    const health = await (await fetch(`${baseUrl}/api/db/summary`)).json()
+    assert.equal(health.counts.card_progress, 1)
+    assert.equal(health.doneCards, 1)
+    assert.equal(health.loggedHours, 3)
+  })
+})
+
+test('db rebuild reconstructs progress from the event log', async () => {
+  await withApi(async ({ baseUrl }) => {
+    // Seed one card into the catalog by saving it as a custom card.
+    await fetch(`${baseUrl}/api/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        state: { version: 3, addedCards: [{ id: 'card-x', title: 'Custom card', status: 'Backlog' }], cards: {} },
+      }),
+    })
+
+    await fetch(`${baseUrl}/api/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entityType: 'card',
+        entityId: 'card-x',
+        eventType: 'card.done_changed',
+        occurredAt: '2026-07-06T10:00:00.000Z',
+        payload: { done: true, status: 'Done' },
+      }),
+    })
+
+    const rebuild = await (await fetch(`${baseUrl}/api/db/rebuild`)).json()
+    assert.equal(rebuild.ok, true)
+    assert.equal(rebuild.eventCount, 1)
+    const card = rebuild.cards.find((item) => item.cardId === 'card-x')
+    assert.ok(card)
+    assert.equal(card.done, true)
+    assert.equal(card.status, 'Done')
+    assert.equal(card.fromEventLog, true)
+  })
+})

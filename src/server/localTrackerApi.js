@@ -186,6 +186,42 @@ function resolveLocalPaths(options = {}) {
     progressLogPath: options.progressLogPath ?? path.join(localDataDir, 'progress-log.ndjson'),
     resourceRootPath,
     resourceIndexPath: options.resourceIndexPath ?? path.join(resourceRootPath, 'resources.json'),
+    dbPath: options.dbPath ?? path.join(localDataDir, 'app.sqlite'),
+    dbEnabled: options.dbEnabled ?? true,
+  }
+}
+
+async function readAllProgressEvents(progressLogPath) {
+  try {
+    const raw = await fs.readFile(progressLogPath, 'utf8')
+    return raw
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line)
+        } catch {
+          return null
+        }
+      })
+      .filter(Boolean)
+  } catch (error) {
+    if (error.code === 'ENOENT') return []
+    throw error
+  }
+}
+
+// Open the SQLite mirror for a single operation and always close it afterwards.
+// Opening per request keeps the file unlocked between calls (important on
+// Windows and for temp-directory test cleanup) and degrades gracefully if the
+// runtime lacks node:sqlite support.
+async function withTrackerDb(dbPath, run) {
+  const mod = await import('./trackerDb.js')
+  const db = mod.openTrackerDb(dbPath)
+  try {
+    return await run(db, mod)
+  } finally {
+    db.close()
   }
 }
 
@@ -359,12 +395,13 @@ export function createLocalTrackerApi(options = {}) {
       sendJson(res, 200, {
         ok: true,
         app: 'summer-rescue-plan-app',
-        storage: 'local-file',
+        storage: 'local-file+sqlite',
         localDataDir: paths.localDataDir,
         statePath: paths.trackerStatePath,
         progressLogPath: paths.progressLogPath,
         resourceRootPath: paths.resourceRootPath,
         resourceIndexPath: paths.resourceIndexPath,
+        dbPath: paths.dbPath,
         endpoints: [
           '/api/health',
           '/api/state',
@@ -373,8 +410,68 @@ export function createLocalTrackerApi(options = {}) {
           '/api/resources',
           '/api/resources/upload',
           '/api/resources/file/:moduleId/:fileName',
+          '/api/db/health',
+          '/api/db/summary',
+          '/api/db/rebuild',
         ],
       })
+      return
+    }
+
+    if (pathname === '/api/db/health' || pathname === '/api/db/summary') {
+      if (req.method !== 'GET') {
+        res.statusCode = 405
+        res.setHeader('Allow', 'GET')
+        res.end()
+        return
+      }
+      if (!paths.dbEnabled) {
+        sendJson(res, 200, { ok: false, available: false, dbPath: paths.dbPath, error: 'SQLite mirror disabled.' })
+        return
+      }
+      let existedBefore = true
+      try {
+        await fs.access(paths.dbPath)
+      } catch {
+        existedBefore = false
+      }
+      try {
+        const info = await withTrackerDb(paths.dbPath, (db) => {
+          const counts = db.counts()
+          const done = db.db.prepare('SELECT COUNT(*) AS n FROM card_progress WHERE done = 1').get()
+          const hours = db.db.prepare('SELECT COALESCE(SUM(actual_hours), 0) AS h FROM card_progress').get()
+          return {
+            schemaVersion: db.getSchemaVersion(),
+            counts,
+            doneCards: Number(done?.n ?? 0),
+            loggedHours: Math.round(Number(hours?.h ?? 0) * 100) / 100,
+          }
+        })
+        sendJson(res, 200, { ok: true, available: true, dbPath: paths.dbPath, existedBefore, ...info })
+      } catch (error) {
+        sendJson(res, 200, { ok: false, available: false, dbPath: paths.dbPath, error: error.message })
+      }
+      return
+    }
+
+    if (pathname === '/api/db/rebuild') {
+      if (req.method !== 'GET' && req.method !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('Allow', 'GET, POST')
+        res.end()
+        return
+      }
+      if (!paths.dbEnabled) {
+        sendJson(res, 200, { ok: false, available: false, dbPath: paths.dbPath, error: 'SQLite mirror disabled.' })
+        return
+      }
+      try {
+        const events = await readAllProgressEvents(paths.progressLogPath)
+        const recovery = await withTrackerDb(paths.dbPath, (db) => db.recover(events))
+        sendJson(res, 200, { ok: true, eventCount: events.length, ...recovery })
+      } catch (error) {
+        sendJson(res, 500, { ok: false, error: error.message })
+      }
       return
     }
 
@@ -448,7 +545,21 @@ export function createLocalTrackerApi(options = {}) {
           const tmpPath = `${paths.trackerStatePath}.tmp`
           await fs.writeFile(tmpPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
           await fs.rename(tmpPath, paths.trackerStatePath)
-          sendJson(res, 200, { ok: true, savedAt: new Date().toISOString(), path: paths.trackerStatePath })
+
+          // Best-effort: mirror the saved state into the SQLite store. A failure
+          // here (e.g. no node:sqlite) must never fail the JSON save, which is
+          // the app's primary persistence path.
+          let dbMirrored = false
+          if (paths.dbEnabled) {
+            try {
+              await withTrackerDb(paths.dbPath, (db) => db.projectState(payload))
+              dbMirrored = true
+            } catch (error) {
+              console.warn('SQLite projection skipped:', error.message)
+            }
+          }
+
+          sendJson(res, 200, { ok: true, savedAt: new Date().toISOString(), path: paths.trackerStatePath, dbMirrored })
         } catch (error) {
           sendError(res, error, 400)
         }

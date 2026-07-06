@@ -10,6 +10,8 @@
     "test": "node --test",
     "assets:sync": "node scripts/syncStudyAssets.mjs",
     "assets:verify": "node scripts/syncStudyAssets.mjs --verify-only",
+    "db:seed": "node scripts/initTrackerDb.mjs",
+    "db:rebuild": "node scripts/initTrackerDb.mjs --rebuild",
     "preview": "vite preview"
   },
   "dependencies": {

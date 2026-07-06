@@ -45,10 +45,13 @@ logged hours) plus curated study resources surfaced per module.
 - **Plain CSS with design tokens** (`src/index.css` variables + `src/App.css`) — no Tailwind/CSS framework.
 - **Google Fonts**: Fraunces (serif display), Manrope (UI), Space Grotesk (numerals). Loaded via `<link>` in
   `index.html`; falls back to system fonts if offline.
-- **Local-first storage.** The Vite dev/preview server exposes `/api/state`, `/api/health`, `/api/events`, and
-  local resource endpoints. Tracker state autosaves to `local-data/summer-rescue-tracker-state.json`, typed
-  task/card events append to `local-data/progress-log.ndjson`, and uploaded files are copied under
+- **Local-first storage.** The Vite dev/preview server exposes `/api/state`, `/api/health`, `/api/events`,
+  `/api/db/*`, and local resource endpoints. Tracker state autosaves to `local-data/summer-rescue-tracker-state.json`,
+  typed task/card events append to `local-data/progress-log.ndjson`, and uploaded files are copied under
   `local-data/resources/<module-id>/`. Browser `localStorage` remains a secondary startup mirror and safety-copy store.
+- **SQLite durable mirror.** Each save is also written through to `local-data/app.sqlite` (Node's built-in
+  `node:sqlite` — no dependency to install) so durable entities live in queryable tables. `GET /api/db/rebuild`
+  reconstructs per-card progress from the typed event log alone. See [Data model & storage](#data-model--storage).
 - **Zero runtime dependencies** beyond `react` / `react-dom`. Charts, icons, and the timer are hand-built SVG —
   nothing to audit or update.
 
@@ -60,9 +63,11 @@ npm run dev        # start the dev server (http://localhost:5173)
 npm run build      # production build into dist/
 npm run preview    # preview the production build
 npm run lint       # ESLint
-npm run test       # node:test API checks
+npm run test       # node:test API + SQLite checks
 npm run assets:sync    # copy curated study resources into public/study-assets
 npm run assets:verify  # check every referenced asset exists
+npm run db:seed        # build local-data/app.sqlite from source data + current JSON state
+npm run db:rebuild     # print the event-log recovery for the seeded cards
 ```
 
 > **Build on Windows.** `node_modules` holds platform-native binaries (Vite/Rolldown). If the folder was set
@@ -98,9 +103,10 @@ summer-rescue-plan-app/
 └─ public/study-assets/       # local copies of the resources the app links to
 ```
 
-Current local API code lives in `src/server/localTrackerApi.js`, and API coverage lives in `tests/`.
-The ignored `local-data/` folder holds the tracker state file, typed progress log, local resource index,
-and uploaded resource files.
+Current local API code lives in `src/server/localTrackerApi.js`, the SQLite durable store lives in
+`src/server/trackerDb.js`, and `scripts/initTrackerDb.mjs` seeds/rebuilds it. API and database coverage lives
+in `tests/`. The ignored `local-data/` folder holds the tracker state file, typed progress log, the SQLite
+database (`app.sqlite`), the local resource index, and uploaded resource files.
 
 ## Data model & storage
 
@@ -112,6 +118,16 @@ and uploaded resource files.
   `card.done_changed`, `card.status_changed`, `checklist_item.toggled`, `hours.logged`,
   `focus_session.completed`, `evidence.added`, `note.edited`, and `resource.linked`. Settings, notifications,
   and browser safety-copy churn are not written to this log.
+- **SQLite mirror** (`local-data/app.sqlite`): every `/api/state` save is written through into normalised tables
+  (`cards`, `card_progress`, `checklist_items`, `card_notes`, `card_evidence`, `card_resources`, `module_notes`,
+  `resources`, `resource_reviewed`, `settings`, `notifications`) via `src/server/trackerDb.js`. Seed or reseed it
+  from the source data plus the current JSON state with `npm run db:seed`; inspect table counts at
+  `GET /api/db/health` / `GET /api/db/summary`. Projection is best-effort — if it ever fails, the JSON save (the
+  app's primary persistence path) still succeeds. The client still reads/writes the JSON file, so JSON stays the
+  export/import format; SQLite is the durable, queryable copy.
+- **Event-log recovery**: `GET /api/db/rebuild` (or `npm run db:rebuild`) folds the typed events in
+  `progress-log.ndjson` back over the seeded card catalog to reconstruct per-card status, done-state, logged hours,
+  checklist ticks, notes, evidence, and resource links — a recovery path that does not depend on the JSON state file.
 - **Uploaded resources**: module pages can upload files into `local-data/resources/<module-id>/`. Metadata is mirrored
   in the tracker state and a local resource index so the files appear in the resource browser and can be linked to cards.
 - **Browser mirror**: the browser still mirrors full state to `localStorage["summer-rescue-tracker-state-v3"]` for fast
@@ -192,5 +208,7 @@ runtime.
 
 - Filter/Add-card dropdowns still list the raw value `MAT700`; the label→value split is intentional so
   filtering keeps working. A display-label map in `FilterBar.jsx` / `AddCardDialog.jsx` would prettify it.
-- SQLite is still not the source of truth. Durable data remains in source files plus JSON/local resource metadata.
-- Ideas not yet built: event-log replay/recovery, richer uploaded-resource management, and full UI smoke tests.
+- SQLite (`local-data/app.sqlite`) is now a durable write-through mirror + event-log recovery source, but the live
+  client read path is still the JSON state file. Making SQLite the authoritative read path (so `GET /api/state`
+  reconstructs from tables) is the next step.
+- Ideas not yet built: richer uploaded-resource management, and full UI smoke tests (Playwright or similar).
