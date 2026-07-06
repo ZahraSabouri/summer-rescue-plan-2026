@@ -24,6 +24,7 @@ import {
   WeekView,
 } from './components/TrackerViews'
 import { baseCards, campaignMeta } from './data/baseCards'
+import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
 import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, VIEW_OPTIONS } from './data/constants'
 import { STUDY_MODULES, STUDY_MODULE_MAP } from './data/studyModules'
@@ -40,7 +41,8 @@ import { deriveStats, filterCards, sortCards, sumHours, todayString } from './ut
 import { generateNotifications } from './utils/notifications'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
-const ENRICHED_BASE_CARDS = attachCardResourceLinks(baseCards, STUDY_MODULES)
+const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(baseCards)
+const ENRICHED_BASE_CARDS = attachCardResourceLinks(PLANNED_BASE_CARDS, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
 

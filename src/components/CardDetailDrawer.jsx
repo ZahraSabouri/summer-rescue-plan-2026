@@ -115,6 +115,8 @@ export function CardDetailDrawer({
   const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
   const resourceModuleGroups = useMemo(() => new Set(resources.map((resource) => resource.moduleGroup)), [resources])
   const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
+  const videoResources = linkedResources.filter((resource) => resource.viewer === 'youtube' || resource.type === 'YOUTUBE')
+  const fileResources = linkedResources.filter((resource) => resource.viewer !== 'youtube' && resource.type !== 'YOUTUBE')
   const savedEvidenceItems = useMemo(
     () => (card?.evidenceEntries?.length ? card.evidenceEntries : card?.evidence ? [{ id: `${card.id}-legacy-evidence`, text: card.evidence }] : []),
     [card],
@@ -338,13 +340,36 @@ export function CardDetailDrawer({
             </dl>
           </section>
 
+          {videoResources.length > 0 && (
+            <section className="drawer-section wide video-plan-section">
+              <h3>
+                YouTube study plan <span>{videoResources.length}</span>
+              </h3>
+              <p className="muted">Use these as targeted support for this card, then write the timestamp note into the card evidence.</p>
+              <div className="video-resource-list">
+                {videoResources.map((resource) => (
+                  <div key={resource.id} className="video-resource-card">
+                    <button type="button" onClick={() => onOpenResource?.(resource.id)}>
+                      <span className="type-badge">{resource.type}</span>
+                      <strong>{resource.title}</strong>
+                      {resource.description && <small>{resource.description}</small>}
+                    </button>
+                    <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="drawer-section wide">
             <h3>
-              Resources <span>{linkedResources.length}</span>
+              Files and references <span>{fileResources.length}</span>
             </h3>
             <div className="resource-chip-list">
-              {linkedResources.length === 0 && <p className="muted">No linked resources yet.</p>}
-              {linkedResources.map((resource) => (
+              {fileResources.length === 0 && <p className="muted">No linked files yet.</p>}
+              {fileResources.map((resource) => (
                 <div key={resource.id} className="resource-chip">
                   <button type="button" onClick={() => onOpenResource?.(resource.id)}>
                     <span className="type-badge">{resource.type}</span>

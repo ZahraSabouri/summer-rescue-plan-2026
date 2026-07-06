@@ -4627,6 +4627,54 @@ h1,
   white-space: nowrap;
 }
 
+.video-plan-section {
+  border-color: color-mix(in srgb, var(--module-accent, var(--accent)) 26%, var(--line));
+  background: color-mix(in srgb, var(--module-accent, var(--accent)) 7%, var(--surface));
+}
+
+.video-resource-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 9px;
+}
+
+.video-resource-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.video-resource-card > button:first-child {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.video-resource-card strong,
+.video-resource-card small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-resource-card small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .checklist.editable {
   gap: 7px;
 }

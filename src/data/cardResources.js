@@ -20,7 +20,7 @@ function pushMatches(target, resources, predicate, limit = 6) {
   for (const resource of matches) target.push(resource.id)
 }
 
-function uniqueLimited(ids, limit = 10) {
+function uniqueLimited(ids, limit = 12) {
   return [...new Set(ids)].slice(0, limit)
 }
 
@@ -171,6 +171,8 @@ export function attachCardResourceLinks(cards, modules) {
     if (module.id === 'time-series') resourceIds = timeSeriesLinks(card, module.resources, text)
     if (module.id === 'team-project') resourceIds = teamProjectLinks(card, module.resources, text)
     if (module.id === 'mat700') resourceIds = mat700Links(card, module.resources, text)
+
+    resourceIds = uniqueLimited([...(card.resourceIds ?? []), ...resourceIds])
 
     if (resourceIds.length === 0) return card
     return {
