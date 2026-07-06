@@ -1,5 +1,6 @@
 // Generated from ../trello_import.csv by scripts/generateBaseCards.mjs.
-// This file contains sanitized planning data only. User progress lives in localStorage.
+// This file contains sanitized planning data only. User progress lives in the local API state file,
+// with browser localStorage kept as a secondary fallback.
 
 export const baseCards = [
   {

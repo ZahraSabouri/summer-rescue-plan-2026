@@ -42,6 +42,7 @@ function createInitialState() {
     moduleNotes: {},
     notifications: {},
     resourceProgress: {},
+    uploadedResources: [],
     recentResourceIds: [],
     snapshots: {},
     settings: {
@@ -67,6 +68,32 @@ function plainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 }
 
+function normaliseUploadedResource(resource) {
+  if (!resource || typeof resource !== 'object' || !resource.id || !resource.url) return null
+  return {
+    id: String(resource.id),
+    moduleId: String(resource.moduleId ?? ''),
+    moduleKey: String(resource.moduleKey ?? ''),
+    moduleGroup: String(resource.moduleGroup ?? ''),
+    group: String(resource.group ?? 'Uploaded'),
+    title: String(resource.title ?? resource.fileName ?? 'Uploaded resource').trim() || 'Uploaded resource',
+    path: String(resource.path ?? resource.fileName ?? ''),
+    type: String(resource.type ?? 'FILE'),
+    viewer: String(resource.viewer ?? 'file'),
+    url: String(resource.url),
+    description: String(resource.description ?? ''),
+    tags: Array.isArray(resource.tags) ? resource.tags.map((tag) => String(tag)).filter(Boolean) : [],
+    priority: resource.priority === 'high' ? 'high' : 'normal',
+    uploadedAt: String(resource.uploadedAt ?? ''),
+    size: Number(resource.size ?? 0),
+  }
+}
+
+function normaliseUploadedResources(resources) {
+  if (!Array.isArray(resources)) return []
+  return resources.map(normaliseUploadedResource).filter(Boolean)
+}
+
 function resetStateForCurrentPlan(value) {
   const next = createInitialState()
   const previousSettings = plainObject(value?.settings)
@@ -74,6 +101,7 @@ function resetStateForCurrentPlan(value) {
   return {
     ...next,
     moduleNotes: plainObject(value?.moduleNotes),
+    uploadedResources: normaliseUploadedResources(value?.uploadedResources),
     settings: {
       ...next.settings,
       theme: previousSettings.theme ?? next.settings.theme,
@@ -146,6 +174,7 @@ function normaliseState(value) {
     moduleNotes: value.moduleNotes && typeof value.moduleNotes === 'object' ? value.moduleNotes : {},
     notifications: value.notifications && typeof value.notifications === 'object' ? value.notifications : {},
     resourceProgress: value.resourceProgress && typeof value.resourceProgress === 'object' ? value.resourceProgress : {},
+    uploadedResources: normaliseUploadedResources(value.uploadedResources),
     recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],
     snapshots: value.snapshots && typeof value.snapshots === 'object' ? value.snapshots : {},
     settings: {
@@ -153,49 +182,6 @@ function normaliseState(value) {
       ...(value.settings && typeof value.settings === 'object' ? value.settings : {}),
     },
     updatedAt: value.updatedAt ?? nowIso(),
-  }
-}
-
-function changedObjectKeys(previous = {}, next = {}) {
-  const keys = new Set([...Object.keys(previous ?? {}), ...Object.keys(next ?? {})])
-  return [...keys].filter((key) => JSON.stringify(previous?.[key] ?? null) !== JSON.stringify(next?.[key] ?? null))
-}
-
-function buildProgressEvent(previous, next) {
-  const changedCards = changedObjectKeys(previous.cards, next.cards)
-  const changedSettings = changedObjectKeys(previous.settings, next.settings)
-  const changedModuleNotes = changedObjectKeys(previous.moduleNotes, next.moduleNotes)
-  const changedResourceProgress = changedObjectKeys(previous.resourceProgress, next.resourceProgress)
-  const addedCardsChanged = JSON.stringify(previous.addedCards ?? []) !== JSON.stringify(next.addedCards ?? [])
-  const notificationsChanged = JSON.stringify(previous.notifications ?? {}) !== JSON.stringify(next.notifications ?? {})
-
-  if (
-    changedCards.length === 0 &&
-    changedSettings.length === 0 &&
-    changedModuleNotes.length === 0 &&
-    changedResourceProgress.length === 0 &&
-    !addedCardsChanged &&
-    !notificationsChanged
-  ) {
-    return null
-  }
-
-  return {
-    id: makeId('event'),
-    occurredAt: next.updatedAt ?? nowIso(),
-    entityType: 'tracker',
-    entityId: 'state',
-    eventType: 'state.updated',
-    payload: {
-      changedCards,
-      changedSettings,
-      changedModuleNotes,
-      changedResourceProgress,
-      addedCardsChanged,
-      notificationsChanged,
-      version: next.version,
-      updatedAt: next.updatedAt,
-    },
   }
 }
 
@@ -265,6 +251,25 @@ function addActivity(cardState, action, details = '') {
     details,
   }
   return [entry, ...(cardState.activity ?? [])].slice(0, 80)
+}
+
+function createProgressEvent(eventType, entityId, payload = {}, entityType = 'card') {
+  return {
+    id: makeId('event'),
+    occurredAt: nowIso(),
+    entityType,
+    entityId,
+    eventType,
+    payload,
+  }
+}
+
+function cardEventPayload(card, payload = {}) {
+  return {
+    cardTitle: card?.title ?? '',
+    moduleGroup: card?.moduleGroup ?? '',
+    ...payload,
+  }
 }
 
 function getCardState(state, cardId) {
@@ -424,13 +429,43 @@ export function useTrackerState(baseCards) {
   const browserStateExistedRef = useRef(initialSnapshot.browserStateExisted)
   const localFileTimerRef = useRef(null)
   const progressLogReadyRef = useRef(false)
-  const progressEventStateRef = useRef(initialSnapshot.state)
+  const progressFlushTimerRef = useRef(null)
+  const pendingProgressEventsRef = useRef([])
   const [localFile, setLocalFile] = useState({
     status: 'checking',
     savedAt: null,
     path: LOCAL_STATE_FILE_LABEL,
     error: '',
   })
+
+  const flushProgressEvents = useCallback(() => {
+    if (typeof window === 'undefined' || !progressLogReadyRef.current) return
+    const events = pendingProgressEventsRef.current.splice(0)
+    for (const event of events) {
+      appendLocalProgressEvent(event).catch((error) => {
+        pendingProgressEventsRef.current.push(event)
+        console.warn('Local progress log unavailable:', error)
+      })
+    }
+  }, [])
+
+  const queueProgressEvent = useCallback(
+    (eventType, entityId, payload = {}, entityType = 'card') => {
+      if (!eventType || !entityId) return
+      pendingProgressEventsRef.current.push(createProgressEvent(eventType, entityId, payload, entityType))
+      if (typeof window === 'undefined' || !progressLogReadyRef.current) return
+      if (progressFlushTimerRef.current) window.clearTimeout(progressFlushTimerRef.current)
+      progressFlushTimerRef.current = window.setTimeout(flushProgressEvents, 0)
+    },
+    [flushProgressEvents],
+  )
+
+  useEffect(
+    () => () => {
+      if (progressFlushTimerRef.current) window.clearTimeout(progressFlushTimerRef.current)
+    },
+    [],
+  )
 
   const withCurrentSnapshot = useCallback(
     (nextState) => {
@@ -488,7 +523,6 @@ export function useTrackerState(baseCards) {
         if (incoming) {
           setState(() => {
             const fileState = normaliseState(incoming)
-            progressEventStateRef.current = fileState
             return withCurrentSnapshot(fileState)
           })
           browserStateExistedRef.current = false
@@ -498,6 +532,7 @@ export function useTrackerState(baseCards) {
         }
 
         progressLogReadyRef.current = true
+        flushProgressEvents()
         setLocalFile((current) => ({
           ...current,
           status: 'ready',
@@ -518,30 +553,17 @@ export function useTrackerState(baseCards) {
     return () => {
       cancelled = true
     }
-  }, [withCurrentSnapshot])
-
-  useEffect(() => {
-    const previous = progressEventStateRef.current
-    progressEventStateRef.current = state
-
-    if (typeof window === 'undefined' || !progressLogReadyRef.current) return undefined
-
-    const event = buildProgressEvent(previous, state)
-    if (!event) return undefined
-
-    const timerId = window.setTimeout(() => {
-      appendLocalProgressEvent(event).catch((error) => {
-        console.warn('Local progress log unavailable:', error)
-      })
-    }, 0)
-
-    return () => window.clearTimeout(timerId)
-  }, [state])
+  }, [flushProgressEvents, withCurrentSnapshot])
 
   const cards = useMemo(() => {
     const combinedBaseCards = [...baseCards, ...state.addedCards]
     return combinedBaseCards.map((card) => mergeCard(card, state.cards[card.id]))
   }, [baseCards, state])
+
+  function queueCardEvent(eventType, cardId, payload = {}) {
+    const card = cards.find((item) => item.id === cardId)
+    queueProgressEvent(eventType, cardId, cardEventPayload(card, payload))
+  }
 
   const snapshots = useMemo(() => {
     const today = todayString()
@@ -772,6 +794,12 @@ export function useTrackerState(baseCards) {
 
   function setStatus(cardId, status) {
     const card = cards.find((item) => item.id === cardId)
+    if (!card || card.status === status) return
+    queueCardEvent('card.status_changed', cardId, {
+      previousStatus: card.status,
+      status,
+      done: status === 'Done',
+    })
     updateCard(
       cardId,
       {
@@ -785,11 +813,17 @@ export function useTrackerState(baseCards) {
   }
 
   function toggleDone(cardId) {
+    const card = cards.find((item) => item.id === cardId)
+    if (!card) return
+    const done = !card.done
+    const fallbackStatus = card.status && card.status !== 'Done' ? card.status : 'Backlog'
+    queueCardEvent('card.done_changed', cardId, {
+      done,
+      previousStatus: card.status,
+      status: done ? 'Done' : fallbackStatus,
+    })
     setState((current) => {
       const currentCard = getCardState(current, cardId)
-      const card = cards.find((item) => item.id === cardId)
-      const done = !card?.done
-      const fallbackStatus = card?.status && card.status !== 'Done' ? card.status : 'Backlog'
       const nextStatus = done ? 'Done' : currentCard.previousStatus ?? fallbackStatus
       const nextCard = {
         ...currentCard,
@@ -813,6 +847,15 @@ export function useTrackerState(baseCards) {
   }
 
   function toggleChecklistItem(cardId, itemId) {
+    const card = cards.find((item) => item.id === cardId)
+    const item = card?.checklist?.find((entry) => entry.id === itemId)
+    if (item) {
+      queueCardEvent('checklist_item.toggled', cardId, {
+        itemId,
+        text: item.text,
+        done: !item.done,
+      })
+    }
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const checklist = {
@@ -873,11 +916,16 @@ export function useTrackerState(baseCards) {
     if (!value) return
     const card = cards.find((item) => item.id === cardId)
     if (!card) return
+    const itemId = makeId(`${cardId}-check`)
+    queueCardEvent('checklist_item.added', cardId, {
+      itemId,
+      text: value,
+    })
     setChecklistItems(
       cardId,
       [
         ...card.checklist.map((item) => ({ id: item.id, text: item.text })),
-        { id: makeId(`${cardId}-check`), text: value },
+        { id: itemId, text: value },
       ],
       'Added checklist item',
     )
@@ -888,6 +936,13 @@ export function useTrackerState(baseCards) {
     if (!value) return
     const card = cards.find((item) => item.id === cardId)
     if (!card) return
+    const item = card.checklist.find((entry) => entry.id === itemId)
+    if (!item || item.text === value) return
+    queueCardEvent('checklist_item.edited', cardId, {
+      itemId,
+      previousText: item.text,
+      text: value,
+    })
     setChecklistItems(
       cardId,
       card.checklist.map((item) => ({
@@ -901,6 +956,13 @@ export function useTrackerState(baseCards) {
   function deleteChecklistItem(cardId, itemId) {
     const card = cards.find((item) => item.id === cardId)
     if (!card) return
+    const item = card.checklist.find((entry) => entry.id === itemId)
+    if (!item) return
+    queueCardEvent('checklist_item.deleted', cardId, {
+      itemId,
+      text: item.text,
+      done: Boolean(item.done),
+    })
     setChecklistItems(
       cardId,
       card.checklist
@@ -912,16 +974,31 @@ export function useTrackerState(baseCards) {
 
   function setActualHours(cardId, actualHours) {
     const hours = Math.max(0, Number(actualHours || 0))
+    const card = cards.find((item) => item.id === cardId)
+    const previousHours = Number(card?.actualHours ?? 0)
+    if (!card || previousHours === hours) return
+    queueCardEvent('hours.logged', cardId, {
+      previousHours,
+      hours,
+      deltaHours: Math.round((hours - previousHours) * 100) / 100,
+    })
     updateCard(cardId, { actualHours: hours }, 'Logged hours', `${hours}h`)
   }
 
   function addFocusSession(cardId, minutes) {
     const elapsedMinutes = Math.max(0, Math.round(Number(minutes || 0)))
     if (elapsedMinutes < 1) return
+    const card = cards.find((item) => item.id === cardId)
+    if (!card) return
+    const roundedHours = Math.max(0.25, Math.round((elapsedMinutes / 60) * 4) / 4)
+    queueCardEvent('focus_session.completed', cardId, {
+      minutes: elapsedMinutes,
+      hours: roundedHours,
+      previousHours: Number(card.actualHours ?? 0),
+      hoursAfter: Math.round((Number(card.actualHours ?? 0) + roundedHours) * 4) / 4,
+    })
     setState((current) => {
       const currentCard = getCardState(current, cardId)
-      const card = cards.find((item) => item.id === cardId)
-      const roundedHours = Math.max(0.25, Math.round((elapsedMinutes / 60) * 4) / 4)
       const nextHours = Math.round((Number(card?.actualHours ?? currentCard.actualHours ?? 0) + roundedHours) * 4) / 4
       const session = {
         id: makeId('focus'),
@@ -951,6 +1028,11 @@ export function useTrackerState(baseCards) {
   function rescheduleCard(cardId, dueDate) {
     const card = cards.find((item) => item.id === cardId)
     if (!card || !dueDate) return
+    queueCardEvent('card.rescheduled', cardId, {
+      previousDueDate: card.dueDate ?? '',
+      dueDate,
+      status: card.status === 'Done' ? 'Done' : 'This Week',
+    })
     updateCardDetails(cardId, {
       dueDate,
       dueDateTime: dueDate,
@@ -992,12 +1074,23 @@ export function useTrackerState(baseCards) {
   }
 
   function setEvidence(cardId, evidence) {
+    const card = cards.find((item) => item.id === cardId)
+    if (!card || card.evidence === evidence) return
+    queueCardEvent('evidence.edited', cardId, {
+      text: evidence,
+      mode: 'legacy_text',
+    })
     updateCard(cardId, { evidence }, 'Updated evidence')
   }
 
   function addEvidence(cardId, text) {
     const value = text.trim()
     if (!value) return
+    const evidenceId = makeId(`${cardId}-evidence`)
+    queueCardEvent('evidence.added', cardId, {
+      evidenceId,
+      text: value,
+    })
 
     setState((current) => {
       const currentCard = getCardState(current, cardId)
@@ -1005,7 +1098,7 @@ export function useTrackerState(baseCards) {
       const nextEntries = [
         ...entries,
         {
-          id: makeId(`${cardId}-evidence`),
+          id: evidenceId,
           at: nowIso(),
           text: value,
         },
@@ -1032,6 +1125,14 @@ export function useTrackerState(baseCards) {
   function updateEvidence(cardId, evidenceId, text) {
     const value = text.trim()
     if (!value) return
+    const card = cards.find((item) => item.id === cardId)
+    const entry = card?.evidenceEntries?.find((item) => item.id === evidenceId)
+    if (!entry || entry.text === value) return
+    queueCardEvent('evidence.edited', cardId, {
+      evidenceId,
+      previousText: entry.text,
+      text: value,
+    })
 
     setState((current) => {
       const currentCard = getCardState(current, cardId)
@@ -1059,6 +1160,13 @@ export function useTrackerState(baseCards) {
   }
 
   function deleteEvidence(cardId, evidenceId) {
+    const card = cards.find((item) => item.id === cardId)
+    const entry = card?.evidenceEntries?.find((item) => item.id === evidenceId)
+    if (!entry) return
+    queueCardEvent('evidence.deleted', cardId, {
+      evidenceId,
+      text: entry.text,
+    })
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const entries = normaliseEvidenceEntries(cardId, currentCard)
@@ -1087,11 +1195,16 @@ export function useTrackerState(baseCards) {
   function addNote(cardId, text) {
     const noteText = text.trim()
     if (!noteText) return
+    const noteId = makeId('note')
+    queueCardEvent('note.added', cardId, {
+      noteId,
+      text: noteText,
+    })
 
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const note = {
-        id: makeId('note'),
+        id: noteId,
         at: nowIso(),
         text: noteText,
       }
@@ -1116,6 +1229,14 @@ export function useTrackerState(baseCards) {
   function updateNote(cardId, noteId, text) {
     const value = text.trim()
     if (!value) return
+    const card = cards.find((item) => item.id === cardId)
+    const note = card?.notes?.find((item) => item.id === noteId)
+    if (!note || note.text === value) return
+    queueCardEvent('note.edited', cardId, {
+      noteId,
+      previousText: note.text,
+      text: value,
+    })
 
     setState((current) => {
       const currentCard = getCardState(current, cardId)
@@ -1142,6 +1263,13 @@ export function useTrackerState(baseCards) {
   }
 
   function deleteNote(cardId, noteId) {
+    const card = cards.find((item) => item.id === cardId)
+    const note = card?.notes?.find((item) => item.id === noteId)
+    if (!note) return
+    queueCardEvent('note.deleted', cardId, {
+      noteId,
+      text: note.text,
+    })
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const nextCard = {
@@ -1164,6 +1292,11 @@ export function useTrackerState(baseCards) {
 
   function addCard(input) {
     const card = buildCustomCard(input, state.addedCards.length)
+    queueProgressEvent('card.added', card.id, cardEventPayload(card, {
+      status: card.status,
+      priority: card.priority,
+      dueDate: card.dueDate,
+    }))
     setState((current) =>
       withCurrentSnapshot({
         ...current,
@@ -1192,6 +1325,10 @@ export function useTrackerState(baseCards) {
   function deleteCard(cardId) {
     const card = cards.find((item) => item.id === cardId)
     if (!card?.custom) return false
+    queueCardEvent('card.deleted', cardId, {
+      status: card.status,
+      dueDate: card.dueDate,
+    })
     setState((current) => {
       const nextCards = { ...(current.cards ?? {}) }
       delete nextCards[cardId]
@@ -1228,6 +1365,12 @@ export function useTrackerState(baseCards) {
 
   function addCardResource(cardId, resourceId) {
     if (!resourceId) return
+    const card = cards.find((item) => item.id === cardId)
+    if (card) {
+      queueCardEvent('resource.linked', cardId, {
+        resourceId,
+      })
+    }
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const resourceIds = [...new Set([...(currentCard.resourceIds ?? []), resourceId])]
@@ -1251,6 +1394,12 @@ export function useTrackerState(baseCards) {
   }
 
   function removeCardResource(cardId, resourceId) {
+    const card = cards.find((item) => item.id === cardId)
+    if (card?.resourceIds?.includes(resourceId)) {
+      queueCardEvent('resource.unlinked', cardId, {
+        resourceId,
+      })
+    }
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const resourceIds = (currentCard.resourceIds ?? []).filter((id) => id !== resourceId)
@@ -1271,6 +1420,20 @@ export function useTrackerState(baseCards) {
         updatedAt: nowIso(),
       }
     })
+  }
+
+  function addUploadedResource(resource) {
+    const cleanResource = normaliseUploadedResource(resource)
+    if (!cleanResource) return null
+    setState((current) => ({
+      ...current,
+      uploadedResources: [
+        cleanResource,
+        ...(current.uploadedResources ?? []).filter((item) => item.id !== cleanResource.id),
+      ],
+      updatedAt: nowIso(),
+    }))
+    return cleanResource.id
   }
 
   function markResourceOpened(resourceId) {
@@ -1338,6 +1501,7 @@ export function useTrackerState(baseCards) {
     resetCardState,
     addCardResource,
     removeCardResource,
+    addUploadedResource,
     markResourceOpened,
     toggleResourceProgress,
     importTrackerState,

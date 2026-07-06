@@ -5917,6 +5917,87 @@ body.modal-open {
   flex: 1 0 100%;
 }
 
+.resource-upload-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 94%, var(--module-accent, var(--accent)) 6%);
+}
+
+.resource-upload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resource-upload-head h3 {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.resource-upload-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(160px, 0.8fr) minmax(130px, 0.6fr);
+  gap: 10px;
+}
+
+.resource-upload-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.resource-upload-grid label span,
+.file-pick-field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.resource-upload-grid input,
+.resource-upload-grid select {
+  width: 100%;
+  min-height: 39px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.resource-upload-grid input:not([type='file']),
+.resource-upload-grid select {
+  padding: 8px 10px;
+}
+
+.resource-upload-description {
+  grid-column: span 2;
+}
+
+.resource-upload-meta,
+.resource-upload-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.resource-upload-status {
+  color: var(--green);
+  font-weight: 800;
+}
+
+.resource-upload-status.error {
+  color: var(--danger);
+}
+
 @media (max-width: 720px) {
   .board-column {
     flex-basis: min(82vw, 300px);
@@ -5925,5 +6006,18 @@ body.modal-open {
 
   .board-card-list {
     max-height: none;
+  }
+
+  .resource-upload-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resource-upload-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-upload-description {
+    grid-column: auto;
   }
 }

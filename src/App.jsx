@@ -27,7 +27,7 @@ import { baseCards, campaignMeta } from './data/baseCards'
 import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
 import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, VIEW_OPTIONS } from './data/constants'
-import { STUDY_MODULES, STUDY_MODULE_MAP } from './data/studyModules'
+import { STUDY_MODULES } from './data/studyModules'
 import { useTrackerState } from './state/useTrackerState'
 import {
   chooseBackupHandle,
@@ -37,6 +37,7 @@ import {
   requestBackupPermission,
   writeBackupHandle,
 } from './utils/fileBackup'
+import { readLocalResources, uploadLocalResource } from './utils/localStateFile'
 import { deriveStats, filterCards, sortCards, sumHours, todayString } from './utils/progress'
 import { generateNotifications } from './utils/notifications'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
@@ -59,6 +60,18 @@ function mergeOptions(baseOptions, customOptions) {
     seen.add(key)
     return true
   })
+}
+
+function mergeResources(resources) {
+  const byId = new Map()
+  for (const resource of resources) {
+    if (!resource?.id) continue
+    byId.set(resource.id, {
+      ...(byId.get(resource.id) ?? {}),
+      ...resource,
+    })
+  }
+  return [...byId.values()]
 }
 
 function optionExists(options, value, except = '') {
@@ -412,6 +425,7 @@ export default function App() {
   })
   const autosaveSupported = fileBackupSupported()
   const [assetManifest, setAssetManifest] = useState(null)
+  const [localResources, setLocalResources] = useState([])
   const [autosaveHandle, setAutosaveHandle] = useState(null)
   const [autosaveStatus, setAutosaveStatus] = useState(autosaveSupported ? 'off' : 'unsupported')
   const [autosaveSavedAt, setAutosaveSavedAt] = useState(null)
@@ -517,6 +531,20 @@ export default function App() {
       })
       .catch(() => {
         if (!cancelled) setAssetManifest(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    readLocalResources()
+      .then((resources) => {
+        if (!cancelled) setLocalResources(resources)
+      })
+      .catch((error) => {
+        if (!cancelled) console.warn('Local resources unavailable:', error)
       })
     return () => {
       cancelled = true
@@ -675,9 +703,39 @@ export default function App() {
   )
   const selectedCard = tracker.cards.find((card) => card.id === selectedCardId)
   const activeTimerCard = tracker.cards.find((card) => card.id === activeTimerCardId) ?? null
+  const uploadedResources = useMemo(
+    () => mergeResources([...(tracker.state.uploadedResources ?? []), ...localResources]),
+    [localResources, tracker.state.uploadedResources],
+  )
+  const studyModules = useMemo(
+    () =>
+      STUDY_MODULES.map((module) => {
+        const moduleResources = uploadedResources
+          .filter(
+            (resource) =>
+              resource.moduleId === module.id ||
+              resource.moduleKey === module.id ||
+              resource.moduleGroup === module.moduleGroup,
+          )
+          .map((resource) => ({
+            ...resource,
+            moduleId: module.id,
+            moduleGroup: resource.moduleGroup || module.moduleGroup,
+          }))
+        return {
+          ...module,
+          resources: mergeResources([...module.resources, ...moduleResources]),
+        }
+      }),
+    [uploadedResources],
+  )
+  const studyModuleMap = useMemo(
+    () => Object.fromEntries(studyModules.map((module) => [module.id, module])),
+    [studyModules],
+  )
   const allResources = useMemo(
     () =>
-      STUDY_MODULES.flatMap((module) =>
+      studyModules.flatMap((module) =>
         module.resources.map((resource) => ({
           ...resource,
           moduleId: module.id,
@@ -685,7 +743,7 @@ export default function App() {
           moduleTitle: module.title,
         })),
       ),
-    [],
+    [studyModules],
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
   const isStudyView = ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
@@ -1071,6 +1129,21 @@ export default function App() {
     tracker.markResourceOpened(resourceId)
   }
 
+  async function uploadResourceForModule(module, payload) {
+    const result = await uploadLocalResource({
+      ...payload,
+      moduleId: module.id,
+      moduleKey: payload.moduleKey || module.id,
+      moduleGroup: module.moduleGroup,
+    })
+    const resource = result.resource
+    if (!resource) throw new Error('Upload did not return a resource record.')
+    setLocalResources((current) => mergeResources([resource, ...current]))
+    tracker.addUploadedResource(resource)
+    setMessage(`Uploaded resource: ${resource.title}`)
+    return resource
+  }
+
   function closeResource() {
     setOpenResourceId(null)
     hashResourceRef.current = ''
@@ -1121,11 +1194,11 @@ export default function App() {
         />
       )
     }
-    if (STUDY_MODULE_MAP[activeView]) {
+    if (studyModuleMap[activeView]) {
       return (
           <ModuleWorkspace
             key={activeView}
-            module={STUDY_MODULE_MAP[activeView]}
+            module={studyModuleMap[activeView]}
             cards={tracker.cards}
             actions={actions}
             referenceDate={referenceDate}
@@ -1138,6 +1211,7 @@ export default function App() {
             recentResourceIds={tracker.state.recentResourceIds}
             onResourceOpen={tracker.markResourceOpened}
             onResourceReviewedToggle={tracker.toggleResourceProgress}
+            onResourceUpload={uploadResourceForModule}
           />
         )
     }
@@ -1652,7 +1726,7 @@ export default function App() {
                 <span>{campaignMeta.cardCount} campaign cards</span>
                 <span>{sortCards(tracker.cards).filter((card) => card.done).length} done</span>
                 <span>{tracker.state.addedCards.length} added</span>
-                <span>3 module workspaces</span>
+                <span>{studyModules.length} module workspaces</span>
                 <span>
                   Assets {assetManifest?.syncedAt ? `synced ${formatExportStamp(assetManifest.syncedAt)}` : 'not stamped'}
                 </span>

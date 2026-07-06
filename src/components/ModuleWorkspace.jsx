@@ -27,6 +27,20 @@ const MODULE_VIEW_BY_KEY = {
   teamProject: 'team-project',
   timeSeries: 'time-series',
 }
+const MAX_LOCAL_RESOURCE_BYTES = 25 * 1024 * 1024
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer)
+  const chunks = []
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    chunks.push(String.fromCharCode(...bytes.subarray(index, index + 0x8000)))
+  }
+  return window.btoa(chunks.join(''))
+}
+
+function titleFromFileName(fileName = '') {
+  return fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+}
 
 function resourceAppTabUrl(resource) {
   if (typeof window === 'undefined' || !resource?.id) return resource?.url ?? '#'
@@ -375,6 +389,125 @@ function ResourceCard({ resource, selected, reviewed, onSelect, onToggleReviewed
   )
 }
 
+function ResourceUploadPanel({ module, groups, onUpload, onUploaded }) {
+  const fileInputRef = useRef(null)
+  const [file, setFile] = useState(null)
+  const [title, setTitle] = useState('')
+  const [group, setGroup] = useState('Uploaded')
+  const [description, setDescription] = useState('')
+  const [tags, setTags] = useState('')
+  const [priority, setPriority] = useState('normal')
+  const [status, setStatus] = useState('idle')
+  const [error, setError] = useState('')
+  const groupOptions = ['Uploaded', ...groups.filter((item) => item !== 'Uploaded')]
+  const canUpload = Boolean(file && title.trim() && status !== 'saving')
+
+  async function submitUpload(event) {
+    event.preventDefault()
+    if (!file || !onUpload) return
+    if (file.size > MAX_LOCAL_RESOURCE_BYTES) {
+      setError('File is larger than 25 MB.')
+      return
+    }
+
+    setStatus('saving')
+    setError('')
+
+    try {
+      const dataBase64 = await arrayBufferToBase64(await file.arrayBuffer())
+      const resource = await onUpload(module, {
+        fileName: file.name,
+        mimeType: file.type,
+        size: file.size,
+        title: title.trim(),
+        group,
+        description: description.trim(),
+        tags,
+        priority,
+        dataBase64,
+      })
+      setFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setTitle('')
+      setGroup('Uploaded')
+      setDescription('')
+      setTags('')
+      setPriority('normal')
+      setStatus('saved')
+      onUploaded?.(resource.id)
+    } catch (uploadError) {
+      setStatus('error')
+      setError(uploadError.message)
+    }
+  }
+
+  return (
+    <form className="resource-upload-panel" onSubmit={submitUpload}>
+      <div className="resource-upload-head">
+        <div>
+          <p className="eyebrow">Local files</p>
+          <h3>Add resource</h3>
+        </div>
+        <button type="submit" className="primary-button" disabled={!canUpload}>
+          {status === 'saving' ? 'Uploading...' : 'Upload'}
+        </button>
+      </div>
+      <div className="resource-upload-grid">
+        <label className="file-pick-field">
+          <span>File</span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={(event) => {
+              const nextFile = event.target.files?.[0] ?? null
+              setFile(nextFile)
+              setError('')
+              setStatus('idle')
+              if (nextFile) setTitle((current) => current.trim() || titleFromFileName(nextFile.name))
+            }}
+          />
+        </label>
+        <label>
+          <span>Title</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Resource title" />
+        </label>
+        <label>
+          <span>Group</span>
+          <select value={group} onChange={(event) => setGroup(event.target.value)}>
+            {groupOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Priority</span>
+          <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+        <label>
+          <span>Tags</span>
+          <input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="comma separated" />
+        </label>
+        <label className="resource-upload-description">
+          <span>Description</span>
+          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional note" />
+        </label>
+      </div>
+      {file && (
+        <p className="resource-upload-meta">
+          {file.name} - {(file.size / 1024 / 1024).toFixed(file.size > 1024 * 1024 ? 1 : 3)} MB
+        </p>
+      )}
+      {status === 'saved' && <p className="resource-upload-status">Resource uploaded.</p>}
+      {error && <p className="resource-upload-status error">{error}</p>}
+    </form>
+  )
+}
+
 function isHtmlResource(resource) {
   return /\.html?(\?|#|$)/i.test(resource?.url || '') || resource?.viewer === 'html'
 }
@@ -679,6 +812,7 @@ export function ModuleWorkspace({
   recentResourceIds = [],
   onResourceOpen,
   onResourceReviewedToggle,
+  onResourceUpload,
 }) {
   const [tab, setTab] = useState('overview')
   const [openResourceId, setOpenResourceId] = useState(null)
@@ -873,6 +1007,12 @@ export function ModuleWorkspace({
       {tab === 'materials' && (
         <div className="module-panel">
           <section className="resource-browser">
+            <ResourceUploadPanel
+              module={module}
+              groups={groups.filter((group) => group !== 'all')}
+              onUpload={onResourceUpload}
+              onUploaded={selectResource}
+            />
             <div className="resource-browser-bar">
               <label className="search-field">
                 <span>Find resource</span>

@@ -45,8 +45,10 @@ logged hours) plus curated study resources surfaced per module.
 - **Plain CSS with design tokens** (`src/index.css` variables + `src/App.css`) — no Tailwind/CSS framework.
 - **Google Fonts**: Fraunces (serif display), Manrope (UI), Space Grotesk (numerals). Loaded via `<link>` in
   `index.html`; falls back to system fonts if offline.
-- **Local-first storage.** When served by Vite, tracker state autosaves to `local-data/summer-rescue-tracker-state.json`
-  and mirrors into browser `localStorage`; optional JSON export/import and Chromium file autosave remain available.
+- **Local-first storage.** The Vite dev/preview server exposes `/api/state`, `/api/health`, `/api/events`, and
+  local resource endpoints. Tracker state autosaves to `local-data/summer-rescue-tracker-state.json`, typed
+  task/card events append to `local-data/progress-log.ndjson`, and uploaded files are copied under
+  `local-data/resources/<module-id>/`. Browser `localStorage` remains a secondary startup mirror and safety-copy store.
 - **Zero runtime dependencies** beyond `react` / `react-dom`. Charts, icons, and the timer are hand-built SVG —
   nothing to audit or update.
 
@@ -58,6 +60,7 @@ npm run dev        # start the dev server (http://localhost:5173)
 npm run build      # production build into dist/
 npm run preview    # preview the production build
 npm run lint       # ESLint
+npm run test       # node:test API checks
 npm run assets:sync    # copy curated study resources into public/study-assets
 npm run assets:verify  # check every referenced asset exists
 ```
@@ -90,18 +93,29 @@ summer-rescue-plan-app/
 │  │  ├─ baseCards.js         # seed planning cards (generated from trello_import.csv)
 │  │  ├─ studyModules.js      # module definitions + curated resource lists
 │  │  └─ constants.js         # view options, statuses, modules, filters
-│  ├─ state/useTrackerState.js# reducer/hooks over local file + localStorage
+│  ├─ state/useTrackerState.js# reducer/hooks over local API + browser fallback
 │  └─ utils/                  # progress math, activity history, file backup, links
 └─ public/study-assets/       # local copies of the resources the app links to
 ```
+
+Current local API code lives in `src/server/localTrackerApi.js`, and API coverage lives in `tests/`.
+The ignored `local-data/` folder holds the tracker state file, typed progress log, local resource index,
+and uploaded resource files.
 
 ## Data model & storage
 
 - **Cards** (`src/data/baseCards.js`): each has `id`, `title`, `module` / `moduleGroup`, `phase`, `priority`,
   `status`, `done`, `checklist`, `evidence`, `notes`, `estimateHours` / `actualHours`, `tags`, and dates.
-- **Persistence**: the Vite dev/preview server writes `local-data/summer-rescue-tracker-state.json` automatically.
-  The browser also mirrors the same state to `localStorage["summer-rescue-tracker-state-v3"]` for fast startup and
-  offline resilience. Nothing leaves the machine.
+- **Persistence**: the Vite dev/preview server writes `local-data/summer-rescue-tracker-state.json` through
+  `/api/state`. `/api/health` reports active local paths and `/api/events` reads/appends recent progress events.
+- **Progress log**: `local-data/progress-log.ndjson` stores typed task/card events such as
+  `card.done_changed`, `card.status_changed`, `checklist_item.toggled`, `hours.logged`,
+  `focus_session.completed`, `evidence.added`, `note.edited`, and `resource.linked`. Settings, notifications,
+  and browser safety-copy churn are not written to this log.
+- **Uploaded resources**: module pages can upload files into `local-data/resources/<module-id>/`. Metadata is mirrored
+  in the tracker state and a local resource index so the files appear in the resource browser and can be linked to cards.
+- **Browser mirror**: the browser still mirrors full state to `localStorage["summer-rescue-tracker-state-v3"]` for fast
+  startup and fallback resilience. The local file wins once `/api/state` loads. Nothing leaves the machine.
 - Additional UI keys: `srp-nav-collapsed` (sidebar), `srp-skip-intro` (landing screen).
 - **Backups**: *Export JSON* downloads a full snapshot; *Import JSON* restores one; *Choose autosave file*
   (Chromium browsers) writes changes to a file you pick, automatically. *Reset* exports first, then clears.
@@ -132,7 +146,7 @@ remaining time shows on the topbar button while running, so it keeps going as yo
 
 - *Study Hub* — cross-module overview and quick actions.
 - *Applied ML / Time Series / Data Mining* — each module's objectives, operating rules, action cards, a
-  resource browser (notes, formula sheets, past papers), and a scratchpad.
+  resource browser (notes, formula sheets, past papers, local uploads), and a scratchpad.
 - *Planner* — pace banner, pipeline, and this week at a glance.
 - *Progress* — burn-up vs. ideal pace (Day/Week/Month), hours-per-period, per-module rings, activity heatmap.
 - *Analytics* — charts, module mix, and stats.
@@ -178,5 +192,5 @@ runtime.
 
 - Filter/Add-card dropdowns still list the raw value `MAT700`; the label→value split is intentional so
   filtering keeps working. A display-label map in `FilterBar.jsx` / `AddCardDialog.jsx` would prettify it.
-- Ideas not yet built: richer in-app viewer for HTML study resources; per-card timers that log hours
-  automatically; keyboard command palette.
+- SQLite is still not the source of truth. Durable data remains in source files plus JSON/local resource metadata.
+- Ideas not yet built: event-log replay/recovery, richer uploaded-resource management, and full UI smoke tests.
