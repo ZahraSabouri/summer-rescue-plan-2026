@@ -84,9 +84,13 @@ function MiniCardList({ cards, empty, actions }) {
   )
 }
 
-export function DashboardView({ cards, stats, referenceDate, mat700Active, actions, schedule }) {
+export function DashboardView({ cards, stats, referenceDate, weekReferenceDate = referenceDate, mat700Active, actions, schedule, scopeLabel = '' }) {
+  const displayScope = scopeLabel === 'MAT700' ? 'Data Mining' : scopeLabel
   const donePct = percent(stats.done, stats.total)
-  const weekOpen = stats.weekCards.filter((card) => !card.done)
+  const weekOpen = cards.filter(
+    (card) => !card.done && isCurrentWeek(getCardDate(card), weekReferenceDate),
+  )
+  const weekHours = sumHours(weekOpen, 'estimatedHours')
   const next7End = addDays(referenceDate, 7)
   const phaseMax = Math.max(...stats.byPhase.map((item) => item.total), 1)
   const moduleMax = Math.max(...stats.byModule.map((item) => item.estimated), 1)
@@ -109,6 +113,15 @@ export function DashboardView({ cards, stats, referenceDate, mat700Active, actio
 
   return (
     <div className="view-grid dashboard-view">
+      {displayScope && (
+        <section className="planner-scope-banner" aria-label={`${displayScope} planner scope`}>
+          <div>
+            <p className="eyebrow">Module planner</p>
+            <strong>{displayScope}</strong>
+          </div>
+          <span>Every metric and card below is limited to this module. Use Clear above for the whole campaign.</span>
+        </section>
+      )}
       <section className="command-grid" aria-label="Progress figures">
         <article className={`command-panel pace-card ${pace.onTrack ? 'on-track' : 'behind'}`}>
           <div>
@@ -152,7 +165,7 @@ export function DashboardView({ cards, stats, referenceDate, mat700Active, actio
           <div className="section-heading">
             <div>
               <p className="eyebrow">Modules</p>
-              <h2>Completion split</h2>
+              <h2>{displayScope ? `${displayScope} completion` : 'Completion split'}</h2>
             </div>
           </div>
           <StackedModuleBars rows={moduleRows} />
@@ -160,30 +173,36 @@ export function DashboardView({ cards, stats, referenceDate, mat700Active, actio
       </section>
 
       <section className="metric-grid" aria-label="Campaign metrics">
-        <MetricTile label="Campaign cards" value={stats.baseTotal} detail={`${stats.done} done / ${stats.notDone} open`} />
+        <MetricTile label={displayScope ? `${displayScope} cards` : 'Campaign cards'} value={stats.baseTotal} detail={`${stats.done} done / ${stats.notDone} open`} />
         <MetricTile label="Completion" value={`${donePct}%`} detail="Done across active tracker" tone="green" />
         <MetricTile
           label="Hours"
           value={`${hours(stats.loggedHours)} / ${hours(stats.estimatedHours)}`}
           detail="Logged vs estimated"
         />
-        <MetricTile label="Current week" value={weekOpen.length} detail={`${hours(stats.weekHours)} planned`} tone="amber" />
+        <MetricTile label={weekReferenceDate > referenceDate ? 'Launch week' : 'Current week'} value={weekOpen.length} detail={`${hours(weekHours)} planned`} tone="amber" />
         <MetricTile label="Overdue" value={stats.overdueCards.length} detail="Open cards past due date" tone="red" />
         <MetricTile label="Due today" value={stats.dueToday.length} detail={formatDate(referenceDate)} />
         <MetricTile label="Next 7 days" value={stats.nextSevenCards.length} detail={`${formatDate(referenceDate)} - ${formatDate(next7End)}`} />
-        <MetricTile label="Rescue lane" value={stats.rescueCards.length} detail="Buffer and recovery cards" tone="amber" />
+        {!displayScope && <MetricTile label="Rescue lane" value={stats.rescueCards.length} detail="Buffer and recovery cards" tone="amber" />}
         <MetricTile label="Waiting" value={stats.waitingCards.length} detail="Blocked or date-dependent" />
-        <MetricTile label="Data Mining" value={mat700Active ? 'Study lane active' : 'Paused'} detail="Tutorial-first recovery lane" tone="green" />
-        <MetricTile
-          label="Project ship"
-          value={`${percent(stats.project.done, stats.project.total)}%`}
-          detail={`${stats.project.done}/${stats.project.total} project cards done`}
-        />
-        <MetricTile
-          label="Exam readiness"
-          value={`${percent(stats.examReadiness.done, stats.examReadiness.examCards)}%`}
-          detail={`${stats.examReadiness.done}/${stats.examReadiness.examCards} exam cards done`}
-        />
+        {(!displayScope || scopeLabel === 'MAT700') && (
+          <MetricTile label="Data Mining" value={mat700Active ? 'Study lane active' : 'Paused'} detail="Tutorial-first recovery lane" tone="green" />
+        )}
+        {(!displayScope || scopeLabel === 'Group Project') && (
+          <MetricTile
+            label="Project ship"
+            value={`${percent(stats.project.done, stats.project.total)}%`}
+            detail={`${stats.project.done}/${stats.project.total} project cards done`}
+          />
+        )}
+        {!displayScope && (
+          <MetricTile
+            label="Exam readiness"
+            value={`${percent(stats.examReadiness.done, stats.examReadiness.examCards)}%`}
+            detail={`${stats.examReadiness.done}/${stats.examReadiness.examCards} exam cards done`}
+          />
+        )}
       </section>
 
       <section className="split-grid">
@@ -201,7 +220,7 @@ export function DashboardView({ cards, stats, referenceDate, mat700Active, actio
           <div className="section-heading">
             <div>
               <p className="eyebrow">Week</p>
-              <h2>{getWeekLabel(referenceDate)}</h2>
+              <h2>{getWeekLabel(weekReferenceDate)}</h2>
             </div>
           </div>
           <MiniCardList cards={weekOpen.slice(0, 8)} empty="No open cards in the selected week." actions={actions} />
@@ -305,6 +324,7 @@ export function BoardView({ cards, actions }) {
 export function TableView({ cards, actions }) {
   return (
     <section className="table-shell" aria-label="Card table">
+      <p className="table-scroll-note">Card titles stay pinned; scroll sideways for status, hours, evidence, and completion.</p>
       <table className="card-table">
         <thead>
           <tr>
@@ -377,6 +397,9 @@ export function WeekView({ cards, referenceDate, actions }) {
         <div>
           <p className="eyebrow">Calendar</p>
           <h2>{getWeekLabel(referenceDate)}</h2>
+          <p className="week-view-note">
+            Cards appear on their due date. Due-card estimates show the size of the whole card, not that day&apos;s reserved workload; use Schedule for daily hours.
+          </p>
         </div>
       </header>
 
@@ -388,7 +411,7 @@ export function WeekView({ cards, referenceDate, actions }) {
             <section className="day-column" key={day}>
               <header>
                 <strong>{formatDate(day)}</strong>
-                <span>{dayCards.length} cards / {hours(dayHours)}</span>
+                <span>{dayCards.length} due · {hours(dayHours)} card estimate</span>
               </header>
               <div className="day-card-list">
                 {dayCards.map((card) => (
@@ -630,7 +653,19 @@ export function EvidenceView({ cards, actions }) {
   )
 }
 
-export function FocusView({ title, eyebrow, description, cards, actions, referenceDate, onRescheduleAllOverdue }) {
+export function FocusView({
+  title,
+  eyebrow,
+  description,
+  cards,
+  actions,
+  referenceDate,
+  onRescheduleAllOverdue,
+  emptyTitle = 'No open cards in this view.',
+  emptyDescription,
+  emptyActionLabel,
+  onEmptyAction,
+}) {
   const sorted = sortCards(cards)
   const openCards = sorted.filter((card) => !card.done)
   const doneCards = sorted.filter((card) => card.done)
@@ -660,7 +695,17 @@ export function FocusView({ title, eyebrow, description, cards, actions, referen
         {openCards.map((card) => (
           <CardSummary key={card.id} card={card} {...actions} />
         ))}
-        {openCards.length === 0 && <p className="empty-state">No open cards in this view.</p>}
+        {openCards.length === 0 && (
+          <div className="focus-empty-state" role="status">
+            <strong>{emptyTitle}</strong>
+            {emptyDescription && <p>{emptyDescription}</p>}
+            {emptyActionLabel && onEmptyAction && (
+              <button type="button" className="secondary-button" onClick={onEmptyAction}>
+                {emptyActionLabel}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {doneCards.length > 0 && (

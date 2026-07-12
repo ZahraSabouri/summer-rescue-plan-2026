@@ -105,6 +105,11 @@ test('job hunt, project, hygiene, groceries, and outside time stay bounded', () 
 })
 
 test('rebased cards are active, bounded, and stop new learning before the exam window', () => {
+  assert.deepEqual(rescueCards.map((card) => card.number), rescueCards.map((_, index) => index + 1))
+  assert.ok(rescueCards.every((card) => !/39|resit|reassess/i.test(
+    `${card.title} ${card.description} ${card.trackerNotes} ${(card.tags ?? []).join(' ')}`,
+  )))
+
   const examModules = new Set(['Applied ML', 'Time Series', 'MAT700'])
   const examCards = rescueCards.filter((card) => examModules.has(card.moduleGroup))
   assert.ok(examCards.length >= 90)

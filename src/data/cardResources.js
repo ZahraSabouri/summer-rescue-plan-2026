@@ -64,7 +64,7 @@ function amlLinks(card, resources, text) {
     pushMatches(ids, resources, (resource) => resource.group === 'Python support', 5)
   }
   if (includesAny(text, ['mock', 'open-book', 'navigation', 'lookup'])) {
-    pushMatches(ids, resources, (resource) => resource.group === 'Weekly maps' || resource.group === 'Study plan', 5)
+    pushMatches(ids, resources, (resource) => resource.group === 'Weekly maps', 5)
   }
 
   return uniqueLimited(ids)

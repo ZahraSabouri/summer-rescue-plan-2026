@@ -6,7 +6,7 @@
 //     for the logged-hours curve (which the activity log can't reconstruct
 //     precisely). Builds real day-by-day history as the campaign runs.
 
-import { addDays, isTrackableCard, localDateString, startOfWeek, toDate } from './progress'
+import { addDays, isTrackableCard, localDateString, startOfWeek, toDate } from './progress.js'
 
 export const CAMPAIGN_START = '2026-07-04'
 export const CAMPAIGN_END = '2026-08-18'
@@ -262,7 +262,12 @@ export function buildPace(cards, referenceDate, { schedule } = {}) {
     }
   }
   const remaining = Math.max(0, total - point.done)
-  const studyDaysLeft = countDaysInclusive(today, plan.examWindowStart)
+  // Readiness work starts no earlier than the campaign and ends the day before
+  // the assessment window. This keeps pre-launch days and the first exam day
+  // out of the denominator used for the required daily pace.
+  const readinessStart = maxDay(today, plan.campaignStart)
+  const readinessEnd = addDays(plan.examWindowStart, -1)
+  const studyDaysLeft = countDaysInclusive(readinessStart, readinessEnd)
   const requiredRaw = remaining / Math.max(1, studyDaysLeft)
   const recentStart = maxDay(plan.campaignStart, addDays(today, -6))
   const recentDays = Math.max(1, countDaysInclusive(recentStart, today))

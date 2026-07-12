@@ -5,9 +5,6 @@ const MODULE_FOLDERS = {
   timeSeries: 'MA4508 Time Series',
   mat700: 'MAT700 Mathematical Methods for Data Mining',
   teamProject: 'CMT501 Team Project',
-  amlPlan: 'Summer_Rescue_Campaign_2026/Module_Plans/CMT307',
-  timeSeriesPlan: 'Summer_Rescue_Campaign_2026/Module_Plans/MAT508',
-  mat700Plan: 'Summer_Rescue_Campaign_2026/Module_Plans/MAT700',
 }
 
 function slug(value) {
@@ -108,40 +105,6 @@ const mat700LectureResources = Array.from({ length: 7 }, (_, index) => {
     ),
   ]
 }).flat()
-
-const amlPlanResources = [
-  local('amlPlan', 'Study plan', 'CMT307 resource priority map', 'CMT307_resource_priority.md', {
-    description: 'Resource triage for Applied ML revision.',
-    tags: ['plan', 'resources'],
-  }),
-  local('amlPlan', 'Study plan', 'CMT307 session 1-5 map', 'CMT307_session_1_to_5_map.md', {
-    description: 'Session map linking Applied ML topics to materials.',
-    tags: ['plan', 'sessions'],
-  }),
-]
-
-const timeSeriesPlanResources = [
-  local('timeSeriesPlan', 'Study plan', 'Time Series high-yield templates', 'MAT508_high_yield_templates.md', {
-    description: 'High-yield exam templates and answer patterns.',
-    tags: ['plan', 'templates'],
-    priority: 'high',
-  }),
-  local('timeSeriesPlan', 'Study plan', 'Time Series pack map', 'MAT508_pack_map.md', {
-    description: 'Pack-to-topic map for Time Series revision.',
-    tags: ['plan', 'packs'],
-  }),
-]
-
-const mat700PlanResources = [
-  local('mat700Plan', 'Study plan', 'MAT700 planning guardrails', 'MAT700_planning_guardrails.md', {
-    description: 'Planning guardrails and decision context for MAT700.',
-    tags: ['plan', 'risk'],
-  }),
-  local('mat700Plan', 'Study plan', 'MAT700 tutorial priority map', 'MAT700_tutorial_priority_map.md', {
-    description: 'Tutorial triage map for high-yield MAT700 practice.',
-    tags: ['plan', 'tutorials'],
-  }),
-]
 
 const teamProjectAdminResources = [
   local('teamProject', 'Module admin', 'CMT501 plan and weekly module map', 'About your module/CMT501Plan and weekly-module-map - Tagged.pdf', {
@@ -244,14 +207,6 @@ const teamProjectTranscriptResources = [
       tags: ['git', 'dhondt', '30 june'],
     },
   ),
-]
-
-const teamProjectPracticeResources = [
-  local('teamProject', 'Practice', "D'Hondt homework plan", 'dhondt-homework-plan.md', {
-    description: "Small-increment D'Hondt calculator plan that can seed the e-voting practice issue.",
-    tags: ['dhondt', 'practice', 'e-voting'],
-    priority: 'high',
-  }),
 ]
 
 const timeSeriesPastPaperResources = [
@@ -569,7 +524,6 @@ export const STUDY_MODULES = [
       'For open-book speed, build lookup paths rather than large prose notes.',
     ],
     resources: [
-      ...amlPlanResources,
       ...amlStudyNoteResources,
       local(
         'aml',
@@ -725,7 +679,6 @@ export const STUDY_MODULES = [
       'Past-paper attempts must end with an error-log update.',
     ],
     resources: [
-      ...timeSeriesPlanResources,
       local(
         'timeSeries',
         'Study packs',
@@ -879,7 +832,6 @@ export const STUDY_MODULES = [
       ...teamProjectAssessmentResources,
       ...teamProjectSessionResources,
       ...teamProjectTranscriptResources,
-      ...teamProjectPracticeResources,
     ],
     drills: [
       {
@@ -932,7 +884,6 @@ export const STUDY_MODULES = [
       'Recall first, check second, and feed every miss into one error log.',
     ],
     resources: [
-      ...mat700PlanResources,
       local('mat700', 'Formula sheets', 'Master formula cheat sheet', 'MAT700_Master_Formula_Cheat_Sheet.html', {
         description: 'Combined formula reference for lectures 1-7.',
         tags: ['formula'],
@@ -981,10 +932,6 @@ export const STUDY_MODULES = [
       local('mat700', 'Module admin', 'MAT700 module description', 'MAT700 Mathematical Methods for Data Mining module description.docx', {
         description: 'Module description document for MAT700.',
         tags: ['module description'],
-      }),
-      local('mat700', 'Planning', 'MAT700 and Time Series exam plan', 'Mathematical Methods for Data Mining and Time Series Exam Plan.md', {
-        description: 'Existing combined planning note for MAT700 and Time Series.',
-        tags: ['plan'],
       }),
     ],
     drills: [

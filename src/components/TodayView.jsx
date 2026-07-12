@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatDate } from '../utils/progress'
 import {
   buildDaySummary,
@@ -10,6 +10,7 @@ import {
 import { AnimatedNumber } from './Celebration'
 import { CardSummary } from './CardSummary'
 import { DailyAgenda } from './ScheduleView'
+import { buildExecutionContext } from '../utils/schedule.js'
 
 function greeting() {
   const hour = new Date().getHours()
@@ -75,6 +76,96 @@ function SplitGuardrail({ guardrail }) {
   )
 }
 
+function blockTime(block) {
+  if (!block) return ''
+  return `${block.start}–${block.end}`
+}
+
+function executionLabel(mode, preCampaign) {
+  if (preCampaign) return "Tomorrow's first boundary"
+  if (mode === 'current') return 'Current boundary'
+  if (mode === 'upcoming') return 'Next boundary'
+  if (mode === 'future') return "Selected day's first boundary"
+  if (mode === 'selected') return 'Selected-day boundary'
+  return 'Day complete'
+}
+
+function ExecutionStrip({ context, preCampaign, onOpenCard, onStartSession }) {
+  const { block, nextBlock, card, cardBlock, lockedToTimer } = context
+
+  return (
+    <section className="execution-strip" aria-label="Now and next execution guide">
+      <div className="execution-boundary">
+        <span>{executionLabel(context.mode, preCampaign)}</span>
+        {block ? (
+          <>
+            <strong>{block.title}</strong>
+            <p>
+              {blockTime(block)}
+              {block.location ? ` · ${block.location}` : ''}
+            </p>
+          </>
+        ) : (
+          <>
+            <strong>No more protected blocks today</strong>
+            <p>Close the day instead of manufacturing extra work.</p>
+          </>
+        )}
+      </div>
+
+      <div className="execution-output">
+        <span>{lockedToTimer ? 'Focus locked to timer' : cardBlock === block ? 'Work output' : 'Next work output'}</span>
+        {card ? (
+          <>
+            <strong>#{card.number} {card.title}</strong>
+            {cardBlock && cardBlock !== block && <p>{blockTime(cardBlock)} scheduled block</p>}
+            <dl>
+              <div>
+                <dt>Finish line</dt>
+                <dd>{card.doneCondition || 'Complete the card checklist and leave the required output.'}</dd>
+              </div>
+              {card.evidenceRequirement && (
+                <div>
+                  <dt>Leave behind</dt>
+                  <dd>{card.evidenceRequirement}</dd>
+                </div>
+              )}
+            </dl>
+            <div className="execution-actions">
+              <button type="button" className="secondary-button" onClick={() => onOpenCard(card.id)}>
+                Open card
+              </button>
+              <button type="button" className="primary-button" onClick={() => onStartSession(card.id)}>
+                {lockedToTimer ? 'Open focus timer' : 'Start focus'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <strong>No linked card in this boundary</strong>
+            <p>Finish the routine, meal, travel, or recovery block as scheduled.</p>
+          </>
+        )}
+      </div>
+
+      <div className="execution-next">
+        <span>Then stop and switch</span>
+        {nextBlock ? (
+          <>
+            <strong>{nextBlock.title}</strong>
+            <p>{blockTime(nextBlock)}{nextBlock.location ? ` · ${nextBlock.location}` : ''}</p>
+          </>
+        ) : (
+          <>
+            <strong>End-of-day boundary</strong>
+            <p>Protect sleep and restart from tomorrow's plan.</p>
+          </>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function TodayView({
   cards,
   snapshots,
@@ -87,6 +178,7 @@ export function TodayView({
   scheduleDate,
   campaignStart,
   onOpenCard,
+  activeTimerCard,
 }) {
   const preCampaign = Boolean(campaignStart && referenceDate < campaignStart)
   const streak = useMemo(() => buildStreak(cards, referenceDate), [cards, referenceDate])
@@ -101,6 +193,15 @@ export function TodayView({
   const { picks, queue, deficits } = useMemo(
     () => buildTodayPicks(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
+  )
+  const [clock, setClock] = useState(() => new Date())
+  useEffect(() => {
+    const id = window.setInterval(() => setClock(new Date()), 60 * 1000)
+    return () => window.clearInterval(id)
+  }, [])
+  const execution = useMemo(
+    () => buildExecutionContext(dayBlocks, cards, scheduleDate || referenceDate, { now: clock, activeCard: activeTimerCard }),
+    [activeTimerCard, cards, clock, dayBlocks, referenceDate, scheduleDate],
   )
 
   return (
@@ -128,32 +229,12 @@ export function TodayView({
             </div>
           )}
         </div>
-        <div className="today-metrics">
-          <div className="today-metric">
-            <strong>
-              <AnimatedNumber value={daySummary.doneToday.length} />
-            </strong>
-            <span>cards done today</span>
-          </div>
-          <div className="today-metric">
-            <strong>
-              <AnimatedNumber value={daySummary.hoursToday} decimals={1} />
-            </strong>
-            <span>hours logged today</span>
-          </div>
-          <div className="today-metric">
-            <strong>
-              <AnimatedNumber value={daySummary.focusSessionsToday} />
-            </strong>
-            <span>focus sessions</span>
-          </div>
-          <div className="today-metric">
-            <strong>
-              <AnimatedNumber value={streak.totalActiveDays} />
-            </strong>
-            <span>active days total</span>
-          </div>
-        </div>
+        <ExecutionStrip
+          context={execution}
+          preCampaign={preCampaign}
+          onOpenCard={onOpenCard}
+          onStartSession={actions.onStartSession}
+        />
       </section>
 
       <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>

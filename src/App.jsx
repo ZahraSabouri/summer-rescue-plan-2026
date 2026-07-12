@@ -119,13 +119,14 @@ const VIEW_META = {
 const VALID_VIEW_IDS = new Set(Object.keys(VIEW_META))
 
 function parseAppHash() {
-  if (typeof window === 'undefined') return { view: 'today', resourceId: '' }
+  if (typeof window === 'undefined') return { view: 'today', resourceId: '', resourceMode: '' }
   const value = window.location.hash.replace(/^#\/?/, '').trim()
   const [viewPart = '', queryString = ''] = value.split('?')
   const params = new URLSearchParams(queryString)
   return {
     view: VALID_VIEW_IDS.has(viewPart) ? viewPart : 'today',
     resourceId: params.get('resource') ?? '',
+    resourceMode: params.get('mode') ?? '',
   }
 }
 
@@ -135,6 +136,10 @@ function viewFromHash() {
 
 function resourceIdFromHash() {
   return parseAppHash().resourceId
+}
+
+function resourceModeFromHash() {
+  return parseAppHash().resourceMode
 }
 
 function Icon({ name }) {
@@ -347,16 +352,16 @@ function scopeCardsForView(view, cards) {
     return cards.filter((card) => card.status === 'Rescue Lane' || card.tags.includes('rescue'))
   }
   if (view === 'mat700') {
-    return cards.filter((card) => card.moduleGroup === 'MAT700' || card.tags.includes('insurance'))
+    return cards.filter((card) => card.moduleGroup === 'MAT700')
   }
   if (view === 'project') {
-    return cards.filter((card) => card.moduleGroup === 'Group Project' || card.tags.includes('project'))
+    return cards.filter((card) => card.moduleGroup === 'Group Project')
   }
   if (view === 'admin') {
-    return cards.filter((card) => card.moduleGroup === 'Admin' || card.tags.includes('admin') || card.tags.includes('date-watch'))
+    return cards.filter((card) => card.moduleGroup === 'Admin')
   }
   if (view === 'jobs') {
-    return cards.filter((card) => card.moduleGroup === 'Job Hunt' || card.tags.includes('job-hunt'))
+    return cards.filter((card) => card.moduleGroup === 'Job Hunt')
   }
   return cards
 }
@@ -617,6 +622,7 @@ export default function App() {
 
   useEffect(() => {
     function onHashChange() {
+      setFilters((current) => (current.module === 'all' ? current : { ...current, module: 'all' }))
       setActiveView(viewFromHash())
     }
     window.addEventListener('hashchange', onHashChange)
@@ -625,7 +631,9 @@ export default function App() {
 
   useEffect(() => {
     const resourceId = resourceIdFromHash()
-    const resourceQuery = resourceId ? `?resource=${encodeURIComponent(resourceId)}` : ''
+    const resourceMode = resourceModeFromHash()
+    const modeQuery = resourceId && resourceMode ? `&mode=${encodeURIComponent(resourceMode)}` : ''
+    const resourceQuery = resourceId ? `?resource=${encodeURIComponent(resourceId)}${modeQuery}` : ''
     const nextHash = `#/${activeView}${resourceQuery}`
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, '', nextHash)
@@ -787,12 +795,19 @@ export default function App() {
     [studyModules],
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
+  const standaloneResource = activeResource && resourceModeFromHash() === 'reader' ? activeResource : null
   const isStudyView = ['today', 'schedule', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
 
   useEffect(() => {
     function openHashResource() {
       const resourceId = resourceIdFromHash()
-      if (!resourceId) return
+      if (!resourceId) {
+        if (hashResourceRef.current) {
+          hashResourceRef.current = ''
+          setOpenResourceId(null)
+        }
+        return
+      }
 
       const resource = allResources.find((item) => item.id === resourceId)
       if (!resource) return
@@ -1208,6 +1223,18 @@ export default function App() {
     setMessage('Backup exported, then local tracker reset to the 13 July recovery plan.')
   }
 
+  function openGlobalView(view) {
+    setFilters((current) => (current.module === 'all' ? current : { ...current, module: 'all' }))
+    setActiveView(view)
+    setNavOpen(false)
+  }
+
+  function openModuleView(view, moduleGroup) {
+    setFilters({ ...FILTER_DEFAULTS, module: moduleGroup })
+    setActiveView(view)
+    setNavOpen(false)
+  }
+
   function renderView() {
     if (activeView === 'today') {
       return (
@@ -1223,6 +1250,7 @@ export default function App() {
           scheduleDate={dayScheduleDate}
           campaignStart={schedule.campaignStart}
           onOpenCard={setSelectedCardId}
+          activeTimerCard={activeTimerCard}
         />
       )
     }
@@ -1234,7 +1262,8 @@ export default function App() {
           referenceDate={referenceDate}
           mat700Active={mat700Active}
           actions={actions}
-          setActiveView={setActiveView}
+          setActiveView={openGlobalView}
+          openModuleView={openModuleView}
         />
       )
     }
@@ -1247,7 +1276,7 @@ export default function App() {
             actions={actions}
             referenceDate={referenceDate}
             mat700Active={mat700Active}
-            setActiveView={setActiveView}
+            setActiveView={(view) => openModuleView(view, studyModuleMap[activeView].moduleGroup)}
             moduleNote={tracker.state.moduleNotes?.[activeView] ?? ''}
             onModuleNoteChange={tracker.setModuleNote}
             moduleExamDate={moduleExamDates[activeView] ?? ''}
@@ -1266,9 +1295,11 @@ export default function App() {
             stats={stats}
             snapshots={tracker.snapshots}
             referenceDate={referenceDate}
+            weekReferenceDate={dayScheduleDate}
             mat700Active={mat700Active}
             actions={actions}
             schedule={schedule}
+            scopeLabel={filters.module !== 'all' ? filters.module : ''}
           />
         )
     }
@@ -1299,7 +1330,7 @@ export default function App() {
     }
     if (activeView === 'board') return <BoardView cards={visibleCards} actions={actions} />
     if (activeView === 'table') return <TableView cards={visibleCards} actions={actions} />
-    if (activeView === 'week') return <WeekView cards={visibleCards} referenceDate={referenceDate} actions={actions} />
+    if (activeView === 'week') return <WeekView cards={visibleCards} referenceDate={dayScheduleDate} actions={actions} />
     if (activeView === 'analytics') {
       return (
         <AnalyticsView
@@ -1324,6 +1355,10 @@ export default function App() {
           cards={rescueCards}
           actions={actions}
           referenceDate={referenceDate}
+          emptyTitle="No cards need recovery."
+          emptyDescription="Nothing is overdue or in Rescue Lane. Sunday recovery buffers remain protected in Schedule and are ready only if something slips."
+          emptyActionLabel="Open Schedule"
+          onEmptyAction={() => openGlobalView('schedule')}
           onRescheduleAllOverdue={() =>
             tracker.rescheduleCards(
               stats.overdueCards.map((card) => card.id),
@@ -1372,6 +1407,10 @@ export default function App() {
     return null
   }
 
+  if (standaloneResource) {
+    return <ResourceReader resource={standaloneResource} onClose={closeResource} standalone />
+  }
+
   if (!entered) {
     return (
       <AppIntro
@@ -1391,7 +1430,7 @@ export default function App() {
         }}
         onEnter={() => setEntered(true)}
         onJump={(view) => {
-          setActiveView(view)
+          openGlobalView(view)
           setEntered(true)
         }}
       />
@@ -1422,7 +1461,7 @@ export default function App() {
                   type="button"
                   key={id}
                   className={`nav-item${activeView === id ? ' active' : ''}`}
-                  onClick={() => setActiveView(id)}
+                  onClick={() => openGlobalView(id)}
                   title={LABEL_BY_ID[id]}
                 >
                   <span className="nav-ico">
@@ -1513,7 +1552,7 @@ export default function App() {
             <NotificationCenter
               notifications={tracker.state.notifications}
               referenceDate={referenceDate}
-              onGoView={setActiveView}
+              onGoView={openGlobalView}
               onOpenCard={setSelectedCardId}
               onSetRead={tracker.setNotificationRead}
               onMarkAllRead={tracker.markAllNotificationsRead}
@@ -1859,7 +1898,7 @@ export default function App() {
         cards={tracker.cards}
         resources={allResources}
         onClose={() => setCommandOpen(false)}
-        onGoView={setActiveView}
+        onGoView={openGlobalView}
         onOpenCard={setSelectedCardId}
         onOpenResource={openResource}
       />

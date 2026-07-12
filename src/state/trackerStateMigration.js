@@ -1,5 +1,5 @@
 export const TRACKER_STATE_VERSION = 4
-export const PLAN_REVISION = '2026-07-13-private-recovery-plan'
+export const PLAN_REVISION = '2026-07-13-private-recovery-plan-v2'
 export const DEFAULT_CAMPAIGN_START = '2026-07-13'
 export const DEFAULT_CAMPAIGN_END = '2026-08-28'
 export const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
@@ -95,7 +95,9 @@ export function migrateTrackerState(value) {
     !previousSettings.campaignEnd || previousSettings.campaignEnd === '2026-08-18'
       ? DEFAULT_CAMPAIGN_END
       : previousSettings.campaignEnd
-  const referenceDate = campaignReferenceDate(previousSettings.referenceDate || localToday())
+  const referenceDate = planChanged
+    ? localToday()
+    : campaignReferenceDate(previousSettings.referenceDate || localToday())
 
   return {
     ...fallback,

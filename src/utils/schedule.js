@@ -306,3 +306,73 @@ export function resolveScheduledCard(block, cards = []) {
     return Number(a.sortOrder ?? 9999) - Number(b.sortOrder ?? 9999)
   })[0]
 }
+
+function blockContainsMinute(block, minute) {
+  const start = clockMinutes(block?.start)
+  const end = clockMinutes(block?.end)
+  if (start == null || end == null || !Number.isFinite(minute)) return false
+  if (end >= start) return minute >= start && minute < end
+  return minute >= start || minute < end
+}
+
+/**
+ * Build one stable execution answer from the existing timetable and cards.
+ * This is intentionally read-only: it never creates, moves, or completes work.
+ */
+export function buildExecutionContext(blocks = [], cards = [], date, options = {}) {
+  const plannedDay = normaliseDay(date)
+  const now = options.now instanceof Date && !Number.isNaN(options.now.getTime()) ? options.now : new Date()
+  const today = normaliseDay(options.today) || localIsoDay(now)
+  const nowMinutes = Number.isFinite(options.nowMinutes)
+    ? options.nowMinutes
+    : now.getHours() * 60 + now.getMinutes()
+  const orderedBlocks = (Array.isArray(blocks) ? blocks : [])
+    .filter((block) => clockMinutes(block?.start) != null && clockMinutes(block?.end) != null)
+    .sort(compareBlocks)
+
+  let mode
+  let anchorIndex
+
+  if (plannedDay && plannedDay !== today) {
+    anchorIndex = orderedBlocks.length > 0 ? 0 : -1
+    mode = plannedDay > today ? 'future' : 'selected'
+  } else {
+    anchorIndex = orderedBlocks.findIndex((block) => blockContainsMinute(block, nowMinutes))
+    if (anchorIndex >= 0) {
+      mode = 'current'
+    } else {
+      anchorIndex = orderedBlocks.findIndex((block) => (clockMinutes(block.start) ?? -1) >= nowMinutes)
+      mode = anchorIndex >= 0 ? 'upcoming' : 'complete'
+    }
+  }
+
+  const block = anchorIndex >= 0 ? orderedBlocks[anchorIndex] : null
+  const activeCard = options.activeCard && !options.activeCard.done && options.activeCard.status !== 'Done'
+    ? options.activeCard
+    : null
+
+  let card = activeCard
+  let cardBlock = null
+  if (!card && anchorIndex >= 0) {
+    for (let index = anchorIndex; index < orderedBlocks.length; index += 1) {
+      const resolved = resolveScheduledCard(orderedBlocks[index], cards)
+      if (!resolved) continue
+      card = resolved
+      cardBlock = orderedBlocks[index]
+      break
+    }
+  }
+
+  if (card && !cardBlock) {
+    cardBlock = orderedBlocks.find((candidate) => resolveScheduledCard(candidate, cards)?.id === card.id) ?? null
+  }
+
+  return {
+    mode,
+    block,
+    nextBlock: anchorIndex >= 0 ? orderedBlocks[anchorIndex + 1] ?? null : null,
+    card,
+    cardBlock,
+    lockedToTimer: Boolean(activeCard),
+  }
+}

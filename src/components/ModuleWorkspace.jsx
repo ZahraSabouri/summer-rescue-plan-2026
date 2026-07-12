@@ -47,7 +47,7 @@ function resourceAppTabUrl(resource) {
   const url = new URL(window.location.href)
   const currentView = url.hash.replace(/^#\/?/, '').split('?')[0]
   const viewId = resource.moduleId || MODULE_VIEW_BY_KEY[resource.moduleKey] || currentView || 'today'
-  url.hash = `/${viewId}?resource=${encodeURIComponent(resource.id)}`
+  url.hash = `/${viewId}?resource=${encodeURIComponent(resource.id)}&mode=reader`
   return url.toString()
 }
 
@@ -303,7 +303,6 @@ function NotebookPreview({ resource }) {
 
 const GROUP_ORDER = {
   aml: [
-    'Study plan',
     'Study notes',
     'Session 1',
     'Session 2',
@@ -319,7 +318,6 @@ const GROUP_ORDER = {
     'Python bootcamp exercises',
   ],
   'time-series': [
-    'Study plan',
     'Study packs',
     'Quick reference',
     'Past papers',
@@ -339,7 +337,6 @@ const GROUP_ORDER = {
     'Practice',
   ],
   mat700: [
-    'Study plan',
     'Formula sheets',
     'Lecture slides',
     'Lecture notes',
@@ -350,7 +347,6 @@ const GROUP_ORDER = {
     'Derivation notes',
     'Transcripts',
     'Module admin',
-    'Planning',
   ],
 }
 
@@ -581,7 +577,7 @@ function ResourcePreview({ resource, frameRef }) {
   )
 }
 
-export function ResourceReader({ resource, onClose }) {
+export function ResourceReader({ resource, onClose, standalone = false }) {
   const frameRef = useRef(null)
   const html = isHtmlResource(resource)
   const appTabUrl = resourceAppTabUrl(resource)
@@ -605,15 +601,15 @@ export function ResourceReader({ resource, onClose }) {
 
   return createPortal(
     <div
-      className="reader-shell"
-      role="dialog"
-      aria-modal="true"
+      className={`reader-shell${standalone ? ' is-standalone' : ''}`}
+      role={standalone ? 'main' : 'dialog'}
+      {...(!standalone ? { 'aria-modal': 'true' } : {})}
       aria-label={resource.title}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (!standalone && event.target === event.currentTarget) onClose()
       }}
     >
-      <div className={`reader-window viewer-${resource.viewer}${html ? ' is-html' : ''}`}>
+      <div className={`reader-window viewer-${resource.viewer}${html ? ' is-html' : ''}${standalone ? ' is-standalone' : ''}`}>
         <header className="reader-chrome">
           <span className="reader-dots" aria-hidden="true">
             <i />
@@ -630,9 +626,11 @@ export function ResourceReader({ resource, onClose }) {
                 Print
               </button>
             )}
-            <a className="reader-btn" href={appTabUrl} target="_blank" rel="noreferrer" title="Open in a new app tab">
-              New tab
-            </a>
+            {!standalone && (
+              <a className="reader-btn" href={appTabUrl} target="_blank" rel="noreferrer" title="Open in a full-screen reader tab">
+                Full-screen tab
+              </a>
+            )}
             <button type="button" className="reader-btn reader-close" onClick={onClose} aria-label="Close reader">
               ✕
             </button>

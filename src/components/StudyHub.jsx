@@ -20,7 +20,7 @@ function hours(value) {
   return Number.isInteger(number) ? `${number}h` : `${number.toFixed(1)}h`
 }
 
-function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen }) {
+function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen, onOpenModuleView }) {
   const moduleCards = cards.filter((card) => card.moduleGroup === module.moduleGroup)
   const openCards = sortCards(moduleCards.filter((card) => !card.done))
   const dueSoonEnd = addDays(referenceDate, 7)
@@ -51,7 +51,7 @@ function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen 
         <button type="button" className="primary-button" onClick={() => onOpen(module.viewId)}>
           Open workspace
         </button>
-        <button type="button" className="secondary-button" onClick={() => onOpen('week')}>
+        <button type="button" className="secondary-button" onClick={() => onOpenModuleView('week', module.moduleGroup)}>
           Week queue
         </button>
       </div>
@@ -79,7 +79,7 @@ function CompactQueue({ title, eyebrow, cards, empty, actions }) {
   )
 }
 
-export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, setActiveView }) {
+export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, setActiveView, openModuleView }) {
   const activeCards = mat700Active ? cards : cards.filter((card) => card.moduleGroup !== 'MAT700')
   const openCards = activeCards.filter((card) => !card.done)
   const overdueCards = openCards.filter((card) => isOverdue(card, referenceDate))
@@ -160,6 +160,7 @@ export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, s
             referenceDate={referenceDate}
             mat700Active={mat700Active}
             onOpen={setActiveView}
+            onOpenModuleView={openModuleView}
           />
         ))}
       </section>

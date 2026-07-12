@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  elapsedTimerMilliseconds,
+  focusMinutesToLog,
+  nextTimerMode,
+  remainingTimerSeconds,
+} from '../utils/studyTimer'
 
 const MODE_META = {
   focus: { label: 'Focus', accent: 'var(--accent)' },
@@ -44,58 +50,184 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
   const [remaining, setRemaining] = useState(25 * 60)
   const [running, setRunning] = useState(false)
   const [sessions, setSessions] = useState(0)
-  const intervalRef = useRef(null)
+  const [wakeLockEnabled, setWakeLockEnabled] = useState(false)
+  const [wakeLockActive, setWakeLockActive] = useState(false)
+  const [wakeLockStatus, setWakeLockStatus] = useState('idle')
   const wrapRef = useRef(null)
-  const sessionElapsedRef = useRef(0)
+  const runIdRef = useRef(0)
+  const completedRunIdRef = useRef(null)
+  const deadlineRef = useRef(null)
+  const segmentStartedAtRef = useRef(null)
+  const segmentCardIdRef = useRef(null)
+  const wakeLockRef = useRef(null)
+  const modeRef = useRef(mode)
+  const durationsRef = useRef(durations)
+  const sessionsRef = useRef(sessions)
+  const runningRef = useRef(running)
+  const activeCardRef = useRef(activeCard)
+  const onCompleteSessionRef = useRef(onCompleteSession)
+
+  const wakeLockSupported =
+    typeof navigator !== 'undefined' && 'wakeLock' in navigator
 
   const total = durations[mode] * 60
   const progress = total > 0 ? 1 - remaining / total : 0
   const R = 52
   const CIRC = 2 * Math.PI * R
 
-  const logActiveSession = useCallback(() => {
-    if (!activeCard || sessionElapsedRef.current < 60) {
-      sessionElapsedRef.current = 0
+  useEffect(() => {
+    modeRef.current = mode
+    durationsRef.current = durations
+    sessionsRef.current = sessions
+    runningRef.current = running
+  }, [durations, mode, running, sessions])
+
+  useEffect(() => {
+    activeCardRef.current = activeCard
+    onCompleteSessionRef.current = onCompleteSession
+  }, [activeCard, onCompleteSession])
+
+  const logFocusSegment = useCallback((stoppedAt = Date.now()) => {
+    const startedAt = segmentStartedAtRef.current
+    const cardId = segmentCardIdRef.current
+    segmentStartedAtRef.current = null
+    segmentCardIdRef.current = null
+    if (modeRef.current !== 'focus' || startedAt == null || !cardId) return
+
+    const elapsedMs = elapsedTimerMilliseconds(startedAt, stoppedAt, deadlineRef.current)
+    const minutes = focusMinutesToLog(elapsedMs)
+    if (minutes > 0) onCompleteSessionRef.current?.(cardId, minutes)
+  }, [])
+
+  const completeRun = useCallback((runId, stoppedAt = Date.now()) => {
+    if (runId !== runIdRef.current || completedRunIdRef.current === runId) return false
+    completedRunIdRef.current = runId
+
+    const completedMode = modeRef.current
+    logFocusSegment(stoppedAt)
+    deadlineRef.current = null
+    runningRef.current = false
+    setRunning(false)
+    chime()
+
+    const completedFocusSessions =
+      completedMode === 'focus' ? sessionsRef.current + 1 : sessionsRef.current
+    if (completedMode === 'focus') {
+      sessionsRef.current = completedFocusSessions
+      setSessions(completedFocusSessions)
+    }
+
+    const nextMode = nextTimerMode(completedMode, completedFocusSessions)
+    modeRef.current = nextMode
+    setMode(nextMode)
+    setRemaining(durationsRef.current[nextMode] * 60)
+    return true
+  }, [logFocusSegment])
+
+  const syncRunToClock = useCallback((runId, now = Date.now()) => {
+    if (runId !== runIdRef.current || !runningRef.current) return
+    const nextRemaining = remainingTimerSeconds(deadlineRef.current, now)
+    if (nextRemaining === 0) {
+      completeRun(runId, now)
       return
     }
-    const minutes = Math.round(sessionElapsedRef.current / 60)
-    sessionElapsedRef.current = 0
-    onCompleteSession?.(activeCard.id, minutes)
-  }, [activeCard, onCompleteSession])
+    setRemaining((current) => (current === nextRemaining ? current : nextRemaining))
+  }, [completeRun])
 
   useEffect(() => {
     if (!activeCard) return
     const id = window.setTimeout(() => {
       setOpen(true)
-      setMode('focus')
+      if (!runningRef.current) {
+        modeRef.current = 'focus'
+        setMode('focus')
+        setRemaining(durationsRef.current.focus * 60)
+      }
     }, 0)
     return () => window.clearTimeout(id)
   }, [activeCard])
 
   useEffect(() => {
     if (!running) return undefined
-    intervalRef.current = window.setInterval(() => {
-      if (mode === 'focus' && activeCard) sessionElapsedRef.current += 1
-      setRemaining((r) => (r <= 1 ? 0 : r - 1))
-    }, 1000)
-    return () => window.clearInterval(intervalRef.current)
-  }, [activeCard, mode, running])
+    const runId = runIdRef.current
+    const sync = () => syncRunToClock(runId)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') sync()
+    }
+
+    sync()
+    const intervalId = window.setInterval(sync, 1000)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [running, syncRunToClock])
+
+  const releaseWakeLock = useCallback(async () => {
+    const sentinel = wakeLockRef.current
+    wakeLockRef.current = null
+    if (!sentinel || sentinel.released) return
+    try {
+      await sentinel.release()
+    } catch {
+      /* The browser may already have released it. */
+    }
+    if (wakeLockRef.current == null) {
+      setWakeLockActive(false)
+      setWakeLockStatus('idle')
+    }
+  }, [])
 
   useEffect(() => {
-    if (remaining !== 0 || !running) return
-    const id = window.setTimeout(() => {
-      setRunning(false)
-      chime()
-      const completedFocus = mode === 'focus'
-      const nextCount = completedFocus ? sessions + 1 : sessions
-      if (completedFocus) logActiveSession()
-      if (completedFocus) setSessions(nextCount)
-      const next = completedFocus ? (nextCount % 4 === 0 ? 'long' : 'short') : 'focus'
-      setMode(next)
-      setRemaining(durations[next] * 60)
-    }, 0)
-    return () => window.clearTimeout(id)
-  }, [durations, logActiveSession, mode, remaining, running, sessions])
+    const eligible = wakeLockSupported && wakeLockEnabled && running && mode === 'focus'
+    let cancelled = false
+
+    async function acquireWakeLock() {
+      if (!eligible || document.visibilityState !== 'visible') return
+      if (wakeLockRef.current && !wakeLockRef.current.released) return
+      setWakeLockStatus('requesting')
+      try {
+        const sentinel = await navigator.wakeLock.request('screen')
+        if (cancelled || !runningRef.current || modeRef.current !== 'focus') {
+          await sentinel.release()
+          return
+        }
+        wakeLockRef.current = sentinel
+        setWakeLockActive(true)
+        setWakeLockStatus('active')
+        sentinel.addEventListener('release', () => {
+          if (wakeLockRef.current !== sentinel) return
+          wakeLockRef.current = null
+          if (!cancelled) {
+            setWakeLockActive(false)
+            setWakeLockStatus('idle')
+          }
+        })
+      } catch {
+        if (!cancelled) {
+          setWakeLockActive(false)
+          setWakeLockStatus('unavailable')
+        }
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') void acquireWakeLock()
+      else void releaseWakeLock()
+    }
+
+    if (eligible) {
+      void acquireWakeLock()
+      document.addEventListener('visibilitychange', onVisibilityChange)
+    }
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      void releaseWakeLock()
+    }
+  }, [mode, releaseWakeLock, running, wakeLockEnabled, wakeLockSupported])
 
   useEffect(() => {
     function onDocClick(event) {
@@ -105,24 +237,37 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
-  function selectMode(m) {
-    if (mode === 'focus' && m !== 'focus') logActiveSession()
+  function handleSelectMode(m) {
+    if (runningRef.current) logFocusSegment()
+    runIdRef.current += 1
+    completedRunIdRef.current = null
+    deadlineRef.current = null
+    segmentStartedAtRef.current = null
+    segmentCardIdRef.current = null
+    runningRef.current = false
+    setRunning(false)
+    modeRef.current = m
     setMode(m)
-    setRemaining(durations[m] * 60)
-    setRunning(false)
+    setRemaining(durationsRef.current[m] * 60)
   }
-  function reset() {
-    logActiveSession()
-    setRemaining(durations[mode] * 60)
+  function handleReset() {
+    if (runningRef.current) logFocusSegment()
+    runIdRef.current += 1
+    completedRunIdRef.current = null
+    deadlineRef.current = null
+    segmentStartedAtRef.current = null
+    segmentCardIdRef.current = null
+    runningRef.current = false
     setRunning(false)
+    setRemaining(durationsRef.current[modeRef.current] * 60)
   }
-  function adjust(m, delta) {
-    setDurations((d) => {
-      const v = Math.max(1, Math.min(120, d[m] + delta))
-      const nextD = { ...d, [m]: v }
-      if (m === mode && !running) setRemaining(v * 60)
-      return nextD
-    })
+  function handleAdjust(m, delta) {
+    const current = durationsRef.current
+    const value = Math.max(1, Math.min(120, current[m] + delta))
+    const nextDurations = { ...current, [m]: value }
+    durationsRef.current = nextDurations
+    setDurations(nextDurations)
+    if (m === modeRef.current && !runningRef.current) setRemaining(value * 60)
   }
 
   const accent = MODE_META[mode].accent
@@ -130,9 +275,39 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
     (session) => session.at?.slice(0, 10) === new Date().toISOString().slice(0, 10),
   ).length
 
-  function toggleRunning() {
-    if (running) logActiveSession()
-    setRunning((value) => !value)
+  function handleToggleRunning() {
+    const now = Date.now()
+    if (runningRef.current) {
+      const runId = runIdRef.current
+      const nextRemaining = remainingTimerSeconds(deadlineRef.current, now)
+      if (nextRemaining === 0) {
+        completeRun(runId, now)
+        return
+      }
+      logFocusSegment(now)
+      runIdRef.current += 1
+      completedRunIdRef.current = null
+      deadlineRef.current = null
+      runningRef.current = false
+      setRunning(false)
+      setRemaining(nextRemaining)
+      return
+    }
+
+    const seconds = Math.max(1, remaining)
+    const runId = runIdRef.current + 1
+    runIdRef.current = runId
+    completedRunIdRef.current = null
+    deadlineRef.current = now + seconds * 1000
+    if (modeRef.current === 'focus' && activeCardRef.current) {
+      segmentStartedAtRef.current = now
+      segmentCardIdRef.current = activeCardRef.current.id
+    } else {
+      segmentStartedAtRef.current = null
+      segmentCardIdRef.current = null
+    }
+    runningRef.current = true
+    setRunning(true)
   }
 
   return (
@@ -162,7 +337,7 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
                 key={m}
                 type="button"
                 className={`timer-mode${mode === m ? ' active' : ''}`}
-                onClick={() => selectMode(m)}
+                onClick={() => handleSelectMode(m)}
               >
                 {MODE_META[m].label}
               </button>
@@ -202,10 +377,10 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
           </div>
 
           <div className="timer-controls">
-            <button type="button" className="secondary-button" onClick={reset}>
+            <button type="button" className="secondary-button" onClick={handleReset}>
               {activeCard ? 'Log & reset' : 'Reset'}
             </button>
-            <button type="button" className="primary-button timer-go" onClick={toggleRunning}>
+            <button type="button" className="primary-button timer-go" onClick={handleToggleRunning}>
               {running ? 'Pause' : 'Start'}
             </button>
           </div>
@@ -213,11 +388,34 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
           <div className="timer-adjust">
             <span>{MODE_META[mode].label} length</span>
             <div className="timer-stepper">
-              <button type="button" onClick={() => adjust(mode, -5)} aria-label="Decrease">−</button>
+              <button type="button" onClick={() => handleAdjust(mode, -5)} aria-label="Decrease">−</button>
               <strong>{durations[mode]}m</strong>
-              <button type="button" onClick={() => adjust(mode, 5)} aria-label="Increase">+</button>
+              <button type="button" onClick={() => handleAdjust(mode, 5)} aria-label="Increase">+</button>
             </div>
           </div>
+
+          {wakeLockSupported && (
+            <label className={`timer-wake-lock${wakeLockActive ? ' active' : ''}`}>
+              <input
+                type="checkbox"
+                checked={wakeLockEnabled}
+                onChange={(event) => setWakeLockEnabled(event.target.checked)}
+              />
+              <span>
+                <strong>Keep screen awake</strong>
+                <small>Only while a Focus timer is running</small>
+              </span>
+              <em>
+                {wakeLockStatus === 'active'
+                  ? 'On'
+                  : wakeLockStatus === 'requesting'
+                    ? 'Starting'
+                    : wakeLockStatus === 'unavailable'
+                      ? 'Unavailable'
+                      : 'Ready'}
+              </em>
+            </label>
+          )}
 
           <p className="timer-foot">
             {sessions} focus {sessions === 1 ? 'session' : 'sessions'} today · long break every 4th

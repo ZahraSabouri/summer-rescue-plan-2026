@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   FILTER_DEFAULTS,
   MODULE_OPTIONS,
@@ -31,10 +32,28 @@ export function FilterBar({
   moduleOptions = MODULE_OPTIONS,
   phaseOptions = PHASE_OPTIONS,
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
   const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
+  const activeCount = Object.keys(FILTER_DEFAULTS).filter((key) => filters[key] !== FILTER_DEFAULTS[key]).length
 
   return (
-    <section className="filter-bar" aria-label="Card filters">
+    <section className={`filter-bar${mobileOpen ? ' is-open' : ''}`} aria-label="Card filters">
+      <div className="filter-mobile-summary">
+        <button
+          type="button"
+          className="secondary-button"
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen((current) => !current)}
+        >
+          {mobileOpen ? 'Hide filters' : `Filters${activeCount ? ` · ${activeCount} active` : ''}`}
+        </button>
+        <span>{resultCount} shown</span>
+        {activeCount > 0 && (
+          <button type="button" className="text-button" onClick={() => setFilters(FILTER_DEFAULTS)}>
+            Clear
+          </button>
+        )}
+      </div>
       <label className="search-field">
         <span>Search</span>
         <input

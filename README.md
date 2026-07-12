@@ -2,7 +2,7 @@
 
 A local-first command centre for the intensive **13 July–28 August 2026** rescue campaign. The plan reaches
 exam-readiness by **16 August**, then switches to targeted maintenance through Cardiff's provisional
-**17–28 August** summer assessment window. It combines an hour-by-hour timetable, a 115-card outcome tracker, module
+**17–28 August** summer assessment window. It combines an hour-by-hour timetable, a 113-card outcome tracker, module
 workspaces, progress analytics, an evidence log, and a built-in study timer.
 
 > Cardiff University branding uses an **original placeholder crest** at `public/cardiff-logo.svg` (not an
@@ -37,7 +37,8 @@ bounded CMT501 capacity lane, a small job-search lane, and essential life/admin 
 | Time Series | MAT508 | Concept rebuild plus repeated exam-template drills | 35 cards / 95 h |
 | Data Mining | MAT700 | Tutorial-first rebuild, timed recall, and papers | 24 cards / 52 h |
 | Team Project | CMT501 | Generic protected capacity only; detailed management stays elsewhere | 5 cards / 37 h |
-| Job Hunt | Personal | One shortlist scan and at most one application action per week | 9 cards / 15.5 h |
+| Job Hunt | Personal | Five tiny scans plus one weekly review/development output; hard 2 h/week cap | 7 cards / 14 h |
+| Admin & Dates | Personal | Summer timetable checks, information channels, and final logistics | 6 cards / 2.75 h |
 
 The timetable protects eight hours of sleep, caps academic work at eight hours a day (including classes and
 project blocks), includes meals/commute/hygiene/chores, and avoids two consecutive stay-home days. Cards hold
@@ -162,15 +163,21 @@ progress.
 **Topbar** — the current view's title, an **exam countdown** (turns red inside three weeks), your backup
 status, *Add card*, the **study timer**, a light/dark toggle, and *Settings*.
 
-**Study timer** — a Pomodoro popover: Focus / Short break / Long break, adjustable lengths, start/pause/reset,
-a session counter (a long break is suggested every 4th focus), and a soft chime when a block ends. The
-remaining time shows on the topbar button while running, so it keeps going as you move around the app.
+**Study timer** — a wall-clock-accurate Pomodoro popover: Focus / Short break / Long break, adjustable lengths,
+start/pause/reset, a session counter (a long break is suggested every 4th focus), and a soft chime when a block
+ends. Background-tab throttling cannot slow the countdown or inflate logged time. Supporting browsers also get
+an opt-in *Keep screen awake* toggle that is active only during a running Focus session.
 
 **Views**
 
+- *Today* — the **Now → Next** execution strip answers what boundary you are in, which one card/output comes
+  next, its exact finish/evidence conditions, and when to stop or switch. It reads the verified schedule and card
+  data without creating work or changing the plan.
 - *Study Hub* — cross-module overview and quick actions.
 - *Applied ML / Time Series / Data Mining* — each module's objectives, operating rules, action cards, a
-  resource browser (notes, formula sheets, past papers, local uploads), and a scratchpad.
+  resource browser (notes, formula sheets, past papers, local uploads), and a scratchpad. Campaign-planning
+  Markdown is deliberately excluded. In-app resources use a modal reader; *Full-screen tab* opens a dedicated
+  viewport reader with no app shell.
 - *Schedule* — the protected hour-by-hour plan. Each study/project/job block links to the best open card in
   that lane, while routines remain timetable blocks rather than cluttering the tracker.
 - *Planner* — pace banner, pipeline, and this week at a glance.
@@ -178,12 +185,12 @@ remaining time shows on the topbar button while running, so it keeps going as yo
 - *Analytics* — charts, module mix, and stats.
 - *Columns / Table / Week* — Kanban, dense grid, and 7-day plan of the same cards.
 - *Evidence* — proof-of-work outputs.
-- *Rescue Lane / Project Ship / Job Hunt / Admin & Dates* — focused lanes for recovery buffers, generic
+- *Rescue Lane / Project Capacity / Job Hunt / Admin & Dates* — focused lanes for recovery buffers, generic
   group-project capacity, bounded applications, and exam logistics.
 
 **Cards** — click any card title to open the drawer and edit status, tick checklist items, log hours, attach
 evidence, and add notes. *Add card* creates new ones. Use the filter bar (non-study views) to slice by module,
-phase, priority, status, slot, tag, or date.
+phase, priority, status, slot, tag, or date; on mobile the filters stay collapsed until requested.
 
 **Settings** — planning date, campaign window, provisional exam-window start, individual exam dates when
 published, and all backup/data actions. MAT700 is an active study lane throughout the campaign.
@@ -203,7 +210,8 @@ published, and all backup/data actions. MAT700 is an active study lane throughou
 Personal material is kept out of version control via `.gitignore`:
 
 - Tracker JSON backups (`*tracker-backup*.json`).
-- The private strategy PDFs (emergency / exam study plans). These are no longer surfaced in the app either.
+- Campaign-planning notes and private strategy PDFs. These remain planning inputs outside the resource browser
+  and are not shipped as module study materials.
 
 If any of these were committed before, untrack them once with:
 
@@ -221,4 +229,8 @@ runtime.
 - SQLite (`local-data/app.sqlite`) is now a durable write-through mirror + event-log recovery source, but the live
   client read path is still the JSON state file. Making SQLite the authoritative read path (so `GET /api/state`
   reconstructs from tables) is the next step.
-- Ideas not yet built: richer uploaded-resource management, and full UI smoke tests (Playwright or similar).
+- Research-backed later option: an installable standalone PWA shell. Do not claim offline support until the local
+  API, JSON/SQLite writes, cache versioning, and large resource set have an explicit offline integrity design.
+- Deliberately avoided during the campaign: ambient due/streak notifications, AI auto-replanning, more
+  gamification, and any feature that adds another inbox or maintenance ritual.
+- Ideas not yet built: richer uploaded-resource management and automated Playwright-style UI regression tests.

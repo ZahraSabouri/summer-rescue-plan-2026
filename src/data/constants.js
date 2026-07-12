@@ -41,7 +41,6 @@ export const TAG_OPTIONS = [
   'admin',
   'project',
   'health',
-  'insurance',
   'exam',
   'evidence',
   'fixed',
@@ -68,8 +67,8 @@ export const VIEW_OPTIONS = [
   { id: 'analytics', label: 'Analytics' },
   { id: 'evidence', label: 'Evidence' },
   { id: 'rescue', label: 'Rescue Lane' },
-  { id: 'project', label: 'Project Ship' },
-  { id: 'admin', label: 'Admin Watch' },
+  { id: 'project', label: 'Project Capacity' },
+  { id: 'admin', label: 'Admin & Dates' },
   { id: 'jobs', label: 'Job Hunt' },
 ]
 
