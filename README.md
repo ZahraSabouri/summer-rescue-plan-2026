@@ -1,8 +1,9 @@
 # Summer Rescue Plan
 
-A calm, single-page study **command center** for the 2026 summer exam-recovery campaign — built for the
-**Cardiff University · MSc Data Science & Analytics** summer exams window. It unifies a planning tracker, CMT501
-project work, module workspaces, progress analytics, an evidence log, and a built-in study timer into one local-first app.
+A local-first command centre for the intensive **13 July–28 August 2026** rescue campaign. The plan reaches
+exam-readiness by **16 August**, then switches to targeted maintenance through Cardiff's provisional
+**17–28 August** resit window. It combines an hour-by-hour timetable, a 115-card outcome tracker, module
+workspaces, progress analytics, an evidence log, and a built-in study timer.
 
 > Cardiff University branding uses an **original placeholder crest** at `public/cardiff-logo.svg` (not an
 > official mark). To show the real logo, replace that single file — keep the same name — with Cardiff's
@@ -27,17 +28,20 @@ project work, module workspaces, progress analytics, an evidence log, and a buil
 
 ## What it does
 
-The campaign runs three exam lanes plus a CMT501 project workspace:
+The live rescue plan is defined in `src/data/summerRescuePlan.js`. It runs three active exam lanes, a tightly
+bounded CMT501 capacity lane, a small job-search lane, and essential life/admin blocks:
 
-| Lane | Module | Focus | Weight |
+| Lane | Module | Focus | Allocation |
 | --- | --- | --- | --- |
-| Applied ML | CMT307 | Lab-first, practical — the priority module | 40% |
-| Time Series | MAT508 | Repeated exam-template drills | 35% |
-| Team Project | CMT501 | GitLab teamwork, e-voting practice, and report evidence | Project |
-| Data Mining | MAT700 (*Mathematical Methods for Data Mining*) | Kept warm as insurance | 25% |
+| Applied ML | CMT307 | Lab-first fluency, videos only when they produce a lab/output | 36 cards / 80 h |
+| Time Series | MAT508 | Concept rebuild plus repeated exam-template drills | 35 cards / 95 h |
+| Data Mining | MAT700 | Confirmed 39/FF resit: tutorial-first rebuild and timed papers | 24 cards / 52 h |
+| Team Project | CMT501 | Generic protected capacity only; detailed management stays elsewhere | 5 cards / 37 h |
+| Job Hunt | Personal | One shortlist scan and at most one application action per week | 9 cards / 15.5 h |
 
-Everything is driven by a card-based tracker (planning tasks with status, checklist, evidence, notes, and
-logged hours) plus curated study resources surfaced per module.
+The timetable protects eight hours of sleep, caps academic work at eight hours a day (including classes and
+project blocks), includes meals/commute/hygiene/chores, and avoids two consecutive stay-home days. Cards hold
+the checkable outcomes; the Schedule view decides when to work on the next open card in each lane.
 
 ## Tech stack
 
@@ -110,7 +114,8 @@ database (`app.sqlite`), the local resource index, and uploaded resource files.
 
 ## Data model & storage
 
-- **Cards** (`src/data/baseCards.js`): each has `id`, `title`, `module` / `moduleGroup`, `phase`, `priority`,
+- **Cards** (`src/data/summerRescuePlan.js`): the live plan rebases selected legacy study tasks and adds MAT700,
+  project-capacity, job-hunt, and admin outcomes. Each card has `id`, `title`, `module` / `moduleGroup`, `phase`, `priority`,
   `status`, `done`, `checklist`, `evidence`, `notes`, `estimateHours` / `actualHours`, `tags`, and dates.
 - **Persistence**: the Vite dev/preview server writes `local-data/summer-rescue-tracker-state.json` through
   `/api/state`. `/api/health` reports active local paths and `/api/events` reads/appends recent progress events.
@@ -132,6 +137,9 @@ database (`app.sqlite`), the local resource index, and uploaded resource files.
   in the tracker state and a local resource index so the files appear in the resource browser and can be linked to cards.
 - **Browser mirror**: the browser still mirrors full state to `localStorage["summer-rescue-tracker-state-v3"]` for fast
   startup and fallback resilience. The local file wins once `/api/state` loads. Nothing leaves the machine.
+- **Safe migration**: state schema v4 rebases the campaign to 13 July–28 August and activates MAT700 while preserving
+  existing progress, notes, evidence, custom cards, resources, snapshots, and theme settings. Generated alerts from
+  the abandoned pre-13-July plan are cleared and rebuilt from the live cards.
 - Additional UI keys: `srp-nav-collapsed` (sidebar), `srp-skip-intro` (landing screen).
 - **Backups**: *Export JSON* downloads a full snapshot; *Import JSON* restores one; *Choose autosave file*
   (Chromium browsers) writes changes to a file you pick, automatically. *Reset* exports first, then clears.
@@ -163,20 +171,22 @@ remaining time shows on the topbar button while running, so it keeps going as yo
 - *Study Hub* — cross-module overview and quick actions.
 - *Applied ML / Time Series / Data Mining* — each module's objectives, operating rules, action cards, a
   resource browser (notes, formula sheets, past papers, local uploads), and a scratchpad.
+- *Schedule* — the protected hour-by-hour plan. Each study/project/job block links to the best open card in
+  that lane, while routines remain timetable blocks rather than cluttering the tracker.
 - *Planner* — pace banner, pipeline, and this week at a glance.
 - *Progress* — burn-up vs. ideal pace (Day/Week/Month), hours-per-period, per-module rings, activity heatmap.
 - *Analytics* — charts, module mix, and stats.
 - *Columns / Table / Week* — Kanban, dense grid, and 7-day plan of the same cards.
 - *Evidence* — proof-of-work outputs.
-- *Rescue Lane / Project Ship / Admin & Dates* — focused lanes for recovery buffers, the group project, and
-  exam logistics.
+- *Rescue Lane / Project Ship / Job Hunt / Admin & Dates* — focused lanes for recovery buffers, generic
+  group-project capacity, bounded applications, and exam logistics.
 
 **Cards** — click any card title to open the drawer and edit status, tick checklist items, log hours, attach
 evidence, and add notes. *Add card* creates new ones. Use the filter bar (non-study views) to slice by module,
 phase, priority, status, slot, tag, or date.
 
-**Settings** — planning dates, campaign window, exam start, the *Data Mining module active* toggle (drop the
-lane if you pass MAT700), and all backup/data actions.
+**Settings** — planning date, campaign window, provisional exam-window start, individual exam dates when
+published, and all backup/data actions. MAT700 is deliberately active because 39/FF requires reassessment.
 
 ## Design system
 

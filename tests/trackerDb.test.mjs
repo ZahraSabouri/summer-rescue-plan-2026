@@ -63,6 +63,18 @@ test('seedCatalog inserts modules, phases, cards, and checklist text', async () 
     })
     assert.equal(again.cards, 1)
     assert.equal(again.checklist_items, 2)
+
+    // A new source revision prunes obsolete base cards but preserves user-created cards.
+    db.db.prepare(
+      "INSERT INTO cards (id, title, custom, source) VALUES ('custom-1', 'Personal card', 1, 'added-in-app')",
+    ).run()
+    const rebased = db.seedCatalog({
+      cards: [{ id: 'card-002', title: 'New campaign card', checklist: ['New output'] }],
+    })
+    assert.equal(rebased.cards, 2)
+    assert.equal(rebased.checklist_items, 1)
+    assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM cards WHERE id = ?').get('card-001').n, 0)
+    assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM cards WHERE id = ?').get('custom-1').n, 1)
   })
 })
 

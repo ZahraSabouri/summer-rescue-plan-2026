@@ -9,6 +9,7 @@ import {
 } from '../utils/insights'
 import { AnimatedNumber } from './Celebration'
 import { CardSummary } from './CardSummary'
+import { DailyAgenda } from './ScheduleView'
 
 function greeting() {
   const hour = new Date().getHours()
@@ -82,6 +83,7 @@ export function TodayView({
   actions,
   examCountdown,
   examLabel,
+  dayBlocks,
   onOpenCard,
 }) {
   const streak = useMemo(() => buildStreak(cards, referenceDate), [cards, referenceDate])
@@ -147,6 +149,17 @@ export function TodayView({
             <span>active days total</span>
           </div>
         </div>
+      </section>
+
+      <section className="today-agenda panel" aria-label="Today hour-by-hour">
+        <header className="panel-head">
+          <div>
+            <p className="eyebrow">Protected timetable</p>
+            <h3>Today, hour by hour</h3>
+          </div>
+          <span className="muted small">Routines are blocks; outputs stay checkable cards.</span>
+        </header>
+        <DailyAgenda date={referenceDate} blocks={dayBlocks} cards={cards} onOpenCard={onOpenCard} compact />
       </section>
 
       <section className="today-picks" aria-label="Top focus picks">

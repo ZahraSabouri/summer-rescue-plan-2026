@@ -17,12 +17,13 @@ function isoDay(value) {
 }
 
 // ---------------------------------------------------------------------------
-// Priority split guardrail (AML 40 / TS 35 / MAT700 25, or 52/48 without MAT700)
+// Priority split guardrail mirrors the protected pre-exam timetable:
+// 80h AML / 96h Time Series / 58h MAT700 (rounded to whole percentages).
 // ---------------------------------------------------------------------------
 
 export const SPLIT_TARGETS_FULL = {
-  'Applied ML': 40,
-  'Time Series': 35,
+  'Applied ML': 34,
+  'Time Series': 41,
   MAT700: 25,
 }
 

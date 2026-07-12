@@ -346,6 +346,27 @@ export function openTrackerDb(dbPath) {
     // Seed the durable catalog: modules, phases, and the base card list.
     seedCatalog({ modules = [], phases = [], cards = [] } = {}) {
       return transaction(() => {
+        // The source card list is authoritative for non-custom cards. Remove
+        // obsolete catalogue rows from an earlier campaign revision while
+        // preserving cards created by the user in the app.
+        const incomingCardIds = new Set(cards.map((card) => text(card?.id)).filter(Boolean))
+        const obsoleteCardIds = db
+          .prepare('SELECT id FROM cards WHERE custom = 0')
+          .all()
+          .map((row) => text(row.id))
+          .filter((id) => !incomingCardIds.has(id))
+        if (obsoleteCardIds.length > 0) {
+          const dependentTables = ['card_progress', 'checklist_items', 'card_notes', 'card_evidence', 'card_resources']
+          const dependentDeletes = dependentTables.map((table) => db.prepare(`DELETE FROM ${table} WHERE card_id = ?`))
+          const notificationDelete = db.prepare('DELETE FROM notifications WHERE card_id = ?')
+          const cardDelete = db.prepare('DELETE FROM cards WHERE id = ?')
+          for (const cardId of obsoleteCardIds) {
+            dependentDeletes.forEach((statement) => statement.run(cardId))
+            notificationDelete.run(cardId)
+            cardDelete.run(cardId)
+          }
+        }
+
         const moduleStmt = db.prepare(
           `INSERT INTO modules (id, name, module_group, code, active, sort_order)
            VALUES (?, ?, ?, ?, ?, ?)

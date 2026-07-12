@@ -45,7 +45,7 @@ function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen 
           <span>{dueSoon.length} due next 7d</span>
           {overdue.length > 0 && <span className="danger">{overdue.length} overdue</span>}
         </div>
-        {inactiveInsurance && <p className="module-insurance-note">Insurance lane is switched off in planner settings.</p>}
+        {inactiveInsurance && <p className="module-insurance-note">The confirmed resit lane is switched off in planner settings.</p>}
       </div>
       <div className="module-card-actions">
         <button type="button" className="primary-button" onClick={() => onOpen(module.viewId)}>

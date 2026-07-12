@@ -9,7 +9,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { baseCards } from '../src/data/baseCards.js'
+import { rescueCards as baseCards } from '../src/data/summerRescuePlan.js'
 import { STUDY_MODULES } from '../src/data/studyModules.js'
 import { PHASE_OPTIONS } from '../src/data/constants.js'
 import { openTrackerDb } from '../src/server/trackerDb.js'

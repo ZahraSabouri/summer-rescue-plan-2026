@@ -10,6 +10,7 @@ import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
 import { ModuleWorkspace, ResourceReader } from './components/ModuleWorkspace'
 import { ProgressView } from './components/ProgressView'
+import { ScheduleView } from './components/ScheduleView'
 import { StudyHub } from './components/StudyHub'
 import { TodayView } from './components/TodayView'
 import { Celebration } from './components/Celebration'
@@ -23,7 +24,12 @@ import {
   TableView,
   WeekView,
 } from './components/TrackerViews'
-import { baseCards, campaignMeta } from './data/baseCards'
+import {
+  campaignMeta,
+  rescueCards,
+  scheduleExceptions,
+  scheduleRules,
+} from './data/summerRescuePlan'
 import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
 import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, VIEW_OPTIONS } from './data/constants'
@@ -39,10 +45,11 @@ import {
 } from './utils/fileBackup'
 import { readLocalResources, uploadLocalResource } from './utils/localStateFile'
 import { deriveStats, filterCards, sortCards, sumHours, todayString } from './utils/progress'
+import { expandScheduleForDate } from './utils/schedule'
 import { generateNotifications } from './utils/notifications'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
-const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(baseCards)
+const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(rescueCards)
 const ENRICHED_BASE_CARDS = attachCardResourceLinks(PLANNED_BASE_CARDS, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
@@ -82,9 +89,9 @@ function optionExists(options, value, except = '') {
 
 const NAV_GROUPS = [
   { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
-  { label: 'Planning', items: ['dashboard', 'progress', 'analytics'] },
+  { label: 'Planning', items: ['schedule', 'dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
-  { label: 'Focus', items: ['rescue', 'project', 'admin'] },
+  { label: 'Focus', items: ['rescue', 'project', 'jobs', 'admin'] },
 ]
 
 const VIEW_META = {
@@ -92,17 +99,19 @@ const VIEW_META = {
   hub: { title: 'Study Hub', subtitle: 'Command center for the whole rescue campaign.' },
   dashboard: { title: 'Planner', subtitle: 'Pace, pipeline, and this week at a glance.' },
   progress: { title: 'Progress', subtitle: 'Trajectory, streaks, and burn-down.' },
+  schedule: { title: 'Schedule', subtitle: 'Hour-by-hour protected routines, study, project, and job blocks.' },
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
-  'team-project': { title: 'Team Project', subtitle: 'CMT501 teamwork, GitLab practice, and report evidence.' },
-  mat700: { title: 'Mathematical Methods for Data Mining', subtitle: 'Data mining — kept warm as insurance.' },
+  'team-project': { title: 'Team Project', subtitle: 'Protected CMT501 capacity; detailed project management stays elsewhere.' },
+  mat700: { title: 'Mathematical Methods for Data Mining', subtitle: 'Confirmed resit lane — tutorial-first recovery from 39/FF.' },
   board: { title: 'Columns', subtitle: 'Status board across every lane.' },
   table: { title: 'Table', subtitle: 'Dense, editable card grid.' },
   week: { title: 'This Week', subtitle: 'Your seven-day working plan.' },
   analytics: { title: 'Analytics', subtitle: 'Charts, heatmap, and module mix.' },
   evidence: { title: 'Evidence', subtitle: 'Outputs and proof of work.' },
   rescue: { title: 'Rescue Lane', subtitle: 'Buffers and slipped-card recovery.' },
-  project: { title: 'Project Ship', subtitle: 'Group project deliverables.' },
+  project: { title: 'Project Capacity', subtitle: 'Bounded CMT501 space without duplicating the project app.' },
+  jobs: { title: 'Job Hunt', subtitle: 'A bounded opportunity lane that cannot consume exam preparation.' },
   admin: { title: 'Admin & Dates', subtitle: 'Exam logistics and date watch.' },
 }
 
@@ -247,6 +256,14 @@ function Icon({ name }) {
         </>
       )
       break
+    case 'schedule':
+      body = (
+        <>
+          <rect {...p} x="3" y="5" width="18" height="16" rx="2.5" />
+          <path {...p} d="M3 9.5h18M8 3v4M16 3v4M7 13h4M7 17h7" />
+        </>
+      )
+      break
     case 'evidence':
       body = (
         <>
@@ -277,6 +294,14 @@ function Icon({ name }) {
         <>
           <path {...p} d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3Z" />
           <path {...p} d="M9 12l2 2 4-4" />
+        </>
+      )
+      break
+    case 'jobs':
+      body = (
+        <>
+          <rect {...p} x="3" y="7" width="18" height="13" rx="2.5" />
+          <path {...p} d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2" />
         </>
       )
       break
@@ -328,6 +353,9 @@ function scopeCardsForView(view, cards) {
   }
   if (view === 'admin') {
     return cards.filter((card) => card.moduleGroup === 'Admin' || card.tags.includes('admin') || card.tags.includes('date-watch'))
+  }
+  if (view === 'jobs') {
+    return cards.filter((card) => card.moduleGroup === 'Job Hunt' || card.tags.includes('job-hunt'))
   }
   return cards
 }
@@ -456,6 +484,10 @@ export default function App() {
   const moduleExamDates = useMemo(
     () => tracker.state.settings.moduleExamDates ?? {},
     [tracker.state.settings.moduleExamDates],
+  )
+  const dayBlocks = useMemo(
+    () => expandScheduleForDate(scheduleRules, scheduleExceptions, referenceDate),
+    [referenceDate],
   )
   const customModules = useMemo(
     () => cleanCustomOptions(tracker.state.settings.customModules),
@@ -597,6 +629,14 @@ export default function App() {
       window.history.replaceState(null, '', nextHash)
     }
   }, [activeView])
+
+  // Repair a stale planning date after the async local-file state arrives. The campaign
+  // starts tomorrow, so pre-campaign dates must never hide the launch schedule.
+  useEffect(() => {
+    const today = todayString()
+    const floor = today > schedule.campaignStart ? today : schedule.campaignStart
+    if (referenceDate < floor) updateSettingsRef.current({ referenceDate: floor })
+  }, [referenceDate, schedule.campaignStart, tracker.localFile.status])
 
   // Keep "today" live so overdue cards update automatically (advances forward only;
   // a manually-set future planning date is respected). Persists via localStorage.
@@ -746,7 +786,7 @@ export default function App() {
     [studyModules],
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
-  const isStudyView = ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
+  const isStudyView = ['today', 'schedule', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
 
   useEffect(() => {
     function openHashResource() {
@@ -1164,7 +1204,7 @@ export default function App() {
     downloadBackup(new Date().toISOString())
     tracker.resetTrackerState()
     setSelectedCardId(null)
-    setMessage('Backup exported, then local tracker reset to the July 4 plan.')
+    setMessage('Backup exported, then local tracker reset to the 13 July resit plan.')
   }
 
   function renderView() {
@@ -1178,6 +1218,7 @@ export default function App() {
           actions={actions}
           examCountdown={examCountdown}
           examLabel={examTarget.label}
+          dayBlocks={dayBlocks}
           onOpenCard={setSelectedCardId}
         />
       )
@@ -1227,6 +1268,20 @@ export default function App() {
             schedule={schedule}
           />
         )
+    }
+    if (activeView === 'schedule') {
+      return (
+        <ScheduleView
+          rules={scheduleRules}
+          exceptions={scheduleExceptions}
+          cards={tracker.cards}
+          referenceDate={referenceDate}
+          onOpenCard={setSelectedCardId}
+          moduleExamDates={moduleExamDates}
+          campaignStart={schedule.campaignStart}
+          campaignEnd={schedule.campaignEnd}
+        />
+      )
     }
     if (activeView === 'progress') {
       return (
@@ -1279,8 +1334,8 @@ export default function App() {
       return (
         <FocusView
           eyebrow="Shipping"
-          title="Project Shipping"
-          description="Presentation, reflective report, contribution log, and submission confirmations."
+          title="Project Capacity"
+          description="Protected CMT501 blocks only: current bottleneck, integration, coordination, and evidence. Detailed project management stays elsewhere."
           cards={visibleCards}
           actions={actions}
         />
@@ -1292,6 +1347,17 @@ export default function App() {
           eyebrow="Date Watch"
           title="Admin and Date Watch"
           description="Assessment dates, SIMS status, exam logistics, checkpoints, and weekly plan control."
+          cards={visibleCards}
+          actions={actions}
+        />
+      )
+    }
+    if (activeView === 'jobs') {
+      return (
+        <FocusView
+          eyebrow="Bounded opportunity lane"
+          title="Job Hunt"
+          description="One shortlist scan and at most one high-quality action most weeks. Unused time returns to exam study or recovery."
           cards={visibleCards}
           actions={actions}
         />
@@ -1565,8 +1631,8 @@ export default function App() {
                 </label>
               </div>
               <label className="toggle-field">
-                <input type="checkbox" checked={mat700Active} onChange={(event) => tracker.updateSettings({ mat700Active: event.target.checked })} />
-                <span>Data Mining module active</span>
+                <input type="checkbox" checked={mat700Active} readOnly disabled />
+                <span>Data Mining resit active — 39/FF confirmed</span>
               </label>
             </div>
 

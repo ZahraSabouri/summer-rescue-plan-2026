@@ -25,6 +25,7 @@ export const MODULE_OPTIONS = [
   'Time Series',
   'MAT700',
   'Group Project',
+  'Job Hunt',
   'Admin',
   'Health',
   'Cross-module',
@@ -46,6 +47,9 @@ export const TAG_OPTIONS = [
   'fixed',
   'date-watch',
   'gitlab',
+  'resit',
+  'job-hunt',
+  'bounded',
 ]
 
 export const VIEW_OPTIONS = [
@@ -53,6 +57,7 @@ export const VIEW_OPTIONS = [
   { id: 'hub', label: 'Study Hub' },
   { id: 'dashboard', label: 'Planner' },
   { id: 'progress', label: 'Progress' },
+  { id: 'schedule', label: 'Schedule' },
   { id: 'aml', label: 'Applied ML' },
   { id: 'time-series', label: 'Time Series' },
   { id: 'team-project', label: 'Team Project' },
@@ -65,6 +70,7 @@ export const VIEW_OPTIONS = [
   { id: 'rescue', label: 'Rescue Lane' },
   { id: 'project', label: 'Project Ship' },
   { id: 'admin', label: 'Admin Watch' },
+  { id: 'jobs', label: 'Job Hunt' },
 ]
 
 export const FILTER_DEFAULTS = {

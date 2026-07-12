@@ -6,15 +6,15 @@ import {
   writeLocalTrackerStateFile,
 } from '../utils/localStateFile'
 import { isTrackableCard, todayString } from '../utils/progress'
+import {
+  createInitialTrackerState,
+  migrateTrackerState,
+  normaliseUploadedResource,
+} from './trackerStateMigration.js'
 
 export const STORAGE_KEY = 'summer-rescue-tracker-state-v3'
-const STATE_VERSION = 3
-const PLAN_RESET_ID = '2026-07-04-reset-local-date'
 const LEGACY_MODULE_NOTE_PREFIX = 'summer-rescue-module-note-'
 const LEGACY_MODULE_NOTE_SUFFIX = '-v1'
-const DEFAULT_CAMPAIGN_START = '2026-07-04'
-const DEFAULT_CAMPAIGN_END = '2026-08-18'
-const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
 const RESOURCE_PREFIXES_BY_MODULE = {
   'Applied ML': ['aml-', 'amlPlan-'],
   'Time Series': ['timeSeries-', 'timeSeriesPlan-'],
@@ -35,82 +35,7 @@ function nowIso() {
 }
 
 function createInitialState() {
-  return {
-    version: STATE_VERSION,
-    cards: {},
-    addedCards: [],
-    moduleNotes: {},
-    notifications: {},
-    resourceProgress: {},
-    uploadedResources: [],
-    recentResourceIds: [],
-    snapshots: {},
-    settings: {
-      referenceDate: todayString(),
-      mat700Active: true,
-      theme: 'light',
-      campaignStart: DEFAULT_CAMPAIGN_START,
-      campaignEnd: DEFAULT_CAMPAIGN_END,
-      examWindowStart: DEFAULT_EXAM_WINDOW_START,
-      moduleExamDates: {},
-      customModules: [],
-      customPhases: [],
-      lastExportedAt: null,
-      saveHintDismissed: false,
-      planResetId: PLAN_RESET_ID,
-    },
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  }
-}
-
-function plainObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
-}
-
-function normaliseUploadedResource(resource) {
-  if (!resource || typeof resource !== 'object' || !resource.id || !resource.url) return null
-  return {
-    id: String(resource.id),
-    moduleId: String(resource.moduleId ?? ''),
-    moduleKey: String(resource.moduleKey ?? ''),
-    moduleGroup: String(resource.moduleGroup ?? ''),
-    group: String(resource.group ?? 'Uploaded'),
-    title: String(resource.title ?? resource.fileName ?? 'Uploaded resource').trim() || 'Uploaded resource',
-    path: String(resource.path ?? resource.fileName ?? ''),
-    type: String(resource.type ?? 'FILE'),
-    viewer: String(resource.viewer ?? 'file'),
-    url: String(resource.url),
-    description: String(resource.description ?? ''),
-    tags: Array.isArray(resource.tags) ? resource.tags.map((tag) => String(tag)).filter(Boolean) : [],
-    priority: resource.priority === 'high' ? 'high' : 'normal',
-    uploadedAt: String(resource.uploadedAt ?? ''),
-    size: Number(resource.size ?? 0),
-  }
-}
-
-function normaliseUploadedResources(resources) {
-  if (!Array.isArray(resources)) return []
-  return resources.map(normaliseUploadedResource).filter(Boolean)
-}
-
-function resetStateForCurrentPlan(value) {
-  const next = createInitialState()
-  const previousSettings = plainObject(value?.settings)
-
-  return {
-    ...next,
-    moduleNotes: plainObject(value?.moduleNotes),
-    uploadedResources: normaliseUploadedResources(value?.uploadedResources),
-    settings: {
-      ...next.settings,
-      theme: previousSettings.theme ?? next.settings.theme,
-      moduleExamDates: plainObject(previousSettings.moduleExamDates),
-      customModules: Array.isArray(previousSettings.customModules) ? previousSettings.customModules : [],
-      customPhases: Array.isArray(previousSettings.customPhases) ? previousSettings.customPhases : [],
-      saveHintDismissed: Boolean(previousSettings.saveHintDismissed),
-    },
-  }
+  return createInitialTrackerState(todayString())
 }
 
 function checklistId(cardId, index) {
@@ -158,31 +83,7 @@ function pruneNotifications(notifications) {
 }
 
 function normaliseState(value) {
-  const fallback = createInitialState()
-  if (!value || typeof value !== 'object') return fallback
-
-  if (value.version !== STATE_VERSION || value.settings?.planResetId !== PLAN_RESET_ID) {
-    return resetStateForCurrentPlan(value)
-  }
-
-  return {
-    ...fallback,
-    ...value,
-    version: STATE_VERSION,
-    cards: value.cards && typeof value.cards === 'object' ? value.cards : {},
-    addedCards: Array.isArray(value.addedCards) ? value.addedCards : [],
-    moduleNotes: value.moduleNotes && typeof value.moduleNotes === 'object' ? value.moduleNotes : {},
-    notifications: value.notifications && typeof value.notifications === 'object' ? value.notifications : {},
-    resourceProgress: value.resourceProgress && typeof value.resourceProgress === 'object' ? value.resourceProgress : {},
-    uploadedResources: normaliseUploadedResources(value.uploadedResources),
-    recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],
-    snapshots: value.snapshots && typeof value.snapshots === 'object' ? value.snapshots : {},
-    settings: {
-      ...fallback.settings,
-      ...(value.settings && typeof value.settings === 'object' ? value.settings : {}),
-    },
-    updatedAt: value.updatedAt ?? nowIso(),
-  }
+  return migrateTrackerState(value)
 }
 
 function readLegacyModuleNotes() {
@@ -493,18 +394,6 @@ export function useTrackerState(baseCards) {
     },
     [baseCards],
   )
-
-  useEffect(() => {
-    if (state.version === STATE_VERSION && state.settings?.planResetId === PLAN_RESET_ID) return undefined
-    const frameId = window.requestAnimationFrame(() => {
-      setState((current) =>
-        current.version === STATE_VERSION && current.settings?.planResetId === PLAN_RESET_ID
-          ? current
-          : resetStateForCurrentPlan(current),
-      )
-    })
-    return () => window.cancelAnimationFrame(frameId)
-  }, [state.settings?.planResetId, state.version])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
