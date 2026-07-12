@@ -1,5 +1,5 @@
 export const TRACKER_STATE_VERSION = 4
-export const PLAN_REVISION = '2026-07-13-resit-rebase-clean-alerts'
+export const PLAN_REVISION = '2026-07-13-private-recovery-plan'
 export const DEFAULT_CAMPAIGN_START = '2026-07-13'
 export const DEFAULT_CAMPAIGN_END = '2026-08-28'
 export const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
@@ -16,10 +16,9 @@ function localToday() {
 function campaignReferenceDate(value) {
   const date = typeof value === 'string' ? value.slice(0, 10) : ''
   const today = localToday()
-  const floor = today > DEFAULT_CAMPAIGN_START ? today : DEFAULT_CAMPAIGN_START
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date > floor
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date > today
     ? date
-    : floor
+    : today
 }
 
 function plainObject(value) {

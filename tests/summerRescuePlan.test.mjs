@@ -69,8 +69,9 @@ test('job hunt, project, hygiene, groceries, and outside time stay bounded', () 
   }
 
   for (const [week, row] of weekly) {
-    assert.ok(row.jobs.length <= 2, `job sessions in ${week}`)
-    assert.ok(row.jobs.every((block) => minutesBetween(block.start, block.end) <= 120), `job duration in ${week}`)
+    const jobMinutes = row.jobs.reduce((sum, block) => sum + minutesBetween(block.start, block.end), 0)
+    assert.ok(jobMinutes <= 120, `job ceiling in ${week}`)
+    assert.ok(row.jobs.every((block) => minutesBetween(block.start, block.end) <= 45), `job block duration in ${week}`)
     assert.ok(row.showers >= 2 && row.showers <= 3, `shower frequency in ${week}`)
     assert.ok(row.groceries >= 1, `grocery block in ${week}`)
   }
@@ -79,7 +80,7 @@ test('job hunt, project, hygiene, groceries, and outside time stay bounded', () 
     const day = days.find((item) => item.date === date)
     const summary = summariseDay(day?.blocks ?? [])
     assert.equal(summary.academicMinutes, 360, `job-action Sunday academic load on ${date}`)
-    assert.equal(summary.jobMinutes, 120, `job-action Sunday job load on ${date}`)
+    assert.equal(summary.jobMinutes, 65, `job-maintenance Sunday load on ${date}`)
   }
 
   const hasOutside = days.map((day) =>
@@ -87,6 +88,19 @@ test('job hunt, project, hygiene, groceries, and outside time stay bounded', () 
   )
   for (let index = 1; index < hasOutside.length; index += 1) {
     assert.ok(hasOutside[index] || hasOutside[index - 1], `two consecutive stay-home days ending ${days[index].date}`)
+  }
+
+  const allCampaignDays = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, CAMPAIGN_END)
+  const jobMinutesByWeek = new Map()
+  for (const day of allCampaignDays) {
+    const week = mondayOf(day.date)
+    const minutes = day.blocks
+      .filter((block) => block.category === 'job')
+      .reduce((sum, block) => sum + minutesBetween(block.start, block.end), 0)
+    jobMinutesByWeek.set(week, (jobMinutesByWeek.get(week) ?? 0) + minutes)
+  }
+  for (const [week, minutes] of jobMinutesByWeek) {
+    assert.ok(minutes <= 120, `whole-campaign job ceiling in ${week}`)
   }
 })
 
@@ -99,7 +113,8 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
   const mat700Cards = rescueCards.filter((card) => card.moduleGroup === 'MAT700')
   assert.ok(mat700Cards.length >= 20)
   assert.ok(mat700Cards.every((card) => !/insurance/i.test(`${card.title} ${card.description} ${(card.tags ?? []).join(' ')}`)))
-  assert.ok(mat700Cards.some((card) => /39\/FF/.test(card.title)))
+  assert.ok(mat700Cards.some((card) => /foundation reset/i.test(card.title)))
+  assert.ok(mat700Cards.every((card) => !/39|resit|reassess/i.test(`${card.title} ${card.description} ${card.trackerNotes} ${(card.tags ?? []).join(' ')}`)))
 
   const hoursByModule = Object.fromEntries(
     ['Applied ML', 'Time Series', 'MAT700'].map((moduleGroup) => [
@@ -120,7 +135,8 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
   const jobHours = rescueCards
     .filter((card) => card.moduleGroup === 'Job Hunt')
     .reduce((sum, card) => sum + card.estimatedHours, 0)
-  assert.equal(jobHours, 15.5)
+  assert.equal(rescueCards.filter((card) => card.moduleGroup === 'Job Hunt').length, 7)
+  assert.equal(jobHours, 14)
 })
 
 test('v3 tracker state migrates without discarding user work', () => {
@@ -158,7 +174,9 @@ test('v3 tracker state migrates without discarding user work', () => {
 
   const migrated = migrateTrackerState(old)
   assert.equal(migrated.version, 4)
-  assert.equal(migrated.settings.referenceDate, '2026-07-13')
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  assert.equal(migrated.settings.referenceDate, today)
   assert.equal(migrated.settings.campaignStart, '2026-07-13')
   assert.equal(migrated.settings.campaignEnd, '2026-08-28')
   assert.equal(migrated.settings.mat700Active, true)

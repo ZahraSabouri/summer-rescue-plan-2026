@@ -133,8 +133,8 @@ const timeSeriesPlanResources = [
 ]
 
 const mat700PlanResources = [
-  local('mat700Plan', 'Study plan', 'MAT700 resit risk notes', 'MAT700_resit_risk_notes.md', {
-    description: 'Risk notes and decision context for MAT700.',
+  local('mat700Plan', 'Study plan', 'MAT700 planning guardrails', 'MAT700_planning_guardrails.md', {
+    description: 'Planning guardrails and decision context for MAT700.',
     tags: ['plan', 'risk'],
   }),
   local('mat700Plan', 'Study plan', 'MAT700 tutorial priority map', 'MAT700_tutorial_priority_map.md', {
@@ -916,13 +916,13 @@ export const STUDY_MODULES = [
     code: 'MAT700',
     label: 'Data Mining',
     title: 'Mathematical Methods for Data Mining',
-    subtitle: 'Confirmed resit lane: rebuild seven lectures through tutorials, timed recall, and papers.',
+    subtitle: 'Rebuild seven lectures through tutorials, timed recall, and papers.',
     examShape: 'Written mathematical/data-mining exam: definitions, short proofs, TF-IDF, similarity, PageRank, clustering, boosting, and evaluation metrics.',
     accent: '--chart-mat700',
     hero: hero('mat700.svg'),
     visual: mat700Visual,
     objectives: [
-      'Convert the confirmed 39/FF result into a safe 50%+ resit performance.',
+      'Build a safe exam performance from tutorial and question-bank fluency.',
       'Use tutorial and question-bank problems before broad slide reading.',
       'Focus on high-yield templates that can be solved under time.',
     ],

@@ -84,8 +84,11 @@ export function TodayView({
   examCountdown,
   examLabel,
   dayBlocks,
+  scheduleDate,
+  campaignStart,
   onOpenCard,
 }) {
+  const preCampaign = Boolean(campaignStart && referenceDate < campaignStart)
   const streak = useMemo(() => buildStreak(cards, referenceDate), [cards, referenceDate])
   const daySummary = useMemo(
     () => buildDaySummary(cards, snapshots, referenceDate),
@@ -105,9 +108,11 @@ export function TodayView({
       <section className="today-hero panel" aria-label="Today at a glance">
         <div className="today-hero-main">
           <p className="eyebrow">{formatDate(referenceDate)}</p>
-          <h2 className="today-greeting">{greeting()}, Zahra.</h2>
+          <h2 className="today-greeting">{preCampaign ? 'The campaign starts tomorrow, Zahra.' : `${greeting()}, Zahra.`}</h2>
           <p className="today-line">
-            {picks.length === 0
+            {preCampaign
+              ? 'Nothing in the rescue plan is due tonight. Preview Monday’s protected launch schedule and start rested.'
+              : picks.length === 0
               ? 'Nothing urgent in the queue — pick something from the board or take the win.'
               : `Your best next ${picks.length === 1 ? 'move is' : `${picks.length} moves are`} lined up below. Start the top one.`}
           </p>
@@ -151,20 +156,20 @@ export function TodayView({
         </div>
       </section>
 
-      <section className="today-agenda panel" aria-label="Today hour-by-hour">
+      <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>
         <header className="panel-head">
           <div>
             <p className="eyebrow">Protected timetable</p>
-            <h3>Today, hour by hour</h3>
+            <h3>{preCampaign ? 'Tomorrow preview, hour by hour' : 'Today, hour by hour'}</h3>
           </div>
           <span className="muted small">Routines are blocks; outputs stay checkable cards.</span>
         </header>
-        <DailyAgenda date={referenceDate} blocks={dayBlocks} cards={cards} onOpenCard={onOpenCard} compact />
+        <DailyAgenda date={scheduleDate || referenceDate} blocks={dayBlocks} cards={cards} onOpenCard={onOpenCard} compact />
       </section>
 
       <section className="today-picks" aria-label="Top focus picks">
         <header className="section-head">
-          <h3>Mission for today</h3>
+          <h3>{preCampaign ? 'Tomorrow’s launch queue' : 'Mission for today'}</h3>
           <span className="muted small">Auto-picked from due dates, priority, and your split targets.</span>
         </header>
         {picks.length === 0 && (

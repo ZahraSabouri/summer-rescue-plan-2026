@@ -15,6 +15,7 @@ import { StudyHub } from './components/StudyHub'
 import { TodayView } from './components/TodayView'
 import { Celebration } from './components/Celebration'
 import { ImportPreviewDialog } from './components/ImportPreviewDialog'
+import { JobHuntPlaybook } from './components/JobHuntPlaybook'
 import {
   AnalyticsView,
   BoardView,
@@ -103,7 +104,7 @@ const VIEW_META = {
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
   'team-project': { title: 'Team Project', subtitle: 'Protected CMT501 capacity; detailed project management stays elsewhere.' },
-  mat700: { title: 'Mathematical Methods for Data Mining', subtitle: 'Confirmed resit lane — tutorial-first recovery from 39/FF.' },
+  mat700: { title: 'Mathematical Methods for Data Mining', subtitle: 'Tutorial-first recovery, timed recall, and paper practice.' },
   board: { title: 'Columns', subtitle: 'Status board across every lane.' },
   table: { title: 'Table', subtitle: 'Dense, editable card grid.' },
   week: { title: 'This Week', subtitle: 'Your seven-day working plan.' },
@@ -485,9 +486,10 @@ export default function App() {
     () => tracker.state.settings.moduleExamDates ?? {},
     [tracker.state.settings.moduleExamDates],
   )
+  const dayScheduleDate = referenceDate < schedule.campaignStart ? schedule.campaignStart : referenceDate
   const dayBlocks = useMemo(
-    () => expandScheduleForDate(scheduleRules, scheduleExceptions, referenceDate),
-    [referenceDate],
+    () => expandScheduleForDate(scheduleRules, scheduleExceptions, dayScheduleDate),
+    [dayScheduleDate],
   )
   const customModules = useMemo(
     () => cleanCustomOptions(tracker.state.settings.customModules),
@@ -630,13 +632,12 @@ export default function App() {
     }
   }, [activeView])
 
-  // Repair a stale planning date after the async local-file state arrives. The campaign
-  // starts tomorrow, so pre-campaign dates must never hide the launch schedule.
+  // Repair a stale planning date after the async local-file state arrives while
+  // keeping 12 July as the real current day; the launch preview is handled separately.
   useEffect(() => {
     const today = todayString()
-    const floor = today > schedule.campaignStart ? today : schedule.campaignStart
-    if (referenceDate < floor) updateSettingsRef.current({ referenceDate: floor })
-  }, [referenceDate, schedule.campaignStart, tracker.localFile.status])
+    if (referenceDate < today) updateSettingsRef.current({ referenceDate: today })
+  }, [referenceDate, tracker.localFile.status])
 
   // Keep "today" live so overdue cards update automatically (advances forward only;
   // a manually-set future planning date is respected). Persists via localStorage.
@@ -1204,7 +1205,7 @@ export default function App() {
     downloadBackup(new Date().toISOString())
     tracker.resetTrackerState()
     setSelectedCardId(null)
-    setMessage('Backup exported, then local tracker reset to the 13 July resit plan.')
+    setMessage('Backup exported, then local tracker reset to the 13 July recovery plan.')
   }
 
   function renderView() {
@@ -1219,6 +1220,8 @@ export default function App() {
           examCountdown={examCountdown}
           examLabel={examTarget.label}
           dayBlocks={dayBlocks}
+          scheduleDate={dayScheduleDate}
+          campaignStart={schedule.campaignStart}
           onOpenCard={setSelectedCardId}
         />
       )
@@ -1354,13 +1357,16 @@ export default function App() {
     }
     if (activeView === 'jobs') {
       return (
-        <FocusView
-          eyebrow="Bounded opportunity lane"
-          title="Job Hunt"
-          description="One shortlist scan and at most one high-quality action most weeks. Unused time returns to exam study or recovery."
-          cards={visibleCards}
-          actions={actions}
-        />
+        <div className="view-grid">
+          <JobHuntPlaybook />
+          <FocusView
+            eyebrow="Bounded opportunity lane"
+            title="Job Hunt cards"
+            description="One weekly maintenance card, a hard two-hour ceiling, and a 30-minute reserve that returns to study unless a strong role closes within seven days."
+            cards={visibleCards}
+            actions={actions}
+          />
+        </div>
       )
     }
     return null
@@ -1632,7 +1638,7 @@ export default function App() {
               </div>
               <label className="toggle-field">
                 <input type="checkbox" checked={mat700Active} readOnly disabled />
-                <span>Data Mining resit active — 39/FF confirmed</span>
+                <span>Data Mining study lane active</span>
               </label>
             </div>
 

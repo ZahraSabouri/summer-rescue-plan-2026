@@ -173,7 +173,7 @@ export function DashboardView({ cards, stats, referenceDate, mat700Active, actio
         <MetricTile label="Next 7 days" value={stats.nextSevenCards.length} detail={`${formatDate(referenceDate)} - ${formatDate(next7End)}`} />
         <MetricTile label="Rescue lane" value={stats.rescueCards.length} detail="Buffer and recovery cards" tone="amber" />
         <MetricTile label="Waiting" value={stats.waitingCards.length} detail="Blocked or date-dependent" />
-        <MetricTile label="Data Mining" value={mat700Active ? 'Resit active' : 'Paused'} detail="Confirmed 39/FF lane" tone="green" />
+        <MetricTile label="Data Mining" value={mat700Active ? 'Study lane active' : 'Paused'} detail="Tutorial-first recovery lane" tone="green" />
         <MetricTile
           label="Project ship"
           value={`${percent(stats.project.done, stats.project.total)}%`}

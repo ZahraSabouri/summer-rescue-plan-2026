@@ -2,7 +2,7 @@
 
 A local-first command centre for the intensive **13 July–28 August 2026** rescue campaign. The plan reaches
 exam-readiness by **16 August**, then switches to targeted maintenance through Cardiff's provisional
-**17–28 August** resit window. It combines an hour-by-hour timetable, a 115-card outcome tracker, module
+**17–28 August** summer assessment window. It combines an hour-by-hour timetable, a 115-card outcome tracker, module
 workspaces, progress analytics, an evidence log, and a built-in study timer.
 
 > Cardiff University branding uses an **original placeholder crest** at `public/cardiff-logo.svg` (not an
@@ -35,7 +35,7 @@ bounded CMT501 capacity lane, a small job-search lane, and essential life/admin 
 | --- | --- | --- | --- |
 | Applied ML | CMT307 | Lab-first fluency, videos only when they produce a lab/output | 36 cards / 80 h |
 | Time Series | MAT508 | Concept rebuild plus repeated exam-template drills | 35 cards / 95 h |
-| Data Mining | MAT700 | Confirmed 39/FF resit: tutorial-first rebuild and timed papers | 24 cards / 52 h |
+| Data Mining | MAT700 | Tutorial-first rebuild, timed recall, and papers | 24 cards / 52 h |
 | Team Project | CMT501 | Generic protected capacity only; detailed management stays elsewhere | 5 cards / 37 h |
 | Job Hunt | Personal | One shortlist scan and at most one application action per week | 9 cards / 15.5 h |
 
@@ -186,7 +186,7 @@ evidence, and add notes. *Add card* creates new ones. Use the filter bar (non-st
 phase, priority, status, slot, tag, or date.
 
 **Settings** — planning date, campaign window, provisional exam-window start, individual exam dates when
-published, and all backup/data actions. MAT700 is deliberately active because 39/FF requires reassessment.
+published, and all backup/data actions. MAT700 is an active study lane throughout the campaign.
 
 ## Design system
 

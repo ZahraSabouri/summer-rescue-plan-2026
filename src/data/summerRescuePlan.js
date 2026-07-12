@@ -48,7 +48,6 @@ function cleanMat700Text(value) {
 }
 
 function statusForDate(date) {
-  if (date <= CAMPAIGN_START) return 'Today'
   if (date <= '2026-07-19') return 'This Week'
   return 'Backlog'
 }
@@ -379,23 +378,42 @@ const projectCards = [
   }),
 ]
 
-const jobScanDates = ['2026-07-14', '2026-07-21', '2026-07-28', '2026-08-04', '2026-08-11']
-const jobActionDates = ['2026-07-19', '2026-07-26', '2026-08-09', '2026-08-16']
-
-const jobCards = [
-  ...jobScanDates.map((date, index) => datedCard({
-    id: `job-scan-${index + 1}`, number: 401 + index, title: `Job shortlist scan ${index + 1} — one decision-ready UK opportunity review`, moduleGroup: 'Job Hunt', phase: date < '2026-08-01' ? 'Phase 2' : date < '2026-08-10' ? 'Phase 3' : 'Phase 4', startDate: date, dueDate: date, hours: 1.5, priority: 'Medium',
-    description: 'Public sources only. Review no more than eight serious paid/flexible or 2027 leads and choose at most one urgent live action. This is a bounded lane, not an internet-search spiral.',
-    checklist: ['Scan Track A and Track B using public sources', 'Keep no more than 8 serious items', 'Verify hours/pay/start/deadline/employee status', 'Choose at most one application/contact/registration action', 'Record the next deadline and suppress duplicates'],
-    evidence: 'updated max-8 shortlist + one chosen/declined action', done: 'the shortlist is decision-ready and the 90-minute timer has stopped', tags: ['job-hunt', 'bounded', 'public-sources'], slotLabel: 'Tuesday 19:00–20:30',
-  })),
-  ...jobActionDates.map((date, index) => datedCard({
-    id: `job-action-${index + 1}`, number: 411 + index, title: `Job action ${index + 1} — tailor one priority application or release the block`, moduleGroup: 'Job Hunt', phase: date < '2026-08-01' ? 'Phase 2' : date < '2026-08-10' ? 'Phase 3' : 'Phase 4', startDate: date, dueDate: date, hours: 2, priority: 'Medium',
-    description: 'Act only when a verified serious lead exists. Otherwise return the block to exam repair or recovery; do not manufacture low-value applications.',
-    checklist: ['Verify the official vacancy and closing date', 'Verify study/visa safety and employee status', 'Tailor CV emphasis and three evidence bullets', 'Submit/contact/register only after explicit review', 'Record action date and follow-up'],
-    evidence: 'one reviewed application/contact/registration record, or a note releasing the block', done: 'one high-quality action is recorded or the block is intentionally returned', tags: ['job-hunt', 'application', 'bounded'], slotLabel: 'Sunday 18:30–20:30',
-  })),
+const JOB_MAINTENANCE_WEEKS = [
+  ['2026-07-13', '2026-07-19', 'Score the master CV once', 'Run Cardiff’s CV checker once, save the baseline feedback, and choose the five highest-value fixes.'],
+  ['2026-07-20', '2026-07-26', 'Improve one clean master CV', 'Remove repetition, strengthen outcomes and measurements, and lock one clean UK master CV.'],
+  ['2026-07-27', '2026-08-02', 'Create two lightweight CV tracks', 'Create Software/Backend/Platform and Data/Analytics/ML variants while keeping roughly 80–85% shared.'],
+  ['2026-08-03', '2026-08-09', 'Set up Higherin', 'Create the core profile, upload the CV, set availability/location, and enable useful alerts only.'],
+  ['2026-08-10', '2026-08-16', 'Set up Bright Network', 'Reuse the same core profile information and enable relevant graduate/internship alerts.'],
+  ['2026-08-17', '2026-08-23', 'Set up Gradcracker', 'Create the STEM profile and alerts for software, data, AI/ML, data engineering, and relevant UK locations.'],
+  ['2026-08-24', '2026-08-28', 'Build a minimum viable GitHub profile', 'Improve the profile README, pin three relevant repositories, and make one project README presentable.'],
 ]
+
+const jobCards = JOB_MAINTENANCE_WEEKS.map(([startDate, dueDate, task, detail], index) => datedCard({
+  id: `job-maintenance-week-${index + 1}`,
+  number: 401 + index,
+  title: `Job maintenance week ${index + 1} — ${task}`,
+  moduleGroup: 'Job Hunt',
+  phase: startDate < '2026-08-01' ? 'Phase 2' : startDate < '2026-08-10' ? 'Phase 3' : 'Phase 4',
+  startDate,
+  dueDate,
+  hours: 2,
+  priority: 'Medium',
+  description: `Two-hour weekly ceiling, including a 30-minute urgent-role reserve. ${detail}`,
+  checklist: [
+    'Complete five 5-minute Student Futures scans without starting applications (25m total)',
+    'Review accumulated agent, Student Futures, LinkedIn, and Indeed results once (20m)',
+    `Complete the one weekly development task: ${task} (45m)`,
+    'Use the 30m reserve only for a strong role closing within seven days; otherwise return it to study',
+  ],
+  evidence: 'one maintenance note + weekly development output + reserve used/released decision',
+  done: 'the weekly system stopped at two hours and produced the single intended development output',
+  tags: ['job-hunt', 'maintenance-mode', 'two-hour-cap'],
+  slotLabel: 'Weekday 5m scans + one 20m review + one 45m build; 30m reserve stays unallocated',
+}))
+
+const jobSundayDates = JOB_MAINTENANCE_WEEKS
+  .map(([, dueDate]) => dueDate)
+  .filter((date) => new Date(`${date}T12:00:00`).getDay() === 0)
 
 const adminCards = [
   datedCard({
@@ -425,6 +443,11 @@ export const rescueCards = [...examCards, ...projectCards, ...jobCards, ...admin
     if (dateA !== dateB) return dateA.localeCompare(dateB)
     return Number(a.sortOrder) - Number(b.sortOrder)
   })
+  .map((card, index) => ({
+    ...card,
+    number: index + 1,
+    sortOrder: index + 1,
+  }))
 
 export const campaignMeta = {
   title: 'Summer Rescue Campaign 2026',
@@ -476,6 +499,11 @@ const coreRoutineRules = [
   rule({ id: 'sister-call', title: 'Short family catch-up', category: 'recovery', weekdays: [5], start: '21:30', end: '22:00' }),
   rule({ id: 'friend-call', title: 'Weekly friend catch-up', category: 'recovery', weekdays: [7], start: '20:30', end: '21:00' }),
   rule({ id: 'laundry', title: 'Laundry load / collect', category: 'chores', weekdays: [3], start: '20:15', end: '20:30' }),
+  rule({ id: 'job-scan-mon', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [1], start: '20:45', end: '20:50', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
+  rule({ id: 'job-scan-tue', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [2], start: '20:45', end: '20:50', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
+  rule({ id: 'job-scan-wed', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [3], start: '20:30', end: '20:35', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
+  rule({ id: 'job-scan-thu', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [4], start: '20:30', end: '20:35', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
+  rule({ id: 'job-scan-fri', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [5], start: '20:25', end: '20:30', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
 ]
 
 const weekdayStudyRules = [
@@ -492,7 +520,7 @@ const weekdayStudyRules = [
   rule({ id: 'mon-commute-home', title: 'Travel home', category: 'commute', to: READINESS_DEADLINE, weekdays: [1], start: '18:15', end: '18:45', location: 'Transit' }),
   rule({ id: 'mon-dinner', title: 'Make and eat dinner', category: 'meal', to: READINESS_DEADLINE, weekdays: [1], start: '18:45', end: '19:15', protected: true }),
 
-  // Tuesday — home study, walk, job scan, shower.
+  // Tuesday — home study, walk, short family call, and shower.
   rule({ id: 'tue-ts-1', title: 'Time Series queue — concepts and examples', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '08:30', end: '10:30', ...academic('Time Series') }),
   rule({ id: 'tue-break-1', title: 'Break', category: 'recovery', to: READINESS_DEADLINE, weekdays: [2], start: '10:30', end: '10:45' }),
   rule({ id: 'tue-ts-2', title: 'Time Series queue — continue current card', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '10:45', end: '12:45', ...academic('Time Series') }),
@@ -501,7 +529,6 @@ const weekdayStudyRules = [
   rule({ id: 'tue-walk', title: 'Outside walk', category: 'recovery', to: READINESS_DEADLINE, weekdays: [2], start: '15:15', end: '15:45', location: 'Outside', protected: true }),
   rule({ id: 'tue-aml', title: 'Applied ML queue — active recall/output', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '15:45', end: '17:45', ...academic('Applied ML') }),
   rule({ id: 'tue-dinner', title: 'Make and eat dinner', category: 'meal', to: READINESS_DEADLINE, weekdays: [2], start: '18:30', end: '19:00', protected: true }),
-  rule({ id: 'tue-job', title: 'Job shortlist scan — stop at 90 minutes', category: 'job', to: '2026-08-11', weekdays: [2], start: '19:00', end: '20:30', moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
 
   // Wednesday — library; late block is date-specific below.
   rule({ id: 'wed-commute-out', title: 'Travel to library', category: 'commute', to: READINESS_DEADLINE, weekdays: [3], start: '08:30', end: '09:00', location: 'Transit' }),
@@ -604,9 +631,19 @@ const oneOffStudyRules = [
   oneOff('sat-ts-0815', '2026-08-15', '16:15', '18:15', 'Time Series final-drill queue', 'study', { location: 'Library', ...academic('Time Series') }),
   oneOff('sun-project-0802', '2026-08-02', '15:45', '17:45', 'CMT501 internal-handoff block — freeze scope', 'project', project),
 
-  // Sunday job actions replace the fourth academic block, leaving a real recovery buffer.
-  // They are deliberately skipped on the 2 August project cutoff.
-  ...jobActionDates.map((date, index) => oneOff(`sun-job-${index}`, date, '18:30', '20:30', 'Tailor one priority job application — or release the block', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true })),
+  // Weekly maintenance review + one development task. The 30-minute urgent-role
+  // reserve is deliberately left unallocated, keeping the hard ceiling at two hours.
+  ...jobSundayDates.flatMap((date, index) => {
+    const reviewStart = date >= EXAM_WINDOW_START ? '19:00' : '18:30'
+    const reviewEnd = date >= EXAM_WINDOW_START ? '19:20' : '18:50'
+    const buildEnd = date >= EXAM_WINDOW_START ? '20:05' : '19:35'
+    return [
+      oneOff(`sun-job-review-${index}`, date, reviewStart, reviewEnd, 'Review accumulated job leads once', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
+      oneOff(`sun-job-build-${index}`, date, reviewEnd, buildEnd, 'Complete this week’s single job-development task', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
+    ]
+  }),
+  oneOff('fri-job-review-0828', '2026-08-28', '19:00', '19:20', 'Review accumulated job leads once', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
+  oneOff('fri-job-build-0828', '2026-08-28', '19:20', '20:05', 'Complete minimum viable GitHub task', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
   oneOff('mat700-reset-block', '2026-07-13', '19:15', '20:15', 'MAT700 planning reset — build the pass specification', 'admin', { moduleGroup: 'MAT700', protected: true }),
   oneOff('admin-summer-assessment-confirmation-block', '2026-07-13', '20:15', '20:45', 'Confirm summer assessment entry and publication channels', 'admin', { moduleGroup: 'Admin', protected: true }),
   ...['2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10'].map((date, index) =>

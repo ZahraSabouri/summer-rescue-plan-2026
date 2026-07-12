@@ -899,7 +899,7 @@ export function ModuleWorkspace({
 
       {mat700Inactive && (
         <div className="insurance-status-banner">
-          <strong>MAT700 resit lane is currently paused.</strong>
+          <strong>MAT700 study lane is currently paused.</strong>
           <span>Resources remain available, but planner metrics exclude MAT700 unless the MAT700 active toggle is on.</span>
         </div>
       )}

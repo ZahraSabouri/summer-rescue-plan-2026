@@ -165,7 +165,7 @@ export function generateNotifications({
         rule: 'mat700-paused',
         type: 'info',
         title: 'Data Mining lane is paused',
-        detail: 'Turn it on in Settings if the resit stays live.',
+        detail: 'Turn it on in Settings if this study lane is still needed.',
         createdAt: referenceDate,
       }),
     )

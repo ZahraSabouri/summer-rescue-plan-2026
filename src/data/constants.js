@@ -47,7 +47,7 @@ export const TAG_OPTIONS = [
   'fixed',
   'date-watch',
   'gitlab',
-  'resit',
+  'recovery',
   'job-hunt',
   'bounded',
 ]
