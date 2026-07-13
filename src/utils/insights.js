@@ -2,8 +2,8 @@
 // Pure functions only — no state, no fabrication. Everything is derived from
 // the activity log, snapshots, and card fields that already exist.
 
-import { addDays, getCardDate, isOverdue, isTrackableCard, localDateString, sumHours } from './progress'
-import { completionDay } from './history'
+import { addDays, getCardDate, isOverdue, isTrackableCard, localDateString, sumHours } from './progress.js'
+import { completionDay } from './history.js'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -210,4 +210,85 @@ export function buildDaySummary(cards, snapshots, referenceDate) {
   }
 
   return { doneToday, hoursToday, focusSessionsToday, focusMinutesToday }
+}
+
+// ---------------------------------------------------------------------------
+// Study streak — consecutive days with real study activity: a completed card,
+// a logged focus session, or hours logged (a snapshot with more hours/done than
+// the day before). One missed day is forgiven so a single slip doesn't erase
+// the run (a gentle "grace day", not a punishing chain). Purely derived — the
+// same honest sources the rest of this engine uses; nothing is fabricated.
+// ---------------------------------------------------------------------------
+
+export function buildStudyStreak(cards, snapshots, referenceDate) {
+  const today = isoDay(referenceDate)
+  const empty = {
+    current: 0,
+    studiedToday: false,
+    graceUsed: false,
+    graceAvailable: true,
+    totalDays: 0,
+    lastStudyDay: null,
+  }
+  if (!today) return empty
+
+  // Collect every calendar day that shows genuine study activity.
+  const studyDays = new Set()
+  for (const card of cards ?? []) {
+    for (const session of card.focusSessions ?? []) {
+      const day = isoDay(session.at)
+      if (day) studyDays.add(day)
+    }
+    if (card.done) {
+      const day = completionDay(card)
+      if (day) studyDays.add(day)
+    }
+  }
+  // Snapshots are cumulative, so a day counts when its logged hours or done
+  // count rose above the previous recorded day.
+  const snapDays = Object.keys(snapshots ?? {}).sort()
+  for (let index = 0; index < snapDays.length; index += 1) {
+    const day = snapDays[index]
+    const prevDay = index > 0 ? snapDays[index - 1] : null
+    const hours = Number(snapshots[day]?.loggedHours ?? 0)
+    const prevHours = prevDay ? Number(snapshots[prevDay]?.loggedHours ?? 0) : 0
+    const done = Number(snapshots[day]?.done ?? 0)
+    const prevDone = prevDay ? Number(snapshots[prevDay]?.done ?? 0) : 0
+    if (hours - prevHours > 0.001 || done - prevDone > 0) studyDays.add(day)
+  }
+
+  if (studyDays.size === 0) return empty
+
+  const studiedToday = studyDays.has(today)
+  // An unstudied "today" is still in progress, so it never breaks the streak —
+  // start counting from yesterday in that case.
+  let cursor = studiedToday ? today : addDays(today, -1)
+  let current = 0
+  let graceUsed = false
+
+  while (cursor) {
+    if (studyDays.has(cursor)) {
+      current += 1
+      cursor = addDays(cursor, -1)
+      continue
+    }
+    // Non-study day: spend the single grace day only to bridge to a real study
+    // day behind it, so grace can never inflate a run out of thin air.
+    const prior = addDays(cursor, -1)
+    if (!graceUsed && studyDays.has(prior)) {
+      graceUsed = true
+      cursor = prior
+      continue
+    }
+    break
+  }
+
+  return {
+    current,
+    studiedToday,
+    graceUsed,
+    graceAvailable: !graceUsed,
+    totalDays: studyDays.size,
+    lastStudyDay: [...studyDays].sort().at(-1) ?? null,
+  }
 }

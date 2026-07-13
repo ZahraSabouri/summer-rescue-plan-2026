@@ -5536,6 +5536,90 @@ h1,
   font-size: 11.5px;
   font-weight: 750;
 }
+
+/* Gentle study streak — a warm, forgiving nudge, never a guilt counter. */
+.streak-badge {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  text-align: right;
+  padding: 8px 12px;
+  border-radius: 12px;
+  max-width: 230px;
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 28%, transparent);
+  animation: streak-pop 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.streak-badge.streak-empty {
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+  border-color: color-mix(in srgb, var(--muted) 22%, transparent);
+}
+.streak-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.streak-flame {
+  font-size: 18px;
+  line-height: 1;
+  transform-origin: bottom center;
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.streak-pending .streak-flame {
+  filter: none;
+  opacity: 1;
+}
+.streak-done .streak-flame {
+  filter: none;
+  opacity: 1;
+  animation: streak-flicker 1.9s ease-in-out infinite;
+}
+.streak-count {
+  font-family: var(--font-num);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--amber);
+}
+.streak-empty .streak-count {
+  color: var(--muted);
+}
+.streak-unit {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 750;
+}
+.streak-caption {
+  color: var(--muted);
+  font-size: 11px;
+  max-width: 24ch;
+  line-height: 1.35;
+}
+@keyframes streak-flicker {
+  0%,
+  100% {
+    transform: translateY(0) scale(1) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-1.5px) scale(1.09) rotate(1.5deg);
+  }
+}
+@keyframes streak-pop {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Let progress fills glide to their new width instead of snapping. */
+.progress-line span,
+.split-fill {
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
 .today-metrics {
   grid-column: 1 / -1;
   display: grid;
@@ -5947,6 +6031,10 @@ h1,
     justify-items: start;
   }
   .today-exam {
+    justify-items: start;
+    text-align: left;
+  }
+  .streak-badge {
     justify-items: start;
     text-align: left;
   }

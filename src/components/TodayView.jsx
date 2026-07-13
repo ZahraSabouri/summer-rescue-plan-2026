@@ -3,6 +3,7 @@ import { formatDate } from '../utils/progress'
 import {
   buildDaySummary,
   buildSplitGuardrail,
+  buildStudyStreak,
   buildTodayPicks,
   pickReason,
 } from '../utils/insights'
@@ -55,6 +56,45 @@ function SplitGuardrail({ guardrail }) {
 
       {guardrail.alert && <p className="split-alert">{guardrail.alert}</p>}
     </section>
+  )
+}
+
+function StreakBadge({ streak }) {
+  const { current, studiedToday, graceUsed, graceAvailable } = streak
+  const lit = current > 0
+  const state = studiedToday ? 'done' : lit ? 'pending' : 'empty'
+  const caption =
+    state === 'empty'
+      ? 'One focused session lights it up.'
+      : state === 'done'
+        ? current === 1
+          ? 'Day one — nice start.'
+          : 'Studied today. Keep it gentle.'
+        : graceAvailable
+          ? 'A little today keeps it alive · 1 grace day in hand.'
+          : 'Study today to keep it alive.'
+
+  return (
+    <div
+      className={`streak-badge streak-${state}`}
+      aria-label={`Study streak: ${current} day${current === 1 ? '' : 's'}${
+        studiedToday ? ', studied today' : ''
+      }`}
+    >
+      <div className="streak-row">
+        <span className="streak-flame" aria-hidden="true">
+          {lit ? '🔥' : '✷'}
+        </span>
+        <strong className="streak-count">
+          <AnimatedNumber value={current} />
+        </strong>
+        <span className="streak-unit">
+          day{current === 1 ? '' : 's'}
+          {graceUsed ? ' · grace used' : ''}
+        </span>
+      </div>
+      <p className="streak-caption">{caption}</p>
+    </div>
   )
 }
 
@@ -178,6 +218,10 @@ export function TodayView({
     () => buildTodayPicks(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
   )
+  const streak = useMemo(
+    () => buildStudyStreak(cards, snapshots, referenceDate),
+    [cards, snapshots, referenceDate],
+  )
   const [clock, setClock] = useState(() => new Date())
   useEffect(() => {
     const id = window.setInterval(() => setClock(new Date()), 60 * 1000)
@@ -211,6 +255,7 @@ export function TodayView({
           </p>
         </div>
         <div className="today-hero-side">
+          {!preCampaign && <StreakBadge streak={streak} />}
           {examCountdown != null && examCountdown >= 0 && (
             <div className="today-exam">
               <strong>

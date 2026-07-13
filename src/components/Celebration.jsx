@@ -84,6 +84,14 @@ export function Celebration({ trigger }) {
 // AnimatedNumber — counts toward its value whenever the value changes.
 // -----------------------------------------------------------------------
 
+function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
 export function AnimatedNumber({ value, decimals = 0, duration = 650, suffix = '' }) {
   const target = Number(value) || 0
   const [display, setDisplay] = useState(target)
@@ -93,6 +101,15 @@ export function AnimatedNumber({ value, decimals = 0, duration = 650, suffix = '
   useEffect(() => {
     const from = fromRef.current
     if (from === target) return undefined
+    // Respect reduced-motion: snap to the value instead of tweening (the JS
+    // count-up can't be disabled by the global CSS animation kill switch).
+    if (prefersReducedMotion()) {
+      fromRef.current = target
+      frameRef.current = requestAnimationFrame(() => setDisplay(target))
+      return () => {
+        if (frameRef.current) cancelAnimationFrame(frameRef.current)
+      }
+    }
     const start = performance.now()
 
     function tick(now) {
