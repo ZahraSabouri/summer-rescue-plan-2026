@@ -3,14 +3,13 @@ import { formatDate } from '../utils/progress'
 import {
   buildDaySummary,
   buildSplitGuardrail,
-  buildStreak,
   buildTodayPicks,
   pickReason,
 } from '../utils/insights'
 import { AnimatedNumber } from './Celebration'
 import { CardSummary } from './CardSummary'
 import { DailyAgenda } from './ScheduleView'
-import { buildExecutionContext } from '../utils/schedule.js'
+import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
 
 function greeting() {
   const hour = new Date().getHours()
@@ -18,23 +17,6 @@ function greeting() {
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'
-}
-
-function StreakFlame({ streak }) {
-  const lit = streak.current > 0
-  return (
-    <div className={`streak-chip${lit ? ' lit' : ''}`} title={`Longest streak: ${streak.longest} days`}>
-      <span className="streak-flame" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-          <path d="M12 2c1 3.2-.6 4.8-2 6.3C8.4 10 7 11.6 7 14a5 5 0 0 0 10 0c0-1.5-.6-2.6-1.3-3.7-.4.9-1 1.5-1.9 2C14.4 10 15.4 6 12 2Z" />
-        </svg>
-      </span>
-      <strong>
-        <AnimatedNumber value={streak.current} />
-      </strong>
-      <span className="streak-label">day streak{streak.activeToday ? '' : ' · quiet today'}</span>
-    </div>
-  )
 }
 
 function SplitGuardrail({ guardrail }) {
@@ -90,7 +72,7 @@ function executionLabel(mode, preCampaign) {
   return 'Day complete'
 }
 
-function ExecutionStrip({ context, preCampaign, onOpenCard, onStartSession }) {
+function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSession }) {
   const { block, nextBlock, card, cardBlock, lockedToTimer } = context
 
   return (
@@ -103,6 +85,9 @@ function ExecutionStrip({ context, preCampaign, onOpenCard, onStartSession }) {
             <p>
               {blockTime(block)}
               {block.location ? ` · ${block.location}` : ''}
+            </p>
+            <p className={`execution-capacity${capacity.academicHours > 8 ? ' over' : ''}`}>
+              {capacity.academicHours}h protected academic load · {capacity.remainingHours}h below the 8h ceiling
             </p>
           </>
         ) : (
@@ -181,7 +166,6 @@ export function TodayView({
   activeTimerCard,
 }) {
   const preCampaign = Boolean(campaignStart && referenceDate < campaignStart)
-  const streak = useMemo(() => buildStreak(cards, referenceDate), [cards, referenceDate])
   const daySummary = useMemo(
     () => buildDaySummary(cards, snapshots, referenceDate),
     [cards, snapshots, referenceDate],
@@ -203,6 +187,14 @@ export function TodayView({
     () => buildExecutionContext(dayBlocks, cards, scheduleDate || referenceDate, { now: clock, activeCard: activeTimerCard }),
     [activeTimerCard, cards, clock, dayBlocks, referenceDate, scheduleDate],
   )
+  const capacity = useMemo(() => {
+    const summary = summariseDay(dayBlocks)
+    const academicHours = Math.round((summary.academicMinutes / 60) * 10) / 10
+    return {
+      academicHours,
+      remainingHours: Math.max(0, Math.round((8 - academicHours) * 10) / 10),
+    }
+  }, [dayBlocks])
 
   return (
     <div className="today-view">
@@ -219,7 +211,6 @@ export function TodayView({
           </p>
         </div>
         <div className="today-hero-side">
-          <StreakFlame streak={streak} />
           {examCountdown != null && examCountdown >= 0 && (
             <div className="today-exam">
               <strong>
@@ -232,6 +223,7 @@ export function TodayView({
         <ExecutionStrip
           context={execution}
           preCampaign={preCampaign}
+          capacity={capacity}
           onOpenCard={onOpenCard}
           onStartSession={actions.onStartSession}
         />
@@ -302,7 +294,7 @@ export function TodayView({
           </header>
           {daySummary.doneToday.length === 0 ? (
             <p className="empty-note">
-              Nothing marked done yet today. One finished card keeps the streak alive.
+              Nothing marked done yet today. One finished card is enough to leave real evidence.
             </p>
           ) : (
             <ul className="wrapup-list">

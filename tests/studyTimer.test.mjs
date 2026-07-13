@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   elapsedTimerMilliseconds,
+  focusPresetDurations,
   focusMinutesToLog,
   nextTimerMode,
   remainingTimerSeconds,
@@ -46,3 +47,20 @@ test('every fourth completed focus session selects a long break', () => {
   assert.equal(nextTimerMode('long', 4), 'focus')
 })
 
+test('focus-room presets are explicit preferences and custom values stay caller-owned', () => {
+  assert.deepEqual(focusPresetDurations('25-5'), { focus: 25, short: 5, long: 15 })
+  assert.deepEqual(focusPresetDurations('50-10'), { focus: 50, short: 10, long: 20 })
+
+  const custom = { focus: 42, short: 8, long: 17 }
+  const resolved = focusPresetDurations('custom', custom)
+  assert.deepEqual(resolved, custom)
+  assert.notEqual(resolved, custom)
+})
+
+test('custom timer durations are bounded without mutating plan or timer state', () => {
+  assert.deepEqual(
+    focusPresetDurations('custom', { focus: 0, short: 500, long: 'bad' }),
+    { focus: 1, short: 120, long: 15 },
+  )
+  assert.equal(focusPresetDurations('unknown'), null)
+})

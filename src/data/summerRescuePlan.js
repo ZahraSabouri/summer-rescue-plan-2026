@@ -268,7 +268,7 @@ const MAT700_DIAGNOSTIC = makeCard({
   phase: 'Phase 2',
   hours: 1,
   priority: 'Critical',
-  description: 'Acknowledge the confirmed result, inventory the seven lectures/tutorials, and define the evidence needed for a safe pass. This is planning, not rumination.',
+  description: 'Set the working target, inventory the seven lectures/tutorials, and define the evidence needed for exam readiness. This is planning, not rumination.',
   checklist: [
     'Record the assessment scope and working target',
     'Inventory Lectures 1–7, tutorials, question banks, and past papers',
@@ -671,6 +671,6 @@ export const scheduleAssumptions = {
   academicCeiling: '8 protected hours/day; short breaks are outside those blocks',
   locations: 'Library/uni at least every other day; home days include an outside walk',
   project: 'Generic capacity only; detailed waste-project management stays elsewhere',
-  jobs: 'One 90-minute scan plus at most one two-hour action most weeks before 17 August',
+  jobs: 'Five 5-minute scans + 20-minute review + one 45-minute output; any urgent reserve stays inside the hard 2-hour weekly cap',
   fallback: 'If overloaded: protect sleep, fixed class/exam, today’s top exam card, then reduce project scope/job activity',
 }

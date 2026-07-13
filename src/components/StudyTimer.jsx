@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   elapsedTimerMilliseconds,
+  focusPresetDurations,
   focusMinutesToLog,
   nextTimerMode,
   remainingTimerSeconds,
 } from '../utils/studyTimer'
+import { FocusRoom } from './FocusRoom'
 
 const MODE_META = {
   focus: { label: 'Focus', accent: 'var(--accent)' },
@@ -43,10 +45,19 @@ function chime() {
   }
 }
 
-export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
+export function StudyTimer({
+  activeCard,
+  currentBoundary,
+  nextBoundary,
+  onCompleteSession,
+  onClearActive,
+  onSaveRestartCue,
+}) {
   const [open, setOpen] = useState(false)
+  const [focusRoomOpen, setFocusRoomOpen] = useState(false)
   const [mode, setMode] = useState('focus')
   const [durations, setDurations] = useState({ focus: 25, short: 5, long: 15 })
+  const [focusPreset, setFocusPreset] = useState('25-5')
   const [remaining, setRemaining] = useState(25 * 60)
   const [running, setRunning] = useState(false)
   const [sessions, setSessions] = useState(0)
@@ -66,6 +77,7 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
   const runningRef = useRef(running)
   const activeCardRef = useRef(activeCard)
   const onCompleteSessionRef = useRef(onCompleteSession)
+  const customDurationsRef = useRef({ focus: 25, short: 5, long: 15 })
 
   const wakeLockSupported =
     typeof navigator !== 'undefined' && 'wakeLock' in navigator
@@ -144,6 +156,12 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
         setRemaining(durationsRef.current.focus * 60)
       }
     }, 0)
+    return () => window.clearTimeout(id)
+  }, [activeCard])
+
+  useEffect(() => {
+    if (activeCard) return undefined
+    const id = window.setTimeout(() => setFocusRoomOpen(false), 0)
     return () => window.clearTimeout(id)
   }, [activeCard])
 
@@ -261,12 +279,32 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
     setRunning(false)
     setRemaining(durationsRef.current[modeRef.current] * 60)
   }
+  function handleSelectPreset(preset) {
+    const nextDurations = focusPresetDurations(preset, customDurationsRef.current)
+    if (!nextDurations) return
+    if (runningRef.current) logFocusSegment()
+    runIdRef.current += 1
+    completedRunIdRef.current = null
+    deadlineRef.current = null
+    segmentStartedAtRef.current = null
+    segmentCardIdRef.current = null
+    runningRef.current = false
+    setRunning(false)
+    durationsRef.current = nextDurations
+    setDurations(nextDurations)
+    modeRef.current = 'focus'
+    setMode('focus')
+    setRemaining(nextDurations.focus * 60)
+    setFocusPreset(preset)
+  }
   function handleAdjust(m, delta) {
     const current = durationsRef.current
     const value = Math.max(1, Math.min(120, current[m] + delta))
     const nextDurations = { ...current, [m]: value }
     durationsRef.current = nextDurations
+    customDurationsRef.current = nextDurations
     setDurations(nextDurations)
+    setFocusPreset('custom')
     if (m === modeRef.current && !runningRef.current) setRemaining(value * 60)
   }
 
@@ -311,7 +349,8 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
   }
 
   return (
-    <div className="timer-wrap" ref={wrapRef}>
+    <>
+      <div className="timer-wrap" ref={wrapRef}>
       <button
         type="button"
         className={`icon-button timer-trigger${running ? ' running' : ''}`}
@@ -349,8 +388,25 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
               <span>Linked card</span>
               <strong>{activeCard.number}. {activeCard.title}</strong>
               <em>{sessionsToday} linked today</em>
-              <button type="button" className="text-button" onClick={onClearActive}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setFocusRoomOpen(false)
+                  onClearActive?.()
+                }}
+              >
                 Clear
+              </button>
+              <button
+                type="button"
+                className="secondary-button timer-focus-room-button"
+                onClick={() => {
+                  setOpen(false)
+                  setFocusRoomOpen(true)
+                }}
+              >
+                Open Focus Room
               </button>
             </div>
           )}
@@ -418,10 +474,33 @@ export function StudyTimer({ activeCard, onCompleteSession, onClearActive }) {
           )}
 
           <p className="timer-foot">
-            {sessions} focus {sessions === 1 ? 'session' : 'sessions'} today · long break every 4th
+            {sessions} focus {sessions === 1 ? 'session' : 'sessions'} this app session · long break every 4th
           </p>
         </div>
+        )}
+      </div>
+
+      {focusRoomOpen && activeCard && (
+        <FocusRoom
+          key={activeCard.id}
+          activeCard={activeCard}
+          mode={mode}
+          durations={durations}
+          remaining={remaining}
+          running={running}
+          sessions={sessions}
+          preset={focusPreset}
+          currentBoundary={currentBoundary}
+          nextBoundary={nextBoundary}
+          onSelectMode={handleSelectMode}
+          onSelectPreset={handleSelectPreset}
+          onAdjust={handleAdjust}
+          onReset={handleReset}
+          onToggleRunning={handleToggleRunning}
+          onSaveRestartCue={onSaveRestartCue}
+          onExit={() => setFocusRoomOpen(false)}
+        />
       )}
-    </div>
+    </>
   )
 }

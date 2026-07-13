@@ -10,7 +10,6 @@ import {
   groupBy,
   hasEvidence,
   isCurrentWeek,
-  isOverdue,
   sortCards,
   sumHours,
 } from '../utils/progress'
@@ -659,8 +658,6 @@ export function FocusView({
   description,
   cards,
   actions,
-  referenceDate,
-  onRescheduleAllOverdue,
   emptyTitle = 'No open cards in this view.',
   emptyDescription,
   emptyActionLabel,
@@ -669,7 +666,6 @@ export function FocusView({
   const sorted = sortCards(cards)
   const openCards = sorted.filter((card) => !card.done)
   const doneCards = sorted.filter((card) => card.done)
-  const overdueCards = referenceDate ? openCards.filter((card) => isOverdue(card, referenceDate)) : []
 
   return (
     <section className="focus-view" aria-label={title}>
@@ -678,11 +674,6 @@ export function FocusView({
           <p className="eyebrow">{eyebrow}</p>
           <h2>{title}</h2>
           {description && <p>{description}</p>}
-          {onRescheduleAllOverdue && overdueCards.length > 0 && (
-            <button type="button" className="secondary-button focus-bulk-action" onClick={onRescheduleAllOverdue}>
-              Move {overdueCards.length} overdue to today
-            </button>
-          )}
         </div>
         <div className="focus-stats">
           <MetricTile label="Open" value={openCards.length} />

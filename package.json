@@ -12,7 +12,9 @@
     "assets:verify": "node scripts/syncStudyAssets.mjs --verify-only",
     "db:seed": "node scripts/initTrackerDb.mjs",
     "db:rebuild": "node scripts/initTrackerDb.mjs --rebuild",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "app": "npm run build && npm run app:start",
+    "app:start": "node scripts/startLocalApp.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",

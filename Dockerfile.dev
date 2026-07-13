@@ -1,0 +1,26 @@
+# Development image: runs the Vite dev server, which serves the React frontend,
+# the /api backend middleware, and the embedded node:sqlite store all in one
+# process. Source is bind-mounted at runtime (see docker-compose.yml), so code
+# edits on the host hot-reload live — no rebuild needed.
+#
+# Node 24 matches the host and provides a stable built-in node:sqlite (no flag).
+FROM node:24-slim
+
+WORKDIR /app
+
+# Signals vite.config.js to enable polling-based file watching + host binding,
+# both required for HMR to work through a Docker bind mount.
+ENV VITE_DOCKER=1
+
+# Install dependencies inside the container so the binaries are Linux-native.
+# Copy manifests first so this layer is cached until they change.
+COPY package*.json ./
+RUN npm install
+
+# Copy the rest of the source. At runtime the bind mount overlays this, but it
+# keeps the image runnable on its own. node_modules is excluded via .dockerignore
+# so this COPY can't overwrite the Linux install above.
+COPY . .
+
+EXPOSE 5173
+CMD ["npm", "run", "dev"]

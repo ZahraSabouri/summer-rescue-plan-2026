@@ -4760,10 +4760,6 @@ h1,
 .work-card.compact .work-card-controls {
   grid-template-columns: auto minmax(120px, 1fr) 86px auto auto auto;
 }
-.focus-bulk-action {
-  margin-top: 10px;
-}
-
 .resource-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -5602,6 +5598,16 @@ h1,
   font-size: 12px;
   line-height: 1.45;
 }
+.execution-strip .execution-capacity {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-weight: 750;
+}
+.execution-strip .execution-capacity.over {
+  color: var(--red);
+}
 .execution-output {
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -5661,52 +5667,6 @@ h1,
   }
   .execution-actions button {
     flex: 1 1 130px;
-  }
-}
-
-.streak-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 13px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-}
-.streak-chip strong {
-  font-family: var(--font-num);
-  font-size: 17px;
-  color: var(--ink);
-}
-.streak-chip .streak-label {
-  font-size: 12px;
-  font-weight: 700;
-}
-.streak-flame {
-  display: inline-grid;
-  place-items: center;
-  color: var(--line-strong);
-}
-.streak-chip.lit {
-  border-color: color-mix(in srgb, var(--accent-2) 45%, var(--line));
-  background: color-mix(in srgb, var(--accent-2) 9%, var(--surface));
-}
-.streak-chip.lit .streak-flame {
-  color: var(--accent-2);
-  animation: flame-flicker 1.8s ease-in-out infinite;
-  transform-origin: 50% 90%;
-}
-@keyframes flame-flicker {
-  0%,
-  100% {
-    transform: scale(1) rotate(-2deg);
-  }
-  40% {
-    transform: scale(1.12) rotate(2deg);
-  }
-  70% {
-    transform: scale(0.95) rotate(-1deg);
   }
 }
 

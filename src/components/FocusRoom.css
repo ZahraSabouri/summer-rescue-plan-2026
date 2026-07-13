@@ -1,0 +1,528 @@
+.focus-room {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  min-width: 320px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: auto;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 6%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 34rem),
+    radial-gradient(circle at 88% 92%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 34rem),
+    var(--bg);
+}
+
+.focus-room button,
+.focus-room input {
+  font: inherit;
+}
+
+.timer-focus-room-button {
+  width: 100%;
+  margin-top: 5px;
+  grid-column: 1 / -1;
+}
+
+.focus-room-topbar,
+.focus-room-main,
+.focus-room-footer {
+  width: min(100% - 48px, 1380px);
+  margin-inline: auto;
+}
+
+.focus-room-topbar {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.focus-room-topbar > div {
+  display: grid;
+  gap: 4px;
+}
+
+.focus-room-kicker,
+.focus-room-task > span,
+.focus-room-brief section > span,
+.focus-room-boundary > span,
+.focus-room-presets > span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.focus-room-topbar strong {
+  font-size: 0.88rem;
+}
+
+.focus-room-exit {
+  min-height: 42px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.focus-room-exit:hover,
+.focus-room-exit:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+
+.focus-room-exit kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  background: var(--panel-2);
+  font-family: var(--font-num);
+  font-size: 0.7rem;
+}
+
+.focus-room-main {
+  padding-block: clamp(28px, 5vh, 64px);
+}
+
+.focus-room-task {
+  max-width: 1050px;
+  margin-bottom: clamp(28px, 5vh, 56px);
+}
+
+.focus-room-task h1 {
+  max-width: 24ch;
+  margin: 8px 0 12px;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4.7vw, 4.8rem);
+  font-weight: 560;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.focus-room-task p {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(0.92rem, 1.2vw, 1.05rem);
+  line-height: 1.65;
+}
+
+.focus-room-grid {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.92fr) minmax(360px, 1.08fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: start;
+}
+
+.focus-room-timer-panel,
+.focus-room-brief {
+  min-width: 0;
+}
+
+.focus-room-timer-panel {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+}
+
+.focus-room-presets {
+  width: min(100%, 520px);
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+}
+
+.focus-room-presets > div,
+.focus-room-mode-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.focus-room-presets button,
+.focus-room-mode-tabs button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  cursor: pointer;
+}
+
+.focus-room-presets button:hover,
+.focus-room-mode-tabs button:hover,
+.focus-room-presets button:focus-visible,
+.focus-room-mode-tabs button:focus-visible,
+.focus-room-presets button.active,
+.focus-room-mode-tabs button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.focus-room-presets small {
+  max-width: 48ch;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.focus-room-dial {
+  --focus-room-progress: 0deg;
+  width: clamp(220px, 25vw, 330px);
+  aspect-ratio: 1;
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) var(--focus-room-progress), var(--track) 0deg);
+  box-shadow: 0 20px 55px color-mix(in srgb, var(--ink) 12%, transparent);
+  transition: background 0.3s linear, transform 0.25s ease;
+}
+
+.focus-room-dial::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.focus-room-dial > div {
+  z-index: 1;
+  grid-area: 1 / 1;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.focus-room-dial time {
+  font-family: var(--font-num);
+  font-size: clamp(2.8rem, 6vw, 5.1rem);
+  font-weight: 560;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-room-dial span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.focus-room-dial.running {
+  transform: scale(1.012);
+}
+
+.focus-room-duration,
+.focus-room-duration > div,
+.focus-room-controls {
+  display: flex;
+  align-items: center;
+}
+
+.focus-room-duration {
+  gap: 15px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.focus-room-duration > div {
+  gap: 9px;
+}
+
+.focus-room-duration button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.focus-room-duration button:hover,
+.focus-room-duration button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+.focus-room-duration strong {
+  min-width: 48px;
+  color: var(--ink);
+  font-family: var(--font-num);
+  text-align: center;
+}
+
+.focus-room-controls {
+  width: min(100%, 420px);
+  gap: 10px;
+}
+
+.focus-room-controls button {
+  min-height: 50px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.focus-room-reset {
+  flex: 0.8;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: var(--panel);
+}
+
+.focus-room-start {
+  flex: 1.2;
+  border: 1px solid var(--accent);
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.focus-room-controls button:hover,
+.focus-room-controls button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+
+.focus-room-session-count {
+  margin: -10px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.focus-room-brief {
+  display: grid;
+  gap: 14px;
+}
+
+.focus-room-brief > section,
+.focus-room-boundaries,
+.focus-room-cue {
+  padding: clamp(20px, 2.6vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel) 91%, transparent);
+  box-shadow: var(--shadow-1);
+}
+
+.focus-room-brief h2 {
+  margin: 10px 0 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  font-weight: 560;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.focus-room-brief section p {
+  margin: 10px 0 0;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.focus-room-boundaries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.focus-room-boundary {
+  min-width: 0;
+}
+
+.focus-room-boundary + .focus-room-boundary {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+
+.focus-room-boundary strong {
+  display: block;
+  margin-top: 7px;
+  line-height: 1.35;
+}
+
+.focus-room-boundary p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-family: var(--font-num);
+  font-size: 0.78rem;
+}
+
+.focus-room-cue {
+  display: grid;
+  gap: 9px;
+}
+
+.focus-room-cue label {
+  font-weight: 800;
+}
+
+.focus-room-cue > div {
+  display: flex;
+  gap: 8px;
+}
+
+.focus-room-cue input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  padding: 0 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--input-ink);
+  background: var(--input-bg);
+}
+
+.focus-room-cue input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+
+.focus-room-cue button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.focus-room-cue button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.focus-room-cue small {
+  min-height: 1.3em;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.focus-room-footer {
+  min-height: 68px;
+  padding-block: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+@media (max-width: 980px) {
+  .focus-room-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-room-timer-panel {
+    padding-bottom: 18px;
+  }
+
+  .focus-room-task h1 {
+    max-width: 30ch;
+  }
+}
+
+@media (max-width: 620px) {
+  .focus-room-topbar,
+  .focus-room-main,
+  .focus-room-footer {
+    width: min(100% - 28px, 1380px);
+  }
+
+  .focus-room-topbar {
+    min-height: 70px;
+  }
+
+  .focus-room-topbar strong {
+    display: none;
+  }
+
+  .focus-room-exit {
+    min-height: 38px;
+  }
+
+  .focus-room-main {
+    padding-block: 24px 36px;
+  }
+
+  .focus-room-task {
+    margin-bottom: 28px;
+  }
+
+  .focus-room-task h1 {
+    font-size: clamp(1.8rem, 9vw, 2.7rem);
+  }
+
+  .focus-room-dial {
+    width: min(72vw, 280px);
+  }
+
+  .focus-room-boundaries {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-room-boundary + .focus-room-boundary {
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .focus-room-cue > div,
+  .focus-room-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .focus-room-cue button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-room *,
+  .focus-room *::before,
+  .focus-room *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .focus-room-dial.running,
+  .focus-room-controls button:hover,
+  .focus-room-controls button:focus-visible {
+    transform: none;
+  }
+}

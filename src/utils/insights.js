@@ -101,56 +101,6 @@ export function splitDeficits(cards, mat700Active = true) {
 }
 
 // ---------------------------------------------------------------------------
-// Study streak — derived from the activity log (any interaction counts as a
-// study touch; completions and focus sessions weigh the day as "worked").
-// ---------------------------------------------------------------------------
-
-export function collectActiveDays(cards) {
-  const days = new Set()
-  for (const card of cards) {
-    for (const entry of card.activity ?? []) {
-      const day = isoDay(entry.at)
-      if (day) days.add(day)
-    }
-    const done = completionDay(card)
-    if (done) days.add(done)
-  }
-  return days
-}
-
-export function buildStreak(cards, referenceDate) {
-  const activeDays = collectActiveDays(cards)
-  const today = isoDay(referenceDate) ?? isoDay(new Date().toISOString())
-
-  // Current streak: walk back from today. A quiet "today" doesn't break the
-  // streak until the day is over, so fall back to yesterday as the anchor.
-  let anchor = activeDays.has(today) ? today : addDays(today, -1)
-  let current = 0
-  while (activeDays.has(anchor) && current < 400) {
-    current += 1
-    anchor = addDays(anchor, -1)
-  }
-
-  // Longest streak across all recorded days.
-  const sorted = [...activeDays].sort()
-  let longest = 0
-  let run = 0
-  let prev = null
-  for (const day of sorted) {
-    run = prev && addDays(prev, 1) === day ? run + 1 : 1
-    if (run > longest) longest = run
-    prev = day
-  }
-
-  return {
-    current,
-    longest,
-    activeToday: activeDays.has(today),
-    totalActiveDays: activeDays.size,
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Daily focus picks — the three cards most worth doing right now.
 // ---------------------------------------------------------------------------
 

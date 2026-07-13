@@ -1,0 +1,226 @@
+.rescue-triage {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(14px, 2vw, 22px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.rescue-triage-heading,
+.rescue-triage-card-header,
+.rescue-triage-title-row,
+.rescue-triage-navigation {
+  display: flex;
+  align-items: center;
+}
+
+.rescue-triage-heading,
+.rescue-triage-card-header,
+.rescue-triage-navigation {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rescue-triage-heading h2,
+.rescue-triage-empty h2,
+.rescue-triage-title-row h3 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.rescue-triage-heading > div > p:last-child,
+.rescue-triage-empty > p:last-child {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rescue-triage-position {
+  min-width: 72px;
+  display: grid;
+  justify-items: center;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.rescue-triage-position strong {
+  font-family: var(--font-num);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.rescue-triage-position span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rescue-triage-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(14px, 2vw, 20px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.rescue-triage-title-row {
+  gap: 9px;
+  min-width: 0;
+}
+
+.rescue-triage-title-row h3 {
+  overflow-wrap: anywhere;
+  font-size: clamp(18px, 2vw, 23px);
+  line-height: 1.2;
+}
+
+.rescue-triage-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.rescue-triage-meta span,
+.rescue-triage-checklist {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rescue-triage-context {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+
+.rescue-triage-context p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rescue-triage-context strong {
+  color: var(--ink);
+}
+
+.rescue-triage-decisions,
+.rescue-triage-secondary-decisions,
+.rescue-triage-waiting,
+.rescue-triage-defer {
+  display: grid;
+  gap: 9px;
+}
+
+.rescue-triage-decisions {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+}
+
+.rescue-triage-secondary-decisions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.rescue-triage-waiting,
+.rescue-triage-defer {
+  align-content: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.rescue-triage-waiting label,
+.rescue-triage-defer label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rescue-triage-waiting input,
+.rescue-triage-defer input {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--input-ink);
+  padding: 7px 9px;
+  text-transform: none;
+}
+
+.rescue-triage-navigation {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.rescue-triage-empty {
+  min-height: 180px;
+  align-content: center;
+  justify-items: start;
+}
+
+@media (max-width: 720px) {
+  .rescue-triage-heading,
+  .rescue-triage-card-header {
+    align-items: flex-start;
+  }
+
+  .rescue-triage-position {
+    min-width: 60px;
+  }
+
+  .rescue-triage-secondary-decisions,
+  .rescue-triage-decisions {
+    grid-template-columns: 1fr;
+  }
+
+  .rescue-triage-card-header .secondary-button,
+  .rescue-triage-decisions .primary-button,
+  .rescue-triage-decisions .secondary-button,
+  .rescue-triage-waiting .secondary-button,
+  .rescue-triage-defer .secondary-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .rescue-triage-heading,
+  .rescue-triage-card-header {
+    display: grid;
+  }
+
+  .rescue-triage-position {
+    grid-template-columns: auto auto;
+    justify-items: start;
+    gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rescue-triage * {
+    scroll-behavior: auto;
+  }
+}

@@ -50,7 +50,7 @@ the checkable outcomes; the Schedule view decides when to work on the next open 
 - **Plain CSS with design tokens** (`src/index.css` variables + `src/App.css`) — no Tailwind/CSS framework.
 - **Google Fonts**: Fraunces (serif display), Manrope (UI), Space Grotesk (numerals). Loaded via `<link>` in
   `index.html`; falls back to system fonts if offline.
-- **Local-first storage.** The Vite dev/preview server exposes `/api/state`, `/api/health`, `/api/events`,
+- **Local-first storage.** The Vite development server and the fixed production-local server expose `/api/state`, `/api/health`, `/api/events`,
   `/api/db/*`, and local resource endpoints. Tracker state autosaves to `local-data/summer-rescue-tracker-state.json`,
   typed task/card events append to `local-data/progress-log.ndjson`, and uploaded files are copied under
   `local-data/resources/<module-id>/`. Browser `localStorage` remains a secondary startup mirror and safety-copy store.
@@ -67,6 +67,8 @@ npm install
 npm run dev        # start the dev server (http://localhost:5173)
 npm run build      # production build into dist/
 npm run preview    # preview the production build
+npm run app        # build, then run the production-local app at http://127.0.0.1:5173
+npm run app:start  # run an existing build at the same fixed local address
 npm run lint       # ESLint
 npm run test       # node:test API + SQLite checks
 npm run assets:sync    # copy curated study resources into public/study-assets
@@ -74,6 +76,24 @@ npm run assets:verify  # check every referenced asset exists
 npm run db:seed        # build local-data/app.sqlite from source data + current JSON state
 npm run db:rebuild     # print the event-log recovery for the seeded cards
 ```
+
+### Optional installed desktop window
+
+`app.webmanifest` lets Chrome or Edge install Summer Rescue as a standalone window with shortcuts to Today,
+Schedule, and Week. This is an installed shell, **not an offline app**: no service worker is registered, and the
+local service must be running so state continues to reach the JSON file, event log, uploaded resources, and SQLite.
+Always install from the canonical `http://127.0.0.1:5173` address rather than changing host names or ports.
+
+After `npm run build`, Windows users may opt in to starting the local service at sign-in. These scripts are inert
+until explicitly run and do not install themselves:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/windows/install-startup.ps1
+powershell -ExecutionPolicy Bypass -File scripts/windows/uninstall-startup.ps1
+```
+
+The startup task launches the existing production build in the background; it does not rebuild it or open a
+browser window. `npm run app:start` remains the manual startup command.
 
 > **Build on Windows.** `node_modules` holds platform-native binaries (Vite/Rolldown). If the folder was set
 > up on Windows, run install/build there rather than in a Linux shell.
@@ -90,7 +110,9 @@ summer-rescue-plan-app/
 │  ├─ index.css               # design tokens (light/dark), base styles, fonts
 │  ├─ components/
 │  │  ├─ AppIntro.jsx         # landing / mission-briefing screen
-│  │  ├─ StudyTimer.jsx       # Pomodoro timer popover (focus/short/long)
+│  │  ├─ StudyTimer.jsx       # wall-clock timer + full-screen Focus Room
+│  │  ├─ RescueTriage.jsx     # explicit one-card-at-a-time recovery decisions
+│  │  ├─ InstallDesktopApp.jsx# honest Chromium install prompt/status
 │  │  ├─ StudyHub.jsx         # cross-module home
 │  │  ├─ ModuleWorkspace.jsx  # per-module hub + resource browser
 │  │  ├─ TrackerViews.jsx     # Planner, Columns, Table, Week, Analytics, Evidence, Focus
@@ -163,10 +185,11 @@ progress.
 **Topbar** — the current view's title, an **exam countdown** (turns red inside three weeks), your backup
 status, *Add card*, the **study timer**, a light/dark toggle, and *Settings*.
 
-**Study timer** — a wall-clock-accurate Pomodoro popover: Focus / Short break / Long break, adjustable lengths,
-start/pause/reset, a session counter (a long break is suggested every 4th focus), and a soft chime when a block
-ends. Background-tab throttling cannot slow the countdown or inflate logged time. Supporting browsers also get
-an opt-in *Keep screen awake* toggle that is active only during a running Focus session.
+**Study timer and Focus Room** — a wall-clock-accurate Focus / Short break / Long break timer with explicit
+25/5, 50/10, and Custom preferences. The full-screen room keeps one linked card, its exact finish/evidence
+requirements, and the current/next timetable boundary visible; it can save a one-line restart cue but never
+completes or replans a card. Background-tab throttling cannot slow the countdown or inflate logged time.
+Supporting browsers also get an opt-in *Keep screen awake* toggle active only during a running Focus session.
 
 **Views**
 
@@ -185,15 +208,18 @@ an opt-in *Keep screen awake* toggle that is active only during a running Focus 
 - *Analytics* — charts, module mix, and stats.
 - *Columns / Table / Week* — Kanban, dense grid, and 7-day plan of the same cards.
 - *Evidence* — proof-of-work outputs.
-- *Rescue Lane / Project Capacity / Job Hunt / Admin & Dates* — focused lanes for recovery buffers, generic
-  group-project capacity, bounded applications, and exam logistics.
+- *Rescue Lane* — overdue cards enter an explicit one-at-a-time triage: Done, Rescue Lane, Waiting/Blocked, or
+  a manually selected valid date. There is no bulk rollover or automatic rescheduling.
+- *Project Capacity / Job Hunt / Admin & Dates* — focused lanes for generic group-project capacity, bounded
+  applications, and exam logistics.
 
 **Cards** — click any card title to open the drawer and edit status, tick checklist items, log hours, attach
 evidence, and add notes. *Add card* creates new ones. Use the filter bar (non-study views) to slice by module,
 phase, priority, status, slot, tag, or date; on mobile the filters stay collapsed until requested.
 
 **Settings** — planning date, campaign window, provisional exam-window start, individual exam dates when
-published, and all backup/data actions. MAT700 is an active study lane throughout the campaign.
+published, desktop-window installation, and all backup/data actions. MAT700 is an active study lane throughout
+the campaign.
 
 ## Design system
 
@@ -229,8 +255,9 @@ runtime.
 - SQLite (`local-data/app.sqlite`) is now a durable write-through mirror + event-log recovery source, but the live
   client read path is still the JSON state file. Making SQLite the authoritative read path (so `GET /api/state`
   reconstructs from tables) is the next step.
-- Research-backed later option: an installable standalone PWA shell. Do not claim offline support until the local
-  API, JSON/SQLite writes, cache versioning, and large resource set have an explicit offline integrity design.
+- The standalone desktop shell is now installable from Settings. It deliberately remains online-to-localhost:
+  do not add a service worker or claim offline support until JSON/SQLite writes, cache versioning, and the large
+  resource set have an explicit integrity design.
 - Deliberately avoided during the campaign: ambient due/streak notifications, AI auto-replanning, more
   gamification, and any feature that adds another inbox or maintenance ritual.
 - Ideas not yet built: richer uploaded-resource management and automated Playwright-style UI regression tests.

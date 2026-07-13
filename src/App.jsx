@@ -15,7 +15,9 @@ import { StudyHub } from './components/StudyHub'
 import { TodayView } from './components/TodayView'
 import { Celebration } from './components/Celebration'
 import { ImportPreviewDialog } from './components/ImportPreviewDialog'
+import { InstallDesktopApp } from './components/InstallDesktopApp'
 import { JobHuntPlaybook } from './components/JobHuntPlaybook'
+import { RescueTriage } from './components/RescueTriage'
 import {
   AnalyticsView,
   BoardView,
@@ -46,7 +48,7 @@ import {
 } from './utils/fileBackup'
 import { readLocalResources, uploadLocalResource } from './utils/localStateFile'
 import { deriveStats, filterCards, sortCards, sumHours, todayString } from './utils/progress'
-import { expandScheduleForDate } from './utils/schedule'
+import { buildExecutionContext, expandScheduleForDate } from './utils/schedule'
 import { generateNotifications } from './utils/notifications'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
@@ -96,10 +98,10 @@ const NAV_GROUPS = [
 ]
 
 const VIEW_META = {
-  today: { title: 'Today', subtitle: 'Your mission control — best next moves, streak, and split.' },
+  today: { title: 'Today', subtitle: 'Your mission control — now, next, and protected capacity.' },
   hub: { title: 'Study Hub', subtitle: 'Command center for the whole rescue campaign.' },
   dashboard: { title: 'Planner', subtitle: 'Pace, pipeline, and this week at a glance.' },
-  progress: { title: 'Progress', subtitle: 'Trajectory, streaks, and burn-down.' },
+  progress: { title: 'Progress', subtitle: 'Trajectory, pace, and burn-down.' },
   schedule: { title: 'Schedule', subtitle: 'Hour-by-hour protected routines, study, project, and job blocks.' },
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
@@ -752,6 +754,10 @@ export default function App() {
   )
   const selectedCard = tracker.cards.find((card) => card.id === selectedCardId)
   const activeTimerCard = tracker.cards.find((card) => card.id === activeTimerCardId) ?? null
+  const focusExecutionContext = useMemo(
+    () => buildExecutionContext(dayBlocks, tracker.cards, dayScheduleDate, { activeCard: activeTimerCard }),
+    [activeTimerCard, dayBlocks, dayScheduleDate, tracker.cards],
+  )
   const uploadedResources = useMemo(
     () => mergeResources([...(tracker.state.uploadedResources ?? []), ...localResources]),
     [localResources, tracker.state.uploadedResources],
@@ -1347,25 +1353,35 @@ export default function App() {
       const rescueCards = Array.from(
         new Map([...visibleCards, ...stats.overdueCards].map((card) => [card.id, card])).values(),
       )
+      const needsTriage = stats.overdueCards.some(
+        (card) => !['Rescue Lane', 'Waiting / Blocked'].includes(card.status),
+      )
       return (
-        <FocusView
-          eyebrow="Recovery"
-          title="Rescue Lane"
-          description="Sunday buffers, slipped-card cleanup, and protected recovery blocks."
-          cards={rescueCards}
-          actions={actions}
-          referenceDate={referenceDate}
-          emptyTitle="No cards need recovery."
-          emptyDescription="Nothing is overdue or in Rescue Lane. Sunday recovery buffers remain protected in Schedule and are ready only if something slips."
-          emptyActionLabel="Open Schedule"
-          onEmptyAction={() => openGlobalView('schedule')}
-          onRescheduleAllOverdue={() =>
-            tracker.rescheduleCards(
-              stats.overdueCards.map((card) => card.id),
-              referenceDate,
-            )
-          }
-        />
+        <div className="view-grid">
+          {needsTriage && (
+            <RescueTriage
+              overdueCards={stats.overdueCards}
+              referenceDate={referenceDate}
+              onOpenCard={setSelectedCardId}
+              onMarkDone={tracker.toggleDone}
+              onMoveToRescueLane={(cardId) => tracker.setStatus(cardId, 'Rescue Lane')}
+              onMarkWaiting={(cardId) => tracker.setStatus(cardId, 'Waiting / Blocked')}
+              onSaveWaitingReason={(cardId, reason) => tracker.addNote(cardId, `Blocker: ${reason}`)}
+              onDefer={tracker.rescheduleCard}
+            />
+          )}
+          <FocusView
+            eyebrow="Recovery"
+            title="Rescue Lane"
+            description="Sunday buffers, slipped-card cleanup, and protected recovery blocks."
+            cards={rescueCards}
+            actions={actions}
+            emptyTitle="No cards need recovery."
+            emptyDescription="Nothing is overdue or in Rescue Lane. Sunday recovery buffers remain protected in Schedule and are ready only if something slips."
+            emptyActionLabel="Open Schedule"
+            onEmptyAction={() => openGlobalView('schedule')}
+          />
+        </div>
       )
     }
     if (activeView === 'project') {
@@ -1545,8 +1561,11 @@ export default function App() {
             </button>
             <StudyTimer
               activeCard={activeTimerCard}
+              currentBoundary={focusExecutionContext.block}
+              nextBoundary={focusExecutionContext.nextBlock}
               onCompleteSession={completeFocusSession}
               onClearActive={() => setActiveTimerCardId(null)}
+              onSaveRestartCue={(cardId, text) => tracker.addNote(cardId, text)}
             />
             <MusicPopover theme={theme} />
             <NotificationCenter
@@ -1781,6 +1800,10 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="settings-section">
+              <InstallDesktopApp serviceAvailable={localFileActive} />
             </div>
 
             <div className="settings-section">

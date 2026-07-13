@@ -1,0 +1,78 @@
+.desktop-install-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 1.5rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%);
+}
+
+.desktop-install-copy h3,
+.desktop-install-copy p {
+  margin: 0;
+}
+
+.desktop-install-copy h3 {
+  margin-top: 0.15rem;
+}
+
+.desktop-install-copy > p:not(.eyebrow, .desktop-install-service) {
+  max-width: 66ch;
+  margin-top: 0.4rem;
+  color: var(--muted);
+}
+
+.desktop-install-service {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem !important;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.desktop-install-service span {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 18%, transparent);
+}
+
+.desktop-install-service.ready span {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.desktop-install-actions {
+  display: grid;
+  justify-items: stretch;
+  gap: 0.45rem;
+  width: min(17rem, 100%);
+}
+
+.desktop-install-actions small,
+.desktop-install-message {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.desktop-install-message {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .desktop-install-card {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-install-actions {
+    width: 100%;
+  }
+}

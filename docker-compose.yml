@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      # Bind-mount the project so edits on the Windows host reflect live inside
+      # the container...
+      - .:/app
+      # ...but keep the container's Linux-native node_modules (anonymous volume
+      # shadows the host's Windows-native one at this path).
+      - /app/node_modules
+    environment:
+      - VITE_DOCKER=1
