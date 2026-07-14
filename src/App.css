@@ -496,10 +496,10 @@ button:disabled {
 .work-card {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.35fr) minmax(260px, auto);
-  gap: 12px;
-  align-items: center;
-  padding: 10px;
+  grid-template-columns: minmax(220px, 1fr) minmax(140px, 0.3fr) minmax(240px, 0.5fr);
+  gap: 16px;
+  align-items: start;
+  padding: 14px;
   border: 1px solid var(--line);
   border-left: 4px solid var(--line-strong);
   border-radius: 8px;
@@ -549,7 +549,9 @@ button:disabled {
 }
 
 .work-card-progress {
-  align-content: center;
+  align-content: start;
+  display: grid;
+  gap: 6px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -6767,5 +6769,452 @@ body.modal-open {
   .focus-goal {
     flex-direction: row;
     justify-content: center;
+  }
+}
+
+/* Catch-up backlog — recovery board ======================================== */
+.catchup-panel {
+  border-left: 3px solid var(--danger, #e5484d);
+}
+.catchup-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.catchup-hero-lead h3 {
+  margin: 2px 0 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.catchup-count {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--danger, #e5484d);
+  font-family: var(--font-num, inherit);
+}
+.catchup-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 48ch;
+}
+.catchup-runway {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+.catchup-runway-bar {
+  display: flex;
+  height: 12px;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+.catchup-runway-bar .seg {
+  border-radius: 999px;
+  min-width: 10px;
+}
+.catchup-runway-bar .seg.soft {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+.catchup-runway-bar .seg.warn {
+  background: var(--warning, #d98600);
+}
+.catchup-runway-bar .seg.severe {
+  background: var(--danger, #e5484d);
+}
+.catchup-runway-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.catchup-runway-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.catchup-runway-legend em {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.catchup-runway-legend .soft em {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+.catchup-runway-legend .warn em {
+  background: var(--warning, #d98600);
+}
+.catchup-runway-legend .severe em {
+  background: var(--danger, #e5484d);
+}
+.catchup-lanes {
+  display: grid;
+  gap: 14px;
+}
+.catchup-lane {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.catchup-lane.soft {
+  border-left-color: color-mix(in srgb, var(--muted) 50%, var(--line));
+}
+.catchup-lane.warn {
+  border-left-color: var(--warning, #d98600);
+}
+.catchup-lane.severe {
+  border-left-color: var(--danger, #e5484d);
+}
+.catchup-lane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.catchup-lane-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.catchup-lane-title strong {
+  font-size: 15px;
+}
+.catchup-sev {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.catchup-sev.soft {
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.catchup-sev.warn {
+  color: var(--warning, #d98600);
+  background: color-mix(in srgb, var(--warning, #d98600) 14%, transparent);
+}
+.catchup-sev.severe {
+  color: var(--danger, #e5484d);
+  background: color-mix(in srgb, var(--danger, #e5484d) 14%, transparent);
+}
+.catchup-lane-meta {
+  text-align: right;
+  min-width: 160px;
+}
+.catchup-lane-meta > span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.catchup-sev-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.catchup-sev-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.catchup-sev-bar span.soft {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+.catchup-sev-bar span.warn {
+  background: var(--warning, #d98600);
+}
+.catchup-sev-bar span.severe {
+  background: var(--danger, #e5484d);
+}
+.catchup-cards {
+  display: grid;
+  gap: 10px;
+}
+.catchup-card.start-here {
+  padding: 8px;
+  margin: -2px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.catchup-flag {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.catchup-late {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.catchup-late.soft {
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.catchup-late.warn {
+  color: var(--warning, #d98600);
+  background: color-mix(in srgb, var(--warning, #d98600) 12%, transparent);
+}
+.catchup-late.severe {
+  color: var(--danger, #e5484d);
+  background: color-mix(in srgb, var(--danger, #e5484d) 12%, transparent);
+}
+.catchup-more {
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.catchup-more:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.pick-behind-warn {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warning, #d98600);
+}
+
+/* Capacity re-plan panel =================================================== */
+.replan-panel {
+  border-left: 3px solid var(--accent);
+}
+.replan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.replan-head h3 {
+  margin: 2px 0 0;
+}
+.replan-verdict {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 12px;
+  font-weight: 700;
+}
+.replan-verdict.ok {
+  color: var(--positive, #46a758);
+  background: color-mix(in srgb, var(--positive, #46a758) 12%, transparent);
+}
+.replan-verdict.over {
+  color: var(--danger, #e5484d);
+  background: color-mix(in srgb, var(--danger, #e5484d) 12%, transparent);
+}
+.replan-bignum {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.replan-bignum > div {
+  display: grid;
+  gap: 2px;
+}
+.replan-bignum strong {
+  font-size: 22px;
+  font-family: var(--font-num, inherit);
+}
+.replan-bignum strong.warn {
+  color: var(--danger, #e5484d);
+}
+.replan-bignum strong.ok {
+  color: var(--positive, #46a758);
+}
+.replan-bignum span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.replan-vs {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.replan-controls {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.replan-stepper > span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.replan-stepper > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.replan-stepper button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1;
+}
+.replan-stepper strong {
+  font-family: var(--font-num, inherit);
+  min-width: 40px;
+  text-align: center;
+}
+.replan-modules {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.replan-module-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.replan-module-head strong {
+  font-size: 14px;
+}
+.replan-module-head span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.replan-module-head em {
+  font-style: normal;
+  color: var(--accent);
+  font-weight: 600;
+}
+.replan-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.replan-bar-outstanding {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: color-mix(in srgb, var(--danger, #e5484d) 35%, transparent);
+}
+.replan-bar-target {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.replan-guidance {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.replan-apply {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.replan-apply small {
+  flex: 1 1 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Overdue banner inside a module workspace ================================= */
+.module-behind {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--danger, #e5484d) 30%, var(--line));
+  border-left: 3px solid var(--danger, #e5484d);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger, #e5484d) 5%, var(--panel));
+}
+.module-behind-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.module-behind-flag {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--danger, #e5484d);
+  background: color-mix(in srgb, var(--danger, #e5484d) 14%, transparent);
+}
+.module-behind-head strong {
+  font-size: 15px;
+}
+.module-behind-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.module-behind-list {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .catchup-lane-meta {
+    text-align: left;
+    min-width: 0;
+    width: 100%;
   }
 }

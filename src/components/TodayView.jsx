@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { formatDate } from '../utils/progress'
+import { formatDate, isOverdue } from '../utils/progress'
 import {
+  buildCatchUp,
   buildDaySummary,
   buildSplitGuardrail,
   buildStudyStreak,
@@ -11,6 +12,8 @@ import { AnimatedNumber } from './Celebration'
 import { CardSummary } from './CardSummary'
 import { CardSessionTimer } from './CardSessionTimer'
 import { FocusForestPanel } from './FocusStats'
+import { CatchUpPanel } from './CatchUpPanel'
+import { ReplanPanel } from './ReplanPanel'
 import { DailyAgenda } from './ScheduleView'
 import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
 
@@ -223,6 +226,10 @@ export function TodayView({
     () => buildTodayPicks(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
   )
+  const catchUp = useMemo(
+    () => buildCatchUp(cards, referenceDate, mat700Active),
+    [cards, referenceDate, mat700Active],
+  )
   const streak = useMemo(
     () => buildStudyStreak(cards, snapshots, referenceDate),
     [cards, snapshots, referenceDate],
@@ -280,6 +287,16 @@ export function TodayView({
         />
       </section>
 
+      <ReplanPanel
+        cards={cards}
+        referenceDate={referenceDate}
+        onApply={actions.onApplyReplan}
+        onUndo={actions.onUndoReplan}
+        canUndo={actions.replanCanUndo}
+      />
+
+      <CatchUpPanel catchUp={catchUp} actions={actions} />
+
       <FocusForestPanel />
 
       <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>
@@ -309,6 +326,15 @@ export function TodayView({
               </div>
               <div className="pick-body">
                 <p className="pick-reason">{pickReason(item.card, referenceDate, deficits)}</p>
+                {!isOverdue(item.card, referenceDate) &&
+                  (() => {
+                    const behind = catchUp.groups.find((group) => group.group === item.card.moduleGroup)
+                    return behind ? (
+                      <p className="pick-behind-warn">
+                        ⚠ {behind.count} behind in {behind.label} — catch those up first
+                      </p>
+                    ) : null
+                  })()}
                 <CardSummary card={item.card} compact {...actions} />
               </div>
             </div>

@@ -429,6 +429,7 @@ export default function App() {
   const [selectedCardId, setSelectedCardId] = useState(null)
   const [activeTimerCardId, setActiveTimerCardId] = useState(null)
   const [sessionStartSignal, setSessionStartSignal] = useState(0)
+  const [replanUndo, setReplanUndo] = useState(null)
   const [openResourceId, setOpenResourceId] = useState(null)
   const [commandOpen, setCommandOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -922,6 +923,27 @@ export default function App() {
     setSessionStartSignal((signal) => signal + 1)
   }
 
+  // Apply a capacity re-plan to the live cards. Downloads a backup first and keeps
+  // the previous due dates in memory so the whole thing can be undone in one click.
+  function applyReplan(assignments) {
+    if (!Array.isArray(assignments) || assignments.length === 0) return
+    const affected = new Set(assignments.map((item) => item.cardId))
+    const previous = tracker.cards
+      .filter((card) => affected.has(card.id) && card.dueDate)
+      .map((card) => ({ cardId: card.id, dueDate: card.dueDate }))
+    downloadBackup(new Date().toISOString())
+    tracker.applyReplanSchedule(assignments)
+    setReplanUndo(previous)
+    setMessage(`Re-plan applied to ${assignments.length} cards. A backup was downloaded first — you can undo below.`)
+  }
+
+  function undoReplan() {
+    if (!replanUndo || replanUndo.length === 0) return
+    tracker.applyReplanSchedule(replanUndo)
+    setReplanUndo(null)
+    setMessage('Re-plan reverted to the previous dates.')
+  }
+
   const actions = {
     onOpen: setSelectedCardId,
     onStatusChange: tracker.setStatus,
@@ -930,6 +952,9 @@ export default function App() {
     onReschedule: tracker.rescheduleCard,
     onStartSession: startSession,
     activeSessionCardId: activeTimerCardId,
+    onApplyReplan: applyReplan,
+    onUndoReplan: undoReplan,
+    replanCanUndo: replanUndo != null && replanUndo.length > 0,
     referenceDate,
   }
 

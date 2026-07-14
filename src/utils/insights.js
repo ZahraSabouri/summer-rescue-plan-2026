@@ -181,6 +181,66 @@ export function pickReason(card, referenceDate, deficits = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Catch-up backlog — overdue, unfinished work grouped by module so nothing from
+// yesterday or the past week silently falls behind today's plan.
+// ---------------------------------------------------------------------------
+
+export function daysLate(card, referenceDate) {
+  if (!card.dueDate) return 0
+  return Math.max(0, Math.round((Date.parse(referenceDate) - Date.parse(card.dueDate)) / 86400000))
+}
+
+export function buildCatchUp(cards, referenceDate, mat700Active = true) {
+  const behind = (cards ?? [])
+    .filter(
+      (card) =>
+        isTrackableCard(card) &&
+        !card.done &&
+        card.status !== 'Waiting / Blocked' &&
+        isOverdue(card, referenceDate) &&
+        (mat700Active || card.moduleGroup !== 'MAT700'),
+    )
+    .map((card) => ({ card, dueDate: card.dueDate, daysLate: Math.max(1, daysLate(card, referenceDate)) }))
+
+  const groupsMap = new Map()
+  for (const item of behind) {
+    const key = item.card.moduleGroup ?? 'Other'
+    if (!groupsMap.has(key)) groupsMap.set(key, [])
+    groupsMap.get(key).push(item)
+  }
+
+  const groups = [...groupsMap.entries()]
+    .map(([group, items]) => {
+      const sorted = items.slice().sort((a, b) => a.dueDate.localeCompare(b.dueDate) || b.daysLate - a.daysLate)
+      return {
+        group,
+        label: sorted[0].card.module || SPLIT_LABELS[group] || group,
+        items: sorted,
+        count: sorted.length,
+        maxDaysLate: Math.max(...sorted.map((entry) => entry.daysLate)),
+        oldestDue: sorted[0].dueDate,
+        hoursBehind: Math.round(sumHours(sorted.map((entry) => entry.card), 'estimatedHours') * 10) / 10,
+      }
+    })
+    .sort((a, b) => a.oldestDue.localeCompare(b.oldestDue) || b.count - a.count)
+
+  const buckets = { yesterday: 0, week: 0, older: 0 }
+  for (const item of behind) {
+    if (item.daysLate <= 1) buckets.yesterday += 1
+    else if (item.daysLate <= 7) buckets.week += 1
+    else buckets.older += 1
+  }
+
+  return {
+    total: behind.length,
+    moduleCount: groups.length,
+    groups,
+    buckets,
+    behindModules: new Set(groups.map((group) => group.group)),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Day wrap-up — what actually happened today.
 // ---------------------------------------------------------------------------
 

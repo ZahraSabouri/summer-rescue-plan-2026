@@ -822,8 +822,19 @@ export function ModuleWorkspace({
     [cards, module.moduleGroup],
   )
   const openCards = moduleCards.filter((card) => !card.done)
-  const nextCards = openCards.slice(0, 8)
+  const nextCards = openCards
   const doneCards = moduleCards.filter((card) => card.done)
+  const moduleBehind = useMemo(
+    () =>
+      moduleCards
+        .filter((card) => !card.done && card.status !== 'Waiting / Blocked' && isOverdue(card, referenceDate))
+        .map((card) => ({
+          card,
+          daysLate: Math.max(1, Math.round((Date.parse(referenceDate) - Date.parse(card.dueDate)) / 86400000)),
+        })),
+    [moduleCards, referenceDate],
+  )
+  const maxLate = moduleBehind.length ? Math.max(...moduleBehind.map((entry) => entry.daysLate)) : 0
   const groups = useMemo(() => ['all', ...new Set(module.resources.map((resource) => resource.group))], [module.resources])
   const visibleResources = useMemo(() => {
     const query = resourceQuery.trim().toLowerCase()
@@ -900,6 +911,27 @@ export function ModuleWorkspace({
           <strong>MAT700 study lane is currently paused.</strong>
           <span>Resources remain available, but planner metrics exclude MAT700 unless the MAT700 active toggle is on.</span>
         </div>
+      )}
+
+      {moduleBehind.length > 0 && (
+        <section className="module-behind" aria-label="Overdue tasks in this module">
+          <div className="module-behind-head">
+            <span className="module-behind-flag">Behind</span>
+            <strong>{moduleBehind.length} overdue {moduleBehind.length === 1 ? 'task' : 'tasks'} in this module</strong>
+            <span className="module-behind-sub">Oldest {maxLate} {maxLate === 1 ? 'day' : 'days'} late · clear these before new work</span>
+          </div>
+          <div className="module-behind-list">
+            {moduleBehind.map(({ card, daysLate }) => {
+              const level = daysLate <= 1 ? 'soft' : daysLate <= 7 ? 'warn' : 'severe'
+              return (
+                <div className="catchup-card" key={card.id}>
+                  <span className={`catchup-late ${level}`}>{daysLate <= 1 ? 'yesterday' : `${daysLate}d late`}</span>
+                  <CardSummary card={card} compact {...actions} />
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       <div className="module-tabs" role="tablist" aria-label="Module sections">

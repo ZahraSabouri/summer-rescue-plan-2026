@@ -962,6 +962,36 @@ export function useTrackerState(baseCards) {
     })
   }
 
+  // Apply a re-plan: reschedule many cards to their own new due dates in one pass
+  // (each assignment is { cardId, dueDate }). Snapshotted, so it is undoable.
+  function applyReplanSchedule(assignments) {
+    if (!Array.isArray(assignments) || assignments.length === 0) return
+    setState((current) => {
+      const nextCards = { ...current.cards }
+      let changed = false
+      for (const { cardId, dueDate } of assignments) {
+        const card = cards.find((item) => item.id === cardId)
+        if (!card || card.done || !dueDate) continue
+        const currentCard = getCardState(current, cardId)
+        nextCards[cardId] = {
+          ...currentCard,
+          status: card.status === 'Done' ? 'Done' : 'This Week',
+          edits: {
+            ...(currentCard.edits ?? {}),
+            dueDate,
+            dueDateTime: dueDate,
+            startDate: card.startDate && card.startDate > dueDate ? dueDate : card.startDate,
+          },
+          activity: addActivity(currentCard, 'Re-plan reschedule', dueDate),
+          updatedAt: nowIso(),
+        }
+        changed = true
+      }
+      if (!changed) return current
+      return withCurrentSnapshot({ ...current, cards: nextCards, updatedAt: nowIso() })
+    })
+  }
+
   function setEvidence(cardId, evidence) {
     const card = cards.find((item) => item.id === cardId)
     if (!card || card.evidence === evidence) return
@@ -1378,6 +1408,7 @@ export function useTrackerState(baseCards) {
     addFocusSession,
     rescheduleCard,
     rescheduleCards,
+    applyReplanSchedule,
     setEvidence,
     addEvidence,
     updateEvidence,
