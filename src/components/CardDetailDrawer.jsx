@@ -9,6 +9,7 @@ import {
   TAG_OPTIONS,
 } from '../data/constants'
 import { addDays, checklistDoneCount, formatDate } from '../utils/progress'
+import { CardSessionTimer } from './CardSessionTimer'
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -74,6 +75,7 @@ export function CardDetailDrawer({
   onDeleteCard,
   onResetCard,
   onStartSession,
+  activeSessionCardId,
   onReschedule,
   onOpenResource,
   onAddResource,
@@ -384,9 +386,12 @@ export function CardDetailDrawer({
                 onChange={(event) => onHoursChange(card.id, event.target.value)}
               />
             </label>
-            <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
-              Start session
-            </button>
+            {activeSessionCardId !== card.id && (
+              <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
+                Start session
+              </button>
+            )}
+            {activeSessionCardId === card.id && <CardSessionTimer cardId={card.id} />}
             {overdue && (
               <div className="reschedule-inline drawer-reschedule">
                 <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>

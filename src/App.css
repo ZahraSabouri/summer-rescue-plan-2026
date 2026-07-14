@@ -6373,3 +6373,399 @@ body.modal-open {
     grid-column: auto;
   }
 }
+
+/* In-card focus session timer ================================================ */
+.card-session {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.card-session.running {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--panel-2));
+}
+.card-session-dial {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  text-align: center;
+  background:
+    radial-gradient(closest-side, var(--panel) 74%, transparent 75% 100%),
+    conic-gradient(var(--accent) var(--session-progress, 0deg), var(--line) 0);
+}
+.card-session-dial strong {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.card-session-dial span {
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.card-session-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.card-session-controls .primary-button,
+.card-session-controls .secondary-button {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Focus rewards — top-bar badge ============================================= */
+.focus-stats-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--panel-2);
+  white-space: nowrap;
+}
+.focus-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: var(--font-num, inherit);
+  color: var(--ink);
+}
+.focus-stat em {
+  font-style: normal;
+  font-size: 13px;
+}
+.focus-stat.wilt {
+  color: var(--danger, #e5484d);
+}
+
+/* Focus rewards — Today forest panel ======================================== */
+.focus-forest-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.focus-forest-head h3 {
+  margin: 2px 0 0;
+}
+.focus-forest-mode {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.focus-forest-mode.strict {
+  color: var(--danger, #e5484d);
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 45%, var(--line));
+  background: color-mix(in srgb, var(--danger, #e5484d) 10%, transparent);
+}
+.focus-forest-mode.gentle {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--accent-soft);
+}
+.focus-forest-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.focus-forest-stat {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.focus-forest-stat strong {
+  font-size: 20px;
+  font-family: var(--font-num, inherit);
+}
+.focus-forest-stat span {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.focus-forest-ground {
+  min-height: 64px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  gap: 2px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(to bottom, transparent 58%, color-mix(in srgb, var(--accent) 12%, transparent)),
+    var(--panel-2);
+  font-size: 26px;
+  line-height: 1.1;
+}
+.focus-forest-ground .tree.wilt {
+  filter: grayscale(0.3);
+  opacity: 0.85;
+}
+.focus-forest-empty {
+  align-self: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.focus-forest-foot {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Focus level ============================================================== */
+.focus-stat.lvl {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+}
+.focus-level {
+  margin-bottom: 14px;
+}
+.focus-level-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.focus-level-head strong {
+  font-size: 14px;
+}
+.focus-level-head span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.focus-level-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.focus-level-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2, var(--accent)));
+  transition: width 0.4s ease;
+}
+
+/* Daily goal ring + stats row ============================================== */
+.focus-forest-row {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+.focus-goal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  flex: 0 0 auto;
+}
+.focus-goal.met .focus-goal-value {
+  stroke: var(--positive, #46a758);
+}
+.focus-goal-track {
+  stroke: var(--line);
+}
+.focus-goal-value {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 0.5s ease;
+}
+.focus-goal-now {
+  font-size: 20px;
+  font-weight: 800;
+  fill: var(--ink);
+  font-family: var(--font-num, inherit);
+}
+.focus-goal-goal {
+  font-size: 10px;
+  fill: var(--muted);
+}
+.focus-goal-meta {
+  text-align: center;
+}
+.focus-goal-meta > span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.focus-goal-adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.focus-goal-adjust button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1;
+}
+.focus-goal-adjust strong {
+  font-family: var(--font-num, inherit);
+  font-size: 13px;
+  min-width: 34px;
+  text-align: center;
+}
+.focus-forest-row .focus-forest-stats {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Achievements ============================================================= */
+.focus-achievements {
+  margin-bottom: 12px;
+}
+.focus-achievements-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.focus-achievements-head span {
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.focus-achievements-head em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-num, inherit);
+}
+.focus-achievements-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.focus-badge {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  filter: grayscale(1);
+  opacity: 0.45;
+  cursor: default;
+}
+.focus-badge.unlocked {
+  filter: none;
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--accent-soft);
+}
+
+/* Celebration toasts ======================================================= */
+.focus-toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 120;
+  display: grid;
+  gap: 10px;
+  max-width: 340px;
+}
+.focus-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow-2, 0 16px 40px rgba(0, 0, 0, 0.35));
+  animation: focus-toast-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.focus-toast-levelup {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+.focus-toast-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.focus-toast-body {
+  display: grid;
+  gap: 2px;
+}
+.focus-toast-body strong {
+  font-size: 14px;
+}
+.focus-toast-body span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.focus-toast-close {
+  margin-left: auto;
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+@keyframes focus-toast-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 760px) {
+  .focus-stats-badge {
+    display: none;
+  }
+  .focus-forest-stats {
+    grid-template-columns: 1fr;
+  }
+  .focus-forest-row {
+    flex-direction: column;
+  }
+  .focus-goal {
+    flex-direction: row;
+    justify-content: center;
+  }
+}

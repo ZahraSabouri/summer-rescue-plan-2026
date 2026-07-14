@@ -9,6 +9,8 @@ import {
 } from '../utils/insights'
 import { AnimatedNumber } from './Celebration'
 import { CardSummary } from './CardSummary'
+import { CardSessionTimer } from './CardSessionTimer'
+import { FocusForestPanel } from './FocusStats'
 import { DailyAgenda } from './ScheduleView'
 import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
 
@@ -112,7 +114,7 @@ function executionLabel(mode, preCampaign) {
   return 'Day complete'
 }
 
-function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSession }) {
+function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSession, activeSessionCardId }) {
   const { block, nextBlock, card, cardBlock, lockedToTimer } = context
 
   return (
@@ -160,10 +162,13 @@ function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSes
               <button type="button" className="secondary-button" onClick={() => onOpenCard(card.id)}>
                 Open card
               </button>
-              <button type="button" className="primary-button" onClick={() => onStartSession(card.id)}>
-                {lockedToTimer ? 'Open focus timer' : 'Start focus'}
-              </button>
+              {activeSessionCardId !== card.id && (
+                <button type="button" className="primary-button" onClick={() => onStartSession(card.id)}>
+                  {lockedToTimer ? 'Open focus timer' : 'Start focus'}
+                </button>
+              )}
             </div>
+            {activeSessionCardId === card.id && <CardSessionTimer cardId={card.id} />}
           </>
         ) : (
           <>
@@ -271,8 +276,11 @@ export function TodayView({
           capacity={capacity}
           onOpenCard={onOpenCard}
           onStartSession={actions.onStartSession}
+          activeSessionCardId={actions.activeSessionCardId}
         />
       </section>
+
+      <FocusForestPanel />
 
       <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>
         <header className="panel-head">

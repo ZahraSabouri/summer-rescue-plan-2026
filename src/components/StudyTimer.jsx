@@ -7,6 +7,7 @@ import {
   remainingTimerSeconds,
 } from '../utils/studyTimer'
 import { FocusRoom } from './FocusRoom'
+import { studyTimerStore } from '../utils/studyTimerStore'
 
 const MODE_META = {
   focus: { label: 'Focus', accent: 'var(--accent)' },
@@ -47,11 +48,16 @@ function chime() {
 
 export function StudyTimer({
   activeCard,
+  startSignal,
   currentBoundary,
   nextBoundary,
   onCompleteSession,
+  onFocusBlockComplete,
   onClearActive,
   onSaveRestartCue,
+  onChecklistToggle,
+  resources = [],
+  onOpenResource,
 }) {
   const [open, setOpen] = useState(false)
   const [focusRoomOpen, setFocusRoomOpen] = useState(false)
@@ -76,7 +82,9 @@ export function StudyTimer({
   const sessionsRef = useRef(sessions)
   const runningRef = useRef(running)
   const activeCardRef = useRef(activeCard)
+  const startSignalRef = useRef(startSignal)
   const onCompleteSessionRef = useRef(onCompleteSession)
+  const onFocusBlockCompleteRef = useRef(onFocusBlockComplete)
   const customDurationsRef = useRef({ focus: 25, short: 5, long: 15 })
 
   const wakeLockSupported =
@@ -97,7 +105,8 @@ export function StudyTimer({
   useEffect(() => {
     activeCardRef.current = activeCard
     onCompleteSessionRef.current = onCompleteSession
-  }, [activeCard, onCompleteSession])
+    onFocusBlockCompleteRef.current = onFocusBlockComplete
+  }, [activeCard, onCompleteSession, onFocusBlockComplete])
 
   const logFocusSegment = useCallback((stoppedAt = Date.now()) => {
     const startedAt = segmentStartedAtRef.current
@@ -127,6 +136,7 @@ export function StudyTimer({
     if (completedMode === 'focus') {
       sessionsRef.current = completedFocusSessions
       setSessions(completedFocusSessions)
+      onFocusBlockCompleteRef.current?.(durationsRef.current.focus)
     }
 
     const nextMode = nextTimerMode(completedMode, completedFocusSessions)
@@ -146,24 +156,100 @@ export function StudyTimer({
     setRemaining((current) => (current === nextRemaining ? current : nextRemaining))
   }, [completeRun])
 
+  // Begin a fresh focus block for whatever card is currently active. Mirrors the
+  // start branch of handleToggleRunning but always resets to a full focus segment.
+  const startFocusRun = useCallback(() => {
+    const now = Date.now()
+    const seconds = durationsRef.current.focus * 60
+    modeRef.current = 'focus'
+    setMode('focus')
+    setRemaining(seconds)
+    const runId = runIdRef.current + 1
+    runIdRef.current = runId
+    completedRunIdRef.current = null
+    deadlineRef.current = now + seconds * 1000
+    if (activeCardRef.current) {
+      segmentStartedAtRef.current = now
+      segmentCardIdRef.current = activeCardRef.current.id
+    } else {
+      segmentStartedAtRef.current = null
+      segmentCardIdRef.current = null
+    }
+    runningRef.current = true
+    setRunning(true)
+  }, [])
+
+  // Abandon the current run WITHOUT logging any focus time (strict-mode forfeit).
+  // The partial segment is discarded, so no points or card minutes are credited.
+  const forfeitRun = useCallback(() => {
+    runIdRef.current += 1
+    completedRunIdRef.current = null
+    deadlineRef.current = null
+    segmentStartedAtRef.current = null
+    segmentCardIdRef.current = null
+    runningRef.current = false
+    setRunning(false)
+    modeRef.current = 'focus'
+    setMode('focus')
+    setRemaining(durationsRef.current.focus * 60)
+  }, [])
+
+  // Pressing "Start" on a card sends a new startSignal. Begin the focus session
+  // right away so the timer visibly runs inside the card. We key off startSignal
+  // (not the activeCard reference, which also changes when a session is logged) so
+  // completing a segment never silently restarts the clock.
   useEffect(() => {
-    if (!activeCard) return
+    const userInitiated = startSignal !== startSignalRef.current
+    startSignalRef.current = startSignal
+    if (!activeCard || !userInitiated) return undefined
     const id = window.setTimeout(() => {
-      setOpen(true)
-      if (!runningRef.current) {
-        modeRef.current = 'focus'
-        setMode('focus')
-        setRemaining(durationsRef.current.focus * 60)
-      }
+      const cardId = activeCardRef.current?.id
+      const alreadyRunningThisCard =
+        runningRef.current && modeRef.current === 'focus' && segmentCardIdRef.current === cardId
+      if (alreadyRunningThisCard) return
+      if (runningRef.current) logFocusSegment()
+      startFocusRun()
     }, 0)
     return () => window.clearTimeout(id)
-  }, [activeCard])
+  }, [activeCard, startSignal, logFocusSegment, startFocusRun])
 
   useEffect(() => {
     if (activeCard) return undefined
     const id = window.setTimeout(() => setFocusRoomOpen(false), 0)
     return () => window.clearTimeout(id)
   }, [activeCard])
+
+  // Mirror the live timer into the shared store so the active card can display it.
+  useEffect(() => {
+    studyTimerStore.publishState({
+      activeCardId: activeCard?.id ?? null,
+      mode,
+      remaining,
+      running,
+      durations,
+      sessions,
+      preset: focusPreset,
+    })
+  }, [activeCard, mode, remaining, running, durations, sessions, focusPreset])
+
+  // Refresh the shared handlers every render so card controls act on live state.
+  useEffect(() => {
+    studyTimerStore.setActions({
+      toggleRunning: handleToggleRunning,
+      reset: handleReset,
+      selectMode: handleSelectMode,
+      selectPreset: handleSelectPreset,
+      adjust: handleAdjust,
+      openFocusRoom: () => {
+        setOpen(false)
+        setFocusRoomOpen(true)
+      },
+      clearActive: () => {
+        setFocusRoomOpen(false)
+        onClearActive?.()
+      },
+    })
+  })
 
   useEffect(() => {
     if (!running) return undefined
@@ -497,7 +583,11 @@ export function StudyTimer({
           onAdjust={handleAdjust}
           onReset={handleReset}
           onToggleRunning={handleToggleRunning}
+          onForfeit={forfeitRun}
           onSaveRestartCue={onSaveRestartCue}
+          onChecklistToggle={onChecklistToggle}
+          resources={resources}
+          onOpenResource={onOpenResource}
           onExit={() => setFocusRoomOpen(false)}
         />
       )}

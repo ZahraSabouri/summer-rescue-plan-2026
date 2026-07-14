@@ -526,3 +526,236 @@
     transform: none;
   }
 }
+
+/* Full card contents inside the Focus Room ================================== */
+.focus-room-meta {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.focus-room-meta li {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+.focus-room-checklist ul,
+.focus-room-notes ul,
+.focus-room-evidence ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.focus-room-checklist em {
+  margin-left: 6px;
+  color: var(--muted);
+  font-style: normal;
+  font-family: var(--font-num);
+}
+.focus-room-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+.focus-room-checklist input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+.focus-room-checklist li.is-done span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.focus-room-notes li,
+.focus-room-evidence li {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.focus-room-resource-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.focus-room-resource-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.focus-room-resource-list button:hover,
+.focus-room-resource-list button:focus-visible {
+  border-color: var(--accent);
+}
+.focus-room-resource-list strong {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Focus rewards: points, streak, forest ===================================== */
+.focus-room-rewards {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+}
+.focus-room-reward-row {
+  display: flex;
+  gap: 10px;
+}
+.focus-room-reward-stat {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.focus-room-reward-stat strong {
+  font-size: 18px;
+  font-family: var(--font-num);
+}
+.focus-room-reward-stat span {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.focus-room-forest > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.focus-room-trees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: 22px;
+  line-height: 1.2;
+  min-height: 28px;
+}
+.focus-room-trees em {
+  font-size: 13px;
+  color: var(--muted);
+}
+.focus-room-forest small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Focus guard: pause & nudge overlay ======================================== */
+.focus-room-guard {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(6px);
+  animation: focus-room-guard-in 0.2s ease both;
+}
+@keyframes focus-room-guard-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.focus-room-guard-card {
+  max-width: 420px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  padding: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow-2, 0 24px 60px rgba(0, 0, 0, 0.4));
+}
+.focus-room-guard-kicker {
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.focus-room-guard-card strong {
+  font-size: 22px;
+  font-family: var(--font-serif);
+}
+.focus-room-guard-card p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.focus-room-guard-card .focus-room-start {
+  justify-self: center;
+  margin-top: 4px;
+}
+.focus-room-guard.forfeit .focus-room-guard-card {
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 60%, var(--line-strong));
+}
+.focus-room-guard.forfeit .focus-room-guard-kicker {
+  color: var(--danger, #e5484d);
+}
+
+/* Guard strictness toggle =================================================== */
+.focus-room-guard-mode {
+  display: grid;
+  gap: 6px;
+}
+.focus-room-guard-mode > span {
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.focus-room-guard-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.focus-room-guard-toggle button {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 3px);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.focus-room-guard-toggle button.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-1, 0 1px 3px rgba(0, 0, 0, 0.25));
+}
+.focus-room-guard-mode small {
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -1,5 +1,6 @@
 import { STATUS_OPTIONS } from '../data/constants'
 import { addDays, checklistDoneCount, checklistPercent, formatDate, hasEvidence } from '../utils/progress'
+import { CardSessionTimer } from './CardSessionTimer'
 
 function cardNumberLabel(number) {
   return typeof number === 'number' ? `#${number}` : number
@@ -15,8 +16,10 @@ export function CardSummary({
   onHoursChange,
   onReschedule,
   onStartSession,
+  activeSessionCardId,
   referenceDate,
 }) {
+  const isActiveSession = activeSessionCardId != null && activeSessionCardId === card.id
   const doneItems = checklistDoneCount(card)
   const totalItems = card.checklist.length
   const checklist = checklistPercent(card)
@@ -104,14 +107,18 @@ export function CardSummary({
           </div>
         )}
 
-        <button type="button" className="secondary-button" onClick={() => onStartSession?.(card.id)}>
-          Start
-        </button>
+        {!isActiveSession && (
+          <button type="button" className="secondary-button" onClick={() => onStartSession?.(card.id)}>
+            Start
+          </button>
+        )}
 
         <button type="button" className="secondary-button" onClick={() => onOpen(card.id)}>
           Details
         </button>
       </div>
+
+      {isActiveSession && <CardSessionTimer cardId={card.id} />}
     </article>
   )
 }

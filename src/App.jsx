@@ -8,6 +8,8 @@ import { FilterBar } from './components/FilterBar'
 import { MusicPopover } from './components/MusicPopover'
 import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
+import { FocusStatsBadge } from './components/FocusStats'
+import { FocusToasts } from './components/FocusToasts'
 import { ModuleWorkspace, ResourceReader } from './components/ModuleWorkspace'
 import { ProgressView } from './components/ProgressView'
 import { ScheduleView } from './components/ScheduleView'
@@ -50,6 +52,7 @@ import { readLocalResources, uploadLocalResource } from './utils/localStateFile'
 import { deriveStats, filterCards, sortCards, sumHours, todayString } from './utils/progress'
 import { buildExecutionContext, expandScheduleForDate } from './utils/schedule'
 import { generateNotifications } from './utils/notifications'
+import { focusRewards } from './utils/focusRewards'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
 const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(rescueCards)
@@ -425,6 +428,7 @@ export default function App() {
   const [filters, setFilters] = useState(FILTER_DEFAULTS)
   const [selectedCardId, setSelectedCardId] = useState(null)
   const [activeTimerCardId, setActiveTimerCardId] = useState(null)
+  const [sessionStartSignal, setSessionStartSignal] = useState(0)
   const [openResourceId, setOpenResourceId] = useState(null)
   const [commandOpen, setCommandOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -910,13 +914,22 @@ export default function App() {
     unsavedSinceBackup,
   ])
 
+  // A card can already be the active timer card, so setState alone is a no-op and
+  // the timer effect never re-fires. Bump a signal on every request so re-clicking
+  // the same card reliably re-opens the session timer.
+  function startSession(cardId) {
+    setActiveTimerCardId(cardId)
+    setSessionStartSignal((signal) => signal + 1)
+  }
+
   const actions = {
     onOpen: setSelectedCardId,
     onStatusChange: tracker.setStatus,
     onToggleDone: tracker.toggleDone,
     onHoursChange: tracker.setActualHours,
     onReschedule: tracker.rescheduleCard,
-    onStartSession: setActiveTimerCardId,
+    onStartSession: startSession,
+    activeSessionCardId: activeTimerCardId,
     referenceDate,
   }
 
@@ -1217,6 +1230,7 @@ export default function App() {
 
   function completeFocusSession(cardId, minutes) {
     tracker.addFocusSession(cardId, minutes)
+    focusRewards.recordMinutes(minutes)
     setMessage(`Logged ${minutes} min focus session.`)
   }
 
@@ -1559,13 +1573,20 @@ export default function App() {
               <Icon name="plus" />
               <span>Add card</span>
             </button>
+            <FocusStatsBadge />
+            <FocusToasts />
             <StudyTimer
               activeCard={activeTimerCard}
+              startSignal={sessionStartSignal}
               currentBoundary={focusExecutionContext.block}
               nextBoundary={focusExecutionContext.nextBlock}
               onCompleteSession={completeFocusSession}
+              onFocusBlockComplete={(minutes) => focusRewards.recordBlockComplete(minutes)}
               onClearActive={() => setActiveTimerCardId(null)}
               onSaveRestartCue={(cardId, text) => tracker.addNote(cardId, text)}
+              onChecklistToggle={tracker.toggleChecklistItem}
+              resources={allResources}
+              onOpenResource={openResource}
             />
             <MusicPopover theme={theme} />
             <NotificationCenter
@@ -1895,7 +1916,8 @@ export default function App() {
           tracker.resetCardState(cardId)
           setMessage('Card reset to its original plan.')
         }}
-        onStartSession={setActiveTimerCardId}
+        onStartSession={startSession}
+        activeSessionCardId={activeTimerCardId}
         onReschedule={tracker.rescheduleCard}
         onOpenResource={openResource}
         onAddResource={tracker.addCardResource}

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import './FocusRoom.css'
+import { checklistDoneCount, formatDate } from '../utils/progress'
+import { focusRewards } from '../utils/focusRewards'
 
 const MODE_LABELS = {
   focus: 'Focus',
@@ -61,7 +63,11 @@ export function FocusRoom({
   onAdjust,
   onReset,
   onToggleRunning,
+  onForfeit,
   onSaveRestartCue,
+  onChecklistToggle,
+  resources = [],
+  onOpenResource,
   onExit,
 }) {
   const roomRef = useRef(null)
@@ -112,7 +118,112 @@ export function FocusRoom({
     }
   }, [])
 
+  const linkedResources = useMemo(() => {
+    if (!activeCard) return []
+    const byId = new Map(resources.map((resource) => [resource.id, resource]))
+    return (activeCard.resourceIds ?? []).map((id) => byId.get(id)).filter(Boolean)
+  }, [activeCard, resources])
+
+  const rewards = useSyncExternalStore(focusRewards.subscribe, focusRewards.getState)
+
+  // Focus guard: when a block is running and the user leaves this screen — switches
+  // tab, minimises, or alt-tabs to another app — react based on the strictness mode.
+  //   Gentle: pause the timer and hold a "come back" overlay; nothing is lost.
+  //   Strict: forfeit the block (no points, no card credit), wilt a tree, and show
+  //   a "block forfeited" overlay.
+  const [away, setAway] = useState(false)
+  const [forfeited, setForfeited] = useState(false)
+  const runningRef = useRef(running)
+  const toggleRef = useRef(onToggleRunning)
+  const forfeitRef = useRef(onForfeit)
+  const strictRef = useRef(rewards.strict)
+  useEffect(() => {
+    runningRef.current = running
+  }, [running])
+  useEffect(() => {
+    toggleRef.current = onToggleRunning
+  }, [onToggleRunning])
+  useEffect(() => {
+    forfeitRef.current = onForfeit
+  }, [onForfeit])
+  useEffect(() => {
+    strictRef.current = rewards.strict
+  }, [rewards.strict])
+
+  useEffect(() => {
+    let blurTimer = null
+    const leave = () => {
+      if (!runningRef.current) return
+      if (strictRef.current) {
+        forfeitRef.current?.() // discard the run — no points, no credit
+        focusRewards.recordBlockForfeit() // wilt a tree
+        setForfeited(true)
+      } else {
+        toggleRef.current?.() // pause; the partial focus segment is logged
+        setAway(true)
+      }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState !== 'hidden') return
+      if (blurTimer) {
+        window.clearTimeout(blurTimer)
+        blurTimer = null
+      }
+      leave()
+    }
+    // Blur fires on transient focus loss too (address bar, notifications), so wait a
+    // beat and only treat it as leaving if focus is genuinely gone.
+    const onBlur = () => {
+      if (blurTimer) window.clearTimeout(blurTimer)
+      blurTimer = window.setTimeout(() => {
+        if (document.visibilityState === 'hidden' || !document.hasFocus()) leave()
+      }, 400)
+    }
+    const onFocus = () => {
+      if (blurTimer) {
+        window.clearTimeout(blurTimer)
+        blurTimer = null
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('blur', onBlur)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      if (blurTimer) window.clearTimeout(blurTimer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('blur', onBlur)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [])
+
+  function resumeFromAway() {
+    setAway(false)
+    if (!runningRef.current) toggleRef.current?.()
+  }
+
+  // Strict mode: the block was forfeited and the timer reset to a fresh focus block.
+  // Start a new one right away.
+  function startAgainAfterForfeit() {
+    setForfeited(false)
+    if (!runningRef.current) toggleRef.current?.()
+  }
+
   if (!activeCard || typeof document === 'undefined') return null
+
+  const checklist = activeCard.checklist ?? []
+  const notes = activeCard.notes ?? []
+  const evidenceItems = activeCard.evidenceEntries?.length
+    ? activeCard.evidenceEntries
+    : activeCard.evidence
+      ? [{ id: `${activeCard.id}-legacy`, text: activeCard.evidence }]
+      : []
+  const cardMeta = [
+    activeCard.phase,
+    activeCard.priority,
+    activeCard.slotType,
+    (activeCard.dueDate || activeCard.startDate) && `Due ${formatDate(activeCard.dueDate || activeCard.startDate)}`,
+    `${activeCard.actualHours || 0}h logged`,
+  ].filter(Boolean)
 
   const totalSeconds = Math.max(1, Number(durations?.[mode] ?? 1) * 60)
   const progress = Math.max(0, Math.min(1, 1 - remaining / totalSeconds))
@@ -135,6 +246,30 @@ export function FocusRoom({
 
   return createPortal(
     <section ref={roomRef} className="focus-room" role="dialog" aria-modal="true" aria-labelledby="focus-room-title">
+      {away && (
+        <div className="focus-room-guard" role="alertdialog" aria-label="Focus paused because you left the screen">
+          <div className="focus-room-guard-card">
+            <span className="focus-room-guard-kicker">Focus paused</span>
+            <strong>You stepped away.</strong>
+            <p>Your block is on hold — nothing is lost. Come back and pick up where you left off.</p>
+            <button type="button" className="focus-room-start" onClick={resumeFromAway}>
+              Resume focus
+            </button>
+          </div>
+        </div>
+      )}
+      {forfeited && (
+        <div className="focus-room-guard forfeit" role="alertdialog" aria-label="Block forfeited because you left the screen">
+          <div className="focus-room-guard-card">
+            <span className="focus-room-guard-kicker">🥀 Block forfeited</span>
+            <strong>You left the focus screen.</strong>
+            <p>Strict mode: that block is gone — no points, and a tree wilted. The timer is reset. Start again when you’re ready to commit.</p>
+            <button type="button" className="focus-room-start" onClick={startAgainAfterForfeit}>
+              Start a new block
+            </button>
+          </div>
+        </div>
+      )}
       <header className="focus-room-topbar">
         <div>
           <span className="focus-room-kicker">Summer Rescue · Focus Room</span>
@@ -149,7 +284,14 @@ export function FocusRoom({
         <header className="focus-room-task">
           <span>One active card</span>
           <h1 id="focus-room-title">#{activeCard.number} {activeCard.title}</h1>
-          <p>{activeCard.description}</p>
+          {activeCard.description && <p>{activeCard.description}</p>}
+          {cardMeta.length > 0 && (
+            <ul className="focus-room-meta" aria-label="Card details">
+              {cardMeta.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          )}
         </header>
 
         <div className="focus-room-grid">
@@ -214,6 +356,66 @@ export function FocusRoom({
             <p className="focus-room-session-count">
               {sessions} focus {sessions === 1 ? 'block' : 'blocks'} completed this app session
             </p>
+
+            <div className="focus-room-rewards" aria-label="Focus rewards">
+              <div className="focus-room-guard-mode" role="group" aria-label="Focus guard strictness">
+                <span>Focus guard</span>
+                <div className="focus-room-guard-toggle">
+                  <button
+                    type="button"
+                    className={!rewards.strict ? 'active' : ''}
+                    aria-pressed={!rewards.strict}
+                    onClick={() => focusRewards.setStrict(false)}
+                  >
+                    Gentle
+                  </button>
+                  <button
+                    type="button"
+                    className={rewards.strict ? 'active' : ''}
+                    aria-pressed={rewards.strict}
+                    onClick={() => focusRewards.setStrict(true)}
+                  >
+                    Strict
+                  </button>
+                </div>
+                <small>
+                  {rewards.strict
+                    ? 'Leaving forfeits the block and wilts a tree.'
+                    : 'Leaving pauses the timer — nothing lost.'}
+                </small>
+              </div>
+
+              <div className="focus-room-reward-row">
+                <div className="focus-room-reward-stat">
+                  <strong>⚡ {rewards.points}</strong>
+                  <span>focus points</span>
+                </div>
+                <div className="focus-room-reward-stat">
+                  <strong>🔥 {rewards.streak}</strong>
+                  <span>day streak</span>
+                </div>
+              </div>
+              <div className="focus-room-forest">
+                <span>Today’s forest</span>
+                <div className="focus-room-trees" aria-hidden="true">
+                  {rewards.today.trees === 0 && rewards.today.wilted === 0 ? (
+                    <em>Finish a block to grow your first tree.</em>
+                  ) : (
+                    <>
+                      {Array.from({ length: Math.min(rewards.today.trees, 12) }).map((_, index) => (
+                        <span key={`t${index}`}>🌳</span>
+                      ))}
+                      {Array.from({ length: Math.min(rewards.today.wilted, 12) }).map((_, index) => (
+                        <span key={`w${index}`}>🥀</span>
+                      ))}
+                    </>
+                  )}
+                </div>
+                <small>
+                  {rewards.today.trees} grown · {rewards.today.wilted} wilted today · {rewards.totalTrees} all time
+                </small>
+              </div>
+            </div>
           </section>
 
           <aside className="focus-room-brief" aria-label="Card finish and schedule boundaries">
@@ -225,6 +427,62 @@ export function FocusRoom({
               <span>Leave behind</span>
               <p>{activeCard.evidenceRequirement || 'No evidence requirement is recorded on this card.'}</p>
             </section>
+
+            {checklist.length > 0 && (
+              <section className="focus-room-checklist">
+                <span>Checklist <em>{checklistDoneCount(activeCard)}/{checklist.length}</em></span>
+                <ul>
+                  {checklist.map((item) => (
+                    <li key={item.id} className={item.done ? 'is-done' : ''}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.done)}
+                          onChange={() => onChecklistToggle?.(activeCard.id, item.id)}
+                        />
+                        <span>{item.text}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {linkedResources.length > 0 && (
+              <section className="focus-room-resources">
+                <span>Resources</span>
+                <div className="focus-room-resource-list">
+                  {linkedResources.map((resource) => (
+                    <button key={resource.id} type="button" onClick={() => onOpenResource?.(resource.id)}>
+                      <span className="type-badge">{resource.type}</span>
+                      <strong>{resource.title}</strong>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {notes.length > 0 && (
+              <section className="focus-room-notes">
+                <span>Notes</span>
+                <ul>
+                  {notes.map((note, index) => (
+                    <li key={note.id ?? index}>{note.text}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {evidenceItems.length > 0 && (
+              <section className="focus-room-evidence">
+                <span>Evidence logged</span>
+                <ul>
+                  {evidenceItems.map((item, index) => (
+                    <li key={item.id ?? index}>{item.text}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             {hasBoundaries && (
               <div className="focus-room-boundaries" aria-label="Schedule boundaries">
