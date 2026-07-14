@@ -963,19 +963,21 @@ export function useTrackerState(baseCards) {
   }
 
   // Apply a re-plan: reschedule many cards to their own new due dates in one pass
-  // (each assignment is { cardId, dueDate }). Snapshotted, so it is undoable.
+  // (each assignment is { cardId, dueDate, status? }). Stretch cards demote to
+  // Backlog via the per-assignment status; undo replays the previous date+status
+  // through the same path. Snapshotted, so it is undoable.
   function applyReplanSchedule(assignments) {
     if (!Array.isArray(assignments) || assignments.length === 0) return
     setState((current) => {
       const nextCards = { ...current.cards }
       let changed = false
-      for (const { cardId, dueDate } of assignments) {
+      for (const { cardId, dueDate, status } of assignments) {
         const card = cards.find((item) => item.id === cardId)
         if (!card || card.done || !dueDate) continue
         const currentCard = getCardState(current, cardId)
         nextCards[cardId] = {
           ...currentCard,
-          status: card.status === 'Done' ? 'Done' : 'This Week',
+          status: card.status === 'Done' ? 'Done' : status ?? 'This Week',
           edits: {
             ...(currentCard.edits ?? {}),
             dueDate,

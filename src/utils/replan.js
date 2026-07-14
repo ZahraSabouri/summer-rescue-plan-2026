@@ -73,47 +73,116 @@ export function buildReplan(cards, options = {}) {
   }
 }
 
+// Titles matching this are second-pass repeats of work another card already covers
+// (every AML session has both a lab run AND a "timed re-run"). In a compressed
+// 30-day rescue these are the first thing to trade away, so they are scheduled
+// after everything else and usually land in the stretch zone.
+const LOW_YIELD_RE = /timed re-run/i
+
+// Build a per-date study-hours lookup from the protected timetable. Only blocks
+// with category 'study' count — classes, travel, meals, and routines are busy time
+// and never receive study cards. Memoised because the packer probes days repeatedly.
+export function buildStudyCapacityLookup(expandForDate) {
+  const cache = new Map()
+  return (date) => {
+    if (cache.has(date)) return cache.get(date)
+    let minutes = 0
+    for (const block of expandForDate(date) ?? []) {
+      if (block?.category !== 'study') continue
+      const [sh, sm] = String(block.start ?? '').split(':').map(Number)
+      const [eh, em] = String(block.end ?? '').split(':').map(Number)
+      if ([sh, sm, eh, em].some(Number.isNaN)) continue
+      minutes += Math.max(0, eh * 60 + em - (sh * 60 + sm))
+    }
+    const hoursFree = Math.round((minutes / 60) * 10) / 10
+    cache.set(date, hoursFree)
+    return hoursFree
+  }
+}
+
 // Pack outstanding exam cards into a realistic forward schedule: highest priority
-// (then earliest original date) first, filling `dailyHours` per day from today.
-// Each card's new due date is the day its work finishes; anything landing past the
-// readiness date is flagged `stretch` (beyond capacity — do only if time allows).
+// (then earliest original date) first, filling each day's genuinely free study
+// hours from today. With `capacityForDate` the packer respects the protected
+// timetable (skipping days occupied by classes, travel, or routines); otherwise it
+// uses a flat `dailyHours`. Low-yield "timed re-run" repeats are deprioritised to
+// the very end. Each card's new due date is the day its work finishes; anything
+// past the readiness date is flagged `stretch` and demoted to Backlog status.
 export function computeReplanSchedule(cards, options = {}) {
   const {
     referenceDate,
     dailyHours = 8,
     readiness = READINESS_DATE,
     examGroups = EXAM_GROUPS,
+    capacityForDate = null,
+    trimLowYield = true,
   } = options
 
   const outstanding = cards.filter(
     (card) => isTrackableCard(card) && !card.done && examGroups.includes(card.moduleGroup),
   )
-  const sorted = [...outstanding].sort((a, b) => {
+  const byUrgency = (a, b) => {
     const rank = (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4)
     if (rank !== 0) return rank
     const da = a.dueDate || a.startDate || '9999-12-31'
     const db = b.dueDate || b.startDate || '9999-12-31'
     if (da !== db) return da.localeCompare(db)
     return Number(a.number ?? 9999) - Number(b.number ?? 9999)
-  })
+  }
+  const isLowYield = (card) => trimLowYield && LOW_YIELD_RE.test(card.title ?? '')
+  const core = outstanding.filter((card) => !isLowYield(card)).sort(byUrgency)
+  const lowYield = outstanding.filter(isLowYield).sort(byUrgency)
+  const sorted = [...core, ...lowYield]
 
-  const perDay = Math.max(1, dailyHours)
-  let cumulative = 0
+  // Day-walking packer. Days report their own free study hours (capped by the
+  // user's sustainable dailyHours); zero-capacity days (travel, full class days)
+  // are skipped. The horizon is bounded so a broken schedule can never spin.
+  const HORIZON_DAYS = 240
+  const capFor = (dayIndex) => {
+    const date = addDays(referenceDate, dayIndex)
+    const scheduled = capacityForDate ? capacityForDate(date) : dailyHours
+    // Past readiness the timetable may be empty; fall back to flat hours so the
+    // stretch zone still gets dates instead of piling onto one day.
+    const base = capacityForDate && date > readiness && scheduled <= 0 ? dailyHours : scheduled
+    return Math.max(0, Math.min(dailyHours, base))
+  }
+
+  let dayIndex = 0
+  let usedToday = 0
   let overflow = 0
   const assignments = sorted.map((card) => {
-    const hours = Math.max(0.5, Number(card.estimatedHours ?? card.hours ?? 0))
-    cumulative += hours
-    const dayIndex = Math.max(0, Math.ceil(cumulative / perDay) - 1)
-    const dueDate = addDays(referenceDate, dayIndex)
+    let remaining = Math.max(0.5, Number(card.estimatedHours ?? card.hours ?? 0))
+    while (remaining > 0 && dayIndex < HORIZON_DAYS) {
+      const free = capFor(dayIndex) - usedToday
+      if (free <= 0) {
+        dayIndex += 1
+        usedToday = 0
+        continue
+      }
+      const spent = Math.min(free, remaining)
+      usedToday += spent
+      remaining -= spent
+      if (remaining > 0) {
+        dayIndex += 1
+        usedToday = 0
+      }
+    }
+    const dueDate = addDays(referenceDate, Math.min(dayIndex, HORIZON_DAYS))
     const stretch = dueDate > readiness
     if (stretch) overflow += 1
-    return { cardId: card.id, dueDate, stretch }
+    return {
+      cardId: card.id,
+      dueDate,
+      stretch,
+      lowYield: isLowYield(card),
+      status: stretch ? 'Backlog' : 'This Week',
+    }
   })
 
   return {
     assignments,
     count: assignments.length,
     overflow,
+    trimmed: lowYield.length,
     lastDay: assignments.length ? assignments[assignments.length - 1].dueDate : referenceDate,
   }
 }

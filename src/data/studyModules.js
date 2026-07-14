@@ -655,6 +655,20 @@ export const STUDY_MODULES = [
         output: 'Lookup index with slow paths repaired.',
       },
     ],
+    recipes: [
+      {
+        title: 'Preprocessing pipeline frame',
+        detail: 'Name the split first, fit scaler/encoder/imputer on train only, transform both, then state in one line why this prevents leakage.',
+      },
+      {
+        title: 'Model choice justification',
+        detail: 'State the data shape and target, name two candidate models, pick one on assumption fit and scaling cost, then cite the metric that would confirm the choice.',
+      },
+      {
+        title: 'Overfitting diagnosis frame',
+        detail: 'Compare train vs validation curves, name the bias-variance side you are on, then propose the matching lever: regularisation, more data, or a simpler/deeper model.',
+      },
+    ],
   },
   {
     id: 'time-series',

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { buildReplan, computeReplanSchedule } from '../utils/replan'
+import { buildReplan, buildStudyCapacityLookup, computeReplanSchedule } from '../utils/replan'
+import { expandScheduleForDate } from '../utils/schedule'
+import { scheduleRules, scheduleExceptions } from '../data/summerRescuePlan'
 
 const MODULE_LABELS = {
   'Applied ML': 'Applied ML',
@@ -37,16 +39,25 @@ export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) 
     [cards, referenceDate, config.dailyHours, config.projectHours],
   )
 
+  // Per-date free study hours from the protected timetable: only `study` blocks
+  // count, so classes, travel, meals, and routines never receive study cards.
+  const capacityForDate = useMemo(
+    () => buildStudyCapacityLookup((date) => expandScheduleForDate(scheduleRules, scheduleExceptions, date)),
+    [],
+  )
+
   const schedule = useMemo(
-    () => computeReplanSchedule(cards, { referenceDate, dailyHours: config.dailyHours }),
-    [cards, referenceDate, config.dailyHours],
+    () => computeReplanSchedule(cards, { referenceDate, dailyHours: config.dailyHours, capacityForDate }),
+    [cards, referenceDate, config.dailyHours, capacityForDate],
   )
 
   function handleApply() {
     if (!onApply || schedule.assignments.length === 0) return
     const ok = window.confirm(
-      `Re-plan will reschedule ${schedule.count} exam cards across the days left (highest priority first, ` +
-        `${config.dailyHours}h/day), and flag ${schedule.overflow} as beyond capacity.\n\n` +
+      `Re-plan will reschedule ${schedule.count} exam cards into your timetable's free study blocks only ` +
+        `(classes, travel, and routines stay untouched), capped at ${config.dailyHours}h/day, highest priority first.\n\n` +
+        `${schedule.trimmed} low-yield "timed re-run" repeats are deprioritised to the end, and ` +
+        `${schedule.overflow} cards land beyond the readiness date (marked Backlog — do only if time allows).\n\n` +
         'A backup is downloaded first and you can undo. Apply now?',
     )
     if (ok) onApply(schedule.assignments)
@@ -152,8 +163,9 @@ export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) 
             </button>
           )}
           <small>
-            Reschedules by priority, {config.dailyHours}h/day from today — {schedule.overflow} land beyond {' '}
-            {plan.daysLeft} days (stretch). Backs up first; fully reversible.
+            Packs into your timetable's free study blocks only (never classes, travel, or routines), capped at{' '}
+            {config.dailyHours}h/day. {schedule.trimmed} timed re-runs deprioritised; {schedule.overflow} cards land
+            beyond {plan.daysLeft} days and become Backlog. Backs up first; fully reversible.
           </small>
         </div>
       )}

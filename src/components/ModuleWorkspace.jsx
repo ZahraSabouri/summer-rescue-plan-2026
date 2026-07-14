@@ -646,40 +646,51 @@ export function ResourceReader({ resource, onClose, standalone = false }) {
   )
 }
 
-function ModuleStats({ moduleCards, referenceDate }) {
+function ModuleStats({ moduleCards, referenceDate, onOpenPlanning }) {
   const done = moduleCards.filter((card) => card.done).length
   const open = moduleCards.length - done
   const overdue = moduleCards.filter((card) => isOverdue(card, referenceDate)).length
   const checklistItems = moduleCards.reduce((sum, card) => sum + (card.checklist?.length ?? 0), 0)
   const checklistDone = moduleCards.reduce((sum, card) => sum + checklistDoneCount(card), 0)
 
+  // Every tile is a doorway: clicking drills into the planning list behind the
+  // number (overdue jumps to the module's Behind banner when one is showing).
+  function goOverdue() {
+    const banner = document.querySelector('.module-behind')
+    if (banner) banner.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else onOpenPlanning?.()
+  }
+
+  const tiles = [
+    { key: 'cards', label: 'Cards', value: moduleCards.length, detail: `${open} open`, go: onOpenPlanning },
+    { key: 'complete', label: 'Complete', value: `${percent(done, moduleCards.length)}%`, detail: `${done}/${moduleCards.length} cards`, go: onOpenPlanning },
+    { key: 'hours', label: 'Hours', value: hours(sumHours(moduleCards, 'actualHours')), detail: `${hours(sumHours(moduleCards, 'estimatedHours'))} planned`, go: onOpenPlanning },
+    { key: 'checklist', label: 'Checklist', value: `${percent(checklistDone, checklistItems)}%`, detail: `${checklistDone}/${checklistItems} items`, go: onOpenPlanning },
+    { key: 'overdue', label: 'Overdue', value: overdue, detail: formatDate(referenceDate), go: goOverdue },
+  ]
+
   return (
     <div className="module-workspace-stats">
-      <article>
-        <span>Cards</span>
-        <strong>{moduleCards.length}</strong>
-        <p>{open} open</p>
-      </article>
-      <article>
-        <span>Complete</span>
-        <strong>{percent(done, moduleCards.length)}%</strong>
-        <p>{done}/{moduleCards.length} cards</p>
-      </article>
-      <article>
-        <span>Hours</span>
-        <strong>{hours(sumHours(moduleCards, 'actualHours'))}</strong>
-        <p>{hours(sumHours(moduleCards, 'estimatedHours'))} planned</p>
-      </article>
-      <article>
-        <span>Checklist</span>
-        <strong>{percent(checklistDone, checklistItems)}%</strong>
-        <p>{checklistDone}/{checklistItems} items</p>
-      </article>
-      <article>
-        <span>Overdue</span>
-        <strong>{overdue}</strong>
-        <p>{formatDate(referenceDate)}</p>
-      </article>
+      {tiles.map((tile) => (
+        <article
+          key={tile.key}
+          role="button"
+          tabIndex={0}
+          className="module-stat-tile"
+          title={`Open ${tile.label.toLowerCase()} details`}
+          onClick={() => tile.go?.()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              tile.go?.()
+            }
+          }}
+        >
+          <span>{tile.label}</span>
+          <strong>{tile.value}</strong>
+          <p>{tile.detail}</p>
+        </article>
+      ))}
     </div>
   )
 }
@@ -953,7 +964,7 @@ export function ModuleWorkspace({
 
       {tab === 'overview' && (
         <div className="module-panel">
-          <ModuleStats moduleCards={moduleCards} referenceDate={referenceDate} />
+          <ModuleStats moduleCards={moduleCards} referenceDate={referenceDate} onOpenPlanning={() => setTab('planning')} />
           <ModuleProgressBar moduleCards={moduleCards} referenceDate={referenceDate} />
           <ModuleGuidance module={module} />
           <section className="workspace-section">

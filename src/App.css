@@ -6156,12 +6156,14 @@ h1,
   z-index: 80;
 }
 
+/* The reader must sit above the Focus Room (z-index 5000) so resources and videos
+   opened mid-session are actually visible; the command palette stays topmost. */
 .reader-shell {
-  z-index: 90;
+  z-index: 6000;
 }
 
 .command-shell {
-  z-index: 100;
+  z-index: 7000;
 }
 
 body.modal-open {
@@ -7171,6 +7173,36 @@ body.modal-open {
   flex: 1 1 100%;
   color: var(--muted);
   font-size: 12px;
+}
+
+/* Clickable navigation chrome ============================================== */
+.topbar-home-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.topbar-home-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+button.countdown-chip {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+button.countdown-chip:hover {
+  border-color: var(--accent);
+}
+.module-stat-tile {
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.module-stat-tile:hover,
+.module-stat-tile:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 /* Overdue banner inside a module workspace ================================= */

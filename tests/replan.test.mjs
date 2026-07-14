@@ -71,6 +71,39 @@ test('computeReplanSchedule packs by priority into days and flags overflow', () 
   assert.equal(assignments[2].dueDate, '2026-07-16')
 })
 
+test('computeReplanSchedule skips days with no free study blocks', () => {
+  const cards = [
+    { id: 'a', number: 1, moduleGroup: 'Applied ML', done: false, priority: 'Critical', estimatedHours: 4, dueDate: '2026-07-20' },
+    { id: 'b', number: 2, moduleGroup: 'Applied ML', done: false, priority: 'Critical', estimatedHours: 4, dueDate: '2026-07-20' },
+  ]
+  // 15 July is fully occupied (class/travel day): zero study hours.
+  const capacityForDate = (date) => (date === '2026-07-15' ? 0 : 4)
+  const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8, capacityForDate })
+  assert.equal(assignments[0].dueDate, '2026-07-14') // 4h fills today's 4 free hours
+  assert.equal(assignments[1].dueDate, '2026-07-16') // 15th is busy — card lands on the 16th
+})
+
+test('computeReplanSchedule deprioritises low-yield timed re-runs to the end', () => {
+  const cards = [
+    { id: 'rerun', number: 1, moduleGroup: 'Applied ML', done: false, priority: 'Critical', estimatedHours: 8, dueDate: '2026-07-01', title: 'AML S3 — Lab 3 timed re-run + recall' },
+    { id: 'core', number: 2, moduleGroup: 'Applied ML', done: false, priority: 'High', estimatedHours: 8, dueDate: '2026-07-20', title: 'AML S3 — Run Lab 3 clean' },
+  ]
+  const { assignments, trimmed } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
+  assert.equal(trimmed, 1)
+  // Core work schedules first despite the re-run being Critical and older.
+  assert.deepEqual(assignments.map((a) => a.cardId), ['core', 'rerun'])
+})
+
+test('computeReplanSchedule marks stretch cards as Backlog status', () => {
+  const cards = Array.from({ length: 40 }, (_, i) => ({
+    id: `c${i}`, number: i, moduleGroup: 'Time Series', done: false, priority: 'High', estimatedHours: 8, dueDate: '2026-07-20',
+  }))
+  const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
+  for (const a of assignments) {
+    assert.equal(a.status, a.stretch ? 'Backlog' : 'This Week')
+  }
+})
+
 test('computeReplanSchedule flags cards beyond readiness as stretch', () => {
   // 60 cards x 8h at 8h/day = 60 days of work, well past 33 days to readiness
   const cards = Array.from({ length: 60 }, (_, i) => ({

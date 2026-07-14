@@ -88,6 +88,9 @@ export function FocusRoom({
     const focusFrame = window.requestAnimationFrame(() => closeRef.current?.focus())
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
+        // A resource reader open above the room owns Escape — let it close itself
+        // instead of exiting the whole Focus Room underneath the viewer.
+        if (document.querySelector('.reader-shell')) return
         event.preventDefault()
         event.stopPropagation()
         exitRef.current?.()
@@ -172,11 +175,15 @@ export function FocusRoom({
       leave()
     }
     // Blur fires on transient focus loss too (address bar, notifications), so wait a
-    // beat and only treat it as leaving if focus is genuinely gone.
+    // beat and only treat it as leaving if focus is genuinely gone. Focus moving into
+    // an in-app iframe (YouTube embed, PDF reader) keeps document.hasFocus() true and
+    // sets activeElement to the IFRAME — watching a linked video is studying, never a
+    // reason to fire the guard.
     const onBlur = () => {
       if (blurTimer) window.clearTimeout(blurTimer)
       blurTimer = window.setTimeout(() => {
-        if (document.visibilityState === 'hidden' || !document.hasFocus()) leave()
+        const inAppFrame = document.activeElement?.tagName === 'IFRAME'
+        if (document.visibilityState === 'hidden' || (!document.hasFocus() && !inAppFrame)) leave()
       }, 400)
     }
     const onFocus = () => {

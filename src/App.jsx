@@ -636,6 +636,17 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
+  // A refresh or view change should land you at the top of the page, not wherever
+  // the browser remembered the scroll position from the previous session.
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+  }, [])
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    document.querySelector('.app-main')?.scrollTo?.(0, 0)
+  }, [activeView])
+
   useEffect(() => {
     const resourceId = resourceIdFromHash()
     const resourceMode = resourceModeFromHash()
@@ -930,7 +941,7 @@ export default function App() {
     const affected = new Set(assignments.map((item) => item.cardId))
     const previous = tracker.cards
       .filter((card) => affected.has(card.id) && card.dueDate)
-      .map((card) => ({ cardId: card.id, dueDate: card.dueDate }))
+      .map((card) => ({ cardId: card.id, dueDate: card.dueDate, status: card.status }))
     downloadBackup(new Date().toISOString())
     tracker.applyReplanSchedule(assignments)
     setReplanUndo(previous)
@@ -1572,7 +1583,14 @@ export default function App() {
               <Icon name="menu" />
             </button>
             <div className="topbar-title">
-              <p className="eyebrow">{campaignMeta.title}</p>
+              <button
+                type="button"
+                className="eyebrow topbar-home-link"
+                title="Go to Today"
+                onClick={() => setActiveView('today')}
+              >
+                {campaignMeta.title}
+              </button>
               <h1>{viewMeta.title}</h1>
               {viewMeta.subtitle && <p className="topbar-sub">{viewMeta.subtitle}</p>}
             </div>
@@ -1580,10 +1598,15 @@ export default function App() {
 
           <div className="topbar-right">
             {examCountdown != null && (
-              <div className={`countdown-chip${examCountdown <= 21 ? ' urgent' : ''}`} title={`${examTarget.label} date ${examTarget.date}`}>
+              <button
+                type="button"
+                className={`countdown-chip${examCountdown <= 21 ? ' urgent' : ''}`}
+                title={`${examTarget.label} date ${examTarget.date} — open the schedule`}
+                onClick={() => setActiveView('schedule')}
+              >
                 <strong>{examCountdown > 0 ? examCountdown : examCountdown === 0 ? '0' : Math.abs(examCountdown)}</strong>
                 <span>{examCountdown > 0 ? `days to ${examTarget.label}` : examCountdown === 0 ? 'exam day' : 'days after exam'}</span>
-              </div>
+              </button>
             )}
             <button
               type="button"
