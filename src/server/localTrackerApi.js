@@ -352,6 +352,50 @@ async function sendResourceFile(res, paths, resourceRoute) {
   }
 }
 
+// Deletion is deliberately limited to card-attachment files: study resources
+// are curated material and must never be removable through evidence cleanup.
+const DELETABLE_MODULE_DIR = 'card-attachments'
+
+async function deleteAttachmentFile(res, paths, resourceRoute) {
+  if (resourceRoute.moduleDir !== DELETABLE_MODULE_DIR) {
+    sendJson(res, 403, { ok: false, error: 'Only card-attachment files can be deleted.' })
+    return
+  }
+
+  const root = path.resolve(paths.resourceRootPath)
+  const resourcePath = path.resolve(root, resourceRoute.moduleDir, resourceRoute.fileName)
+  if (!resourcePath.startsWith(`${root}${path.sep}`)) {
+    sendJson(res, 403, { ok: false, error: 'Resource path is outside the local resources directory.' })
+    return
+  }
+
+  let fileDeleted = false
+  try {
+    await fs.unlink(resourcePath)
+    fileDeleted = true
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      sendJson(res, 500, { ok: false, error: error.message })
+      return
+    }
+  }
+
+  let indexDeleted = false
+  try {
+    const relativePath = `local-data/resources/${resourceRoute.moduleDir}/${resourceRoute.fileName}`
+    const resources = await readResourceIndex(paths.resourceIndexPath)
+    const remaining = resources.filter((item) => item.path !== relativePath)
+    if (remaining.length !== resources.length) {
+      await writeResourceIndex(paths.resourceIndexPath, remaining)
+      indexDeleted = true
+    }
+  } catch (error) {
+    console.warn('Attachment index cleanup skipped:', error.message)
+  }
+
+  sendJson(res, 200, { ok: true, fileDeleted, indexDeleted })
+}
+
 async function handleResourceUpload(req, res, paths) {
   const raw = await readRequestBody(req, MAX_UPLOAD_BODY_BYTES)
   const payload = JSON.parse(raw)
@@ -477,13 +521,17 @@ export function createLocalTrackerApi(options = {}) {
 
     const resourceRoute = routeResourceFile(pathname)
     if (resourceRoute) {
-      if (req.method !== 'GET') {
-        res.statusCode = 405
-        res.setHeader('Allow', 'GET')
-        res.end()
+      if (req.method === 'GET') {
+        await sendResourceFile(res, paths, resourceRoute)
         return
       }
-      await sendResourceFile(res, paths, resourceRoute)
+      if (req.method === 'DELETE') {
+        await deleteAttachmentFile(res, paths, resourceRoute)
+        return
+      }
+      res.statusCode = 405
+      res.setHeader('Allow', 'GET, DELETE')
+      res.end()
       return
     }
 

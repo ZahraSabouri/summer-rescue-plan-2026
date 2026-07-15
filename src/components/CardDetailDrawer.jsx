@@ -8,8 +8,17 @@ import {
   STATUS_OPTIONS,
   TAG_OPTIONS,
 } from '../data/constants'
-import { addDays, checklistDoneCount, formatDate } from '../utils/progress'
+import { addDays, cardKind, checklistDoneCount, formatDate, kindFeatures, requiresEvidence } from '../utils/progress'
 import { CardSessionTimer } from './CardSessionTimer'
+
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
+function formatBytes(size) {
+  const bytes = Number(size ?? 0)
+  if (!bytes) return ''
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`
+}
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -68,6 +77,8 @@ export function CardDetailDrawer({
   onEvidenceAdd,
   onEvidenceUpdate,
   onEvidenceDelete,
+  onEvidenceFileAdd,
+  onOpenAttachment,
   onAddNote,
   onNoteUpdate,
   onDeleteNote,
@@ -93,6 +104,8 @@ export function CardDetailDrawer({
   const [evidenceDraft, setEvidenceDraft] = useState('')
   const [evidenceText, setEvidenceText] = useState({})
   const [editingEvidenceId, setEditingEvidenceId] = useState(null)
+  const [attachmentStatus, setAttachmentStatus] = useState('idle')
+  const [attachmentError, setAttachmentError] = useState('')
   const [form, setForm] = useState(() => createForm(card))
   const [resourceQuery, setResourceQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
@@ -177,6 +190,8 @@ export function CardDetailDrawer({
       setEvidenceDraft('')
       setEvidenceText({})
       setEditingEvidenceId(null)
+      setAttachmentStatus('idle')
+      setAttachmentError('')
       setNoteDraft('')
       setNoteText({})
       setEditingNoteId(null)
@@ -221,7 +236,10 @@ export function CardDetailDrawer({
 
   const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const doneItems = checklistDoneCount(card)
-  const overdue = referenceDate && card.dueDate && card.dueDate < referenceDate && !card.done
+  const kind = cardKind(card)
+  const evidenceExpected = requiresEvidence(card)
+  const overdue =
+    referenceDate && kindFeatures(card).overdue && card.dueDate && card.dueDate < referenceDate && !card.done
 
   function saveDetails() {
     const tags = form.tags
@@ -300,6 +318,25 @@ export function CardDetailDrawer({
     setEvidenceDraft('')
   }
 
+  async function uploadEvidenceFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !onEvidenceFileAdd) return
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError('Files must be 25 MB or smaller.')
+      return
+    }
+    setAttachmentStatus('saving')
+    setAttachmentError('')
+    try {
+      await onEvidenceFileAdd(card.id, file)
+      setAttachmentStatus('idle')
+    } catch (error) {
+      setAttachmentStatus('idle')
+      setAttachmentError(error.message || 'Upload failed — is the local server running?')
+    }
+  }
+
   function beginEvidenceEdit(item) {
     setEvidenceText((current) => ({ ...current, [item.id]: item.text }))
     setEditingEvidenceId(item.id)
@@ -349,6 +386,7 @@ export function CardDetailDrawer({
             <p className="eyebrow">Card {card.number}</p>
             <h2 id="detail-title">{card.title}</h2>
             <div className="meta-strip">
+              <span className={`kind-chip kind-${kind}`}>{kindFeatures(card).label}</span>
               <span>{card.phase}</span>
               <span>{card.module}</span>
               <span>{card.priority}</span>
@@ -417,10 +455,12 @@ export function CardDetailDrawer({
                 <dt>Estimate</dt>
                 <dd>{card.estimatedHours}h</dd>
               </div>
-              <div>
-                <dt>Evidence requirement</dt>
-                <dd>{card.evidenceRequirement || 'None recorded'}</dd>
-              </div>
+              {evidenceExpected && (
+                <div>
+                  <dt>Evidence requirement</dt>
+                  <dd>{card.evidenceRequirement || 'None recorded'}</dd>
+                </div>
+              )}
               <div>
                 <dt>Done condition</dt>
                 <dd>{card.doneCondition || 'None recorded'}</dd>
@@ -561,13 +601,18 @@ export function CardDetailDrawer({
           </section>
 
           <section className="drawer-section">
-            <h3>Evidence</h3>
+            <h3>{evidenceExpected ? 'Evidence' : 'Proof & attachments'}</h3>
+            {!evidenceExpected && (
+              <p className="muted">
+                Optional for this card — attach an email screenshot, PDF, or a short note if you want a record.
+              </p>
+            )}
             <div className="note-composer">
               <textarea
                 value={evidenceDraft}
                 onChange={(event) => setEvidenceDraft(event.target.value)}
-                rows={5}
-                placeholder="Add another evidence link or short text"
+                rows={evidenceExpected ? 5 : 3}
+                placeholder={evidenceExpected ? 'Add another evidence link or short text' : 'Add a short note or link'}
               />
               <button
                 type="button"
@@ -575,9 +620,18 @@ export function CardDetailDrawer({
                 onClick={saveEvidence}
                 disabled={!evidenceDraft.trim()}
               >
-                Save evidence
+                {evidenceExpected ? 'Save evidence' : 'Save note'}
               </button>
             </div>
+            {onEvidenceFileAdd && (
+              <div className="evidence-attach">
+                <label className={`secondary-button attach-button${attachmentStatus === 'saving' ? ' is-busy' : ''}`}>
+                  <input type="file" onChange={uploadEvidenceFile} disabled={attachmentStatus === 'saving'} />
+                  {attachmentStatus === 'saving' ? 'Uploading…' : 'Attach file (image, PDF, anything)'}
+                </label>
+                {attachmentError && <p className="attach-error">{attachmentError}</p>}
+              </div>
+            )}
             <div className="saved-evidence-list" aria-label="Saved evidence">
               {savedEvidenceItems.length === 0 ? (
                 <p className="muted">No evidence saved yet.</p>
@@ -615,11 +669,34 @@ export function CardDetailDrawer({
                         </>
                       ) : (
                         <>
-                          <p>{item.text}</p>
+                          {item.url ? (
+                            <p className="evidence-attachment">
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => {
+                                  // Plain click opens the in-app viewer; modified clicks
+                                  // keep the browser's raw-tab behaviour.
+                                  if (!onOpenAttachment || event.ctrlKey || event.metaKey || event.shiftKey) return
+                                  event.preventDefault()
+                                  onOpenAttachment(item)
+                                }}
+                              >
+                                <span className="type-badge">{item.fileType || 'FILE'}</span>
+                                <strong>{item.text}</strong>
+                                {item.size ? <small>{formatBytes(item.size)}</small> : null}
+                              </a>
+                            </p>
+                          ) : (
+                            <p>{item.text}</p>
+                          )}
                           <div className="checklist-row-actions">
-                            <button type="button" className="text-button" onClick={() => beginEvidenceEdit(item)}>
-                              Edit
-                            </button>
+                            {!item.url && (
+                              <button type="button" className="text-button" onClick={() => beginEvidenceEdit(item)}>
+                                Edit
+                              </button>
+                            )}
                             <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
                               Delete
                             </button>

@@ -10,6 +10,7 @@ import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
 import { FocusStatsBadge } from './components/FocusStats'
 import { FocusToasts } from './components/FocusToasts'
+import { DayReview } from './components/DayReview'
 import { ModuleWorkspace, ResourceReader } from './components/ModuleWorkspace'
 import { ProgressView } from './components/ProgressView'
 import { ScheduleView } from './components/ScheduleView'
@@ -48,8 +49,14 @@ import {
   requestBackupPermission,
   writeBackupHandle,
 } from './utils/fileBackup'
-import { readLocalResources, uploadLocalResource } from './utils/localStateFile'
-import { deriveStats, filterCards, sortCards, sumHours, todayString } from './utils/progress'
+import {
+  isCardAttachmentResource,
+  readLocalResources,
+  uploadCardAttachmentFile,
+  uploadLocalResource,
+} from './utils/localStateFile'
+import { deriveStats, filterCards, sortCards, startOfWeek, sumHours, todayString } from './utils/progress'
+import { buildWeeklyLifeCardInputs } from './utils/lifeCards'
 import { buildExecutionContext, expandScheduleForDate } from './utils/schedule'
 import { generateNotifications } from './utils/notifications'
 import { focusRewards } from './utils/focusRewards'
@@ -95,7 +102,7 @@ function optionExists(options, value, except = '') {
 
 const NAV_GROUPS = [
   { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
-  { label: 'Planning', items: ['schedule', 'dashboard', 'progress', 'analytics'] },
+  { label: 'Planning', items: ['schedule', 'review', 'dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
   { label: 'Focus', items: ['rescue', 'project', 'jobs', 'admin'] },
 ]
@@ -106,6 +113,7 @@ const VIEW_META = {
   dashboard: { title: 'Planner', subtitle: 'Pace, pipeline, and this week at a glance.' },
   progress: { title: 'Progress', subtitle: 'Trajectory, pace, and burn-down.' },
   schedule: { title: 'Schedule', subtitle: 'Hour-by-hour protected routines, study, project, and job blocks.' },
+  review: { title: 'Review', subtitle: 'Walk back through past days — what was planned, what actually happened.' },
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
   'team-project': { title: 'Team Project', subtitle: 'Protected CMT501 capacity; detailed project management stays elsewhere.' },
@@ -137,6 +145,24 @@ function parseAppHash() {
 
 function viewFromHash() {
   return parseAppHash().view
+}
+
+// Mirrors the server's viewerFor mapping for the file types attachments use.
+const ATTACHMENT_VIEWER_BY_TYPE = {
+  PDF: 'frame',
+  HTML: 'frame',
+  MD: 'markdown',
+  TXT: 'text',
+  CSV: 'text',
+  IPYNB: 'notebook',
+  MP4: 'video',
+  WEBM: 'video',
+  MOV: 'video',
+  PNG: 'image',
+  JPG: 'image',
+  JPEG: 'image',
+  WEBP: 'image',
+  GIF: 'image',
 }
 
 function resourceIdFromHash() {
@@ -191,6 +217,14 @@ function Icon({ name }) {
       break
     case 'time-series':
       body = <path {...p} d="M3 12h3l2-6 4 12 3-8 1.5 3H21" />
+      break
+    case 'review':
+      body = (
+        <>
+          <path {...p} d="M4 12a8 8 0 1 0 2.3-5.6L4 8.5" />
+          <path {...p} d="M4 4v4.5h4.5M12 8v4l3 2" />
+        </>
+      )
       break
     case 'team-project':
       body = (
@@ -431,6 +465,7 @@ export default function App() {
   const [sessionStartSignal, setSessionStartSignal] = useState(0)
   const [replanUndo, setReplanUndo] = useState(null)
   const [openResourceId, setOpenResourceId] = useState(null)
+  const [attachmentResource, setAttachmentResource] = useState(null)
   const [commandOpen, setCommandOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [message, setMessage] = useState('')
@@ -587,7 +622,8 @@ export default function App() {
     let cancelled = false
     readLocalResources()
       .then((resources) => {
-        if (!cancelled) setLocalResources(resources)
+        // Card attachments live on cards, not in the study-resource pickers.
+        if (!cancelled) setLocalResources(resources.filter((resource) => !isCardAttachmentResource(resource)))
       })
       .catch((error) => {
         if (!cancelled) console.warn('Local resources unavailable:', error)
@@ -926,6 +962,21 @@ export default function App() {
     unsavedSinceBackup,
   ])
 
+  // Seed this week's recurring life-admin and health cards once the local file
+  // has finished loading (so we never race the async import and duplicate).
+  // Idempotent: titles embed the week-commencing label, and a card is only added
+  // when no card with that exact title exists yet.
+  const seededWeekRef = useRef('')
+  useEffect(() => {
+    if (tracker.localFile.status === 'checking') return
+    const weekStart = startOfWeek(referenceDate)
+    if (seededWeekRef.current === weekStart) return
+    seededWeekRef.current = weekStart
+    for (const input of buildWeeklyLifeCardInputs(weekStart)) {
+      if (!tracker.cards.some((card) => card.title === input.title)) tracker.addCard(input)
+    }
+  }, [referenceDate, tracker])
+
   // A card can already be the active timer card, so setState alone is a no-op and
   // the timer effect never re-fires. Bump a signal on every request so re-clicking
   // the same card reliably re-opens the session timer.
@@ -939,9 +990,16 @@ export default function App() {
   function applyReplan(assignments) {
     if (!Array.isArray(assignments) || assignments.length === 0) return
     const affected = new Set(assignments.map((item) => item.cardId))
+    // Capture every affected card — an empty dueDate must round-trip so undo can
+    // restore cards that had no due date at all; startDate too (apply clamps it).
     const previous = tracker.cards
-      .filter((card) => affected.has(card.id) && card.dueDate)
-      .map((card) => ({ cardId: card.id, dueDate: card.dueDate, status: card.status }))
+      .filter((card) => affected.has(card.id))
+      .map((card) => ({
+        cardId: card.id,
+        dueDate: card.dueDate ?? '',
+        startDate: card.startDate ?? '',
+        status: card.status,
+      }))
     downloadBackup(new Date().toISOString())
     tracker.applyReplanSchedule(assignments)
     setReplanUndo(previous)
@@ -1240,6 +1298,20 @@ export default function App() {
     tracker.markResourceOpened(resourceId)
   }
 
+  // Evidence attachments only persist {url, fileName, fileType, size}, so a
+  // pseudo-resource is rebuilt for the shared ResourceReader overlay.
+  function openAttachment(entry) {
+    setAttachmentResource({
+      id: `attachment:${entry.url}`,
+      title: entry.fileName || entry.text || 'Attachment',
+      url: entry.url,
+      type: entry.fileType || 'FILE',
+      viewer: ATTACHMENT_VIEWER_BY_TYPE[entry.fileType] ?? 'file',
+      description: '',
+      group: 'Card attachments',
+    })
+  }
+
   async function uploadResourceForModule(module, payload) {
     const result = await uploadLocalResource({
       ...payload,
@@ -1253,6 +1325,18 @@ export default function App() {
     tracker.addUploadedResource(resource)
     setMessage(`Uploaded resource: ${resource.title}`)
     return resource
+  }
+
+  async function addEvidenceAttachment(cardId, file) {
+    const card = tracker.cards.find((item) => item.id === cardId)
+    const resource = await uploadCardAttachmentFile(file, card)
+    tracker.addEvidence(cardId, file.name, {
+      url: resource.url,
+      fileName: file.name,
+      fileType: resource.type,
+      size: resource.size,
+    })
+    setMessage(`Attached ${file.name} to the card.`)
   }
 
   function closeResource() {
@@ -1384,6 +1468,7 @@ export default function App() {
         />
       )
     }
+    if (activeView === 'review') return <DayReview cards={tracker.cards} referenceDate={referenceDate} />
     if (activeView === 'board') return <BoardView cards={visibleCards} actions={actions} />
     if (activeView === 'table') return <TableView cards={visibleCards} actions={actions} />
     if (activeView === 'week') return <WeekView cards={visibleCards} referenceDate={dayScheduleDate} actions={actions} />
@@ -1955,6 +2040,7 @@ export default function App() {
         onEvidenceAdd={tracker.addEvidence}
         onEvidenceUpdate={tracker.updateEvidence}
         onEvidenceDelete={tracker.deleteEvidence}
+        onEvidenceFileAdd={addEvidenceAttachment}
         onAddNote={tracker.addNote}
         onNoteUpdate={tracker.updateNote}
         onDeleteNote={tracker.deleteNote}
@@ -1968,6 +2054,7 @@ export default function App() {
         activeSessionCardId={activeTimerCardId}
         onReschedule={tracker.rescheduleCard}
         onOpenResource={openResource}
+        onOpenAttachment={openAttachment}
         onAddResource={tracker.addCardResource}
         onRemoveResource={tracker.removeCardResource}
         moduleOptions={moduleOptions}
@@ -1997,6 +2084,9 @@ export default function App() {
       />
 
       {activeResource && <ResourceReader resource={activeResource} onClose={closeResource} />}
+      {!activeResource && attachmentResource && (
+        <ResourceReader resource={attachmentResource} onClose={() => setAttachmentResource(null)} />
+      )}
 
       <Celebration trigger={celebrateSeed} />
 

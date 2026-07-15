@@ -75,8 +75,16 @@ export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) 
           <p className="eyebrow">Rescue re-plan</p>
           <h3>{plan.daysLeft} days left · {plan.dailyHours}h/day = {plan.capacity}h capacity</h3>
         </div>
-        <div className={`replan-verdict ${plan.fits ? 'ok' : 'over'}`}>
-          {plan.fits ? 'Exam work fits' : `Over by ${plan.overBy}h`}
+        <div
+          className={`replan-verdict ${schedule.overflow === 0 ? 'ok' : 'over'}`}
+          title={
+            schedule.overflow === 0
+              ? 'Every exam card packs into your timetable’s free study blocks before the readiness date.'
+              : `${schedule.stretchHours}h of exam work (${schedule.overflow} cards) packs past the readiness date, ` +
+                'measured against your real timetable’s free study blocks.'
+          }
+        >
+          {schedule.overflow === 0 ? 'Exam work fits' : `Over by ${schedule.stretchHours}h`}
         </div>
       </header>
 
@@ -95,7 +103,7 @@ export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) 
           <strong className={plan.compressionPct > 0 ? 'warn' : 'ok'}>
             {plan.compressionPct > 0 ? `−${plan.compressionPct}%` : 'fits'}
           </strong>
-          <span>{plan.compressionPct > 0 ? 'must compress' : 'no cuts needed'}</span>
+          <span>{plan.compressionPct > 0 ? 'must compress (flat model)' : 'no cuts needed'}</span>
         </div>
       </div>
 

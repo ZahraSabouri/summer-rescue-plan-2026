@@ -64,3 +64,30 @@ test('buildCatchUp honours the MAT700 toggle', () => {
   assert.equal(buildCatchUp(cards, REF, true).total, 2)
   assert.equal(buildCatchUp(cards, REF, false).total, 1)
 })
+
+test('buildCatchUp reports hoursBehind and oldestDue per module group', () => {
+  const cards = [
+    card({ id: 'old', dueDate: '2026-07-01', estimatedHours: 3 }),
+    card({ id: 'new', dueDate: '2026-07-13', estimatedHours: 2.5 }),
+    card({ id: 'ts', dueDate: '2026-07-10', estimatedHours: 4, moduleGroup: 'Time Series', module: 'Time Series' }),
+  ]
+  const result = buildCatchUp(cards, REF)
+  const aml = result.groups.find((group) => group.group === 'Applied ML')
+  const ts = result.groups.find((group) => group.group === 'Time Series')
+  assert.equal(aml.hoursBehind, 5.5)
+  assert.equal(aml.oldestDue, '2026-07-01')
+  assert.equal(ts.hoursBehind, 4)
+  assert.equal(ts.oldestDue, '2026-07-10')
+  // groups sort oldest-first, so AML (1 July) leads Time Series (10 July)
+  assert.deepEqual(result.groups.map((group) => group.group), ['Applied ML', 'Time Series'])
+})
+
+test('isActionableOverdue is the single behind-ness rule shared with module views', async () => {
+  const { isActionableOverdue } = await import('../src/utils/insights.js')
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-13' }), REF), true)
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-14' }), REF), false) // due today
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', done: true }), REF), false)
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', status: 'Waiting / Blocked' }), REF), false)
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', number: undefined }), REF), false) // not trackable
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', number: undefined, custom: true }), REF), true)
+})

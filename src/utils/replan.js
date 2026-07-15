@@ -149,8 +149,11 @@ export function computeReplanSchedule(cards, options = {}) {
   let dayIndex = 0
   let usedToday = 0
   let overflow = 0
+  let stretchHours = 0
+  let packedHours = 0
   const assignments = sorted.map((card) => {
-    let remaining = Math.max(0.5, Number(card.estimatedHours ?? card.hours ?? 0))
+    const cardHours = Math.max(0.5, Number(card.estimatedHours ?? card.hours ?? 0))
+    let remaining = cardHours
     while (remaining > 0 && dayIndex < HORIZON_DAYS) {
       const free = capFor(dayIndex) - usedToday
       if (free <= 0) {
@@ -168,7 +171,12 @@ export function computeReplanSchedule(cards, options = {}) {
     }
     const dueDate = addDays(referenceDate, Math.min(dayIndex, HORIZON_DAYS))
     const stretch = dueDate > readiness
-    if (stretch) overflow += 1
+    if (stretch) {
+      overflow += 1
+      stretchHours += cardHours
+    } else {
+      packedHours += cardHours
+    }
     return {
       cardId: card.id,
       dueDate,
@@ -183,6 +191,10 @@ export function computeReplanSchedule(cards, options = {}) {
     count: assignments.length,
     overflow,
     trimmed: lowYield.length,
+    // Hours that fit before readiness vs the hours that spill past it — the
+    // timetable-true version of buildReplan's flat "fits / over by" verdict.
+    packedHours: Math.round(packedHours * 10) / 10,
+    stretchHours: Math.round(stretchHours * 10) / 10,
     lastDay: assignments.length ? assignments[assignments.length - 1].dueDate : referenceDate,
   }
 }

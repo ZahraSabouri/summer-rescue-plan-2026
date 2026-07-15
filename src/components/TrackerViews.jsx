@@ -2,6 +2,7 @@ import { STATUS_COLUMNS } from '../data/constants'
 import { buildActivityHeatmap, buildBurnUp, buildHoursSeries, buildPace, bucketSeries } from '../utils/history'
 import {
   addDays,
+  cardKind,
   checklistDoneCount,
   formatDate,
   getCardDate,
@@ -10,6 +11,8 @@ import {
   groupBy,
   hasEvidence,
   isCurrentWeek,
+  KIND_META,
+  requiresEvidence,
   sortCards,
   sumHours,
 } from '../utils/progress'
@@ -329,6 +332,7 @@ export function TableView({ cards, actions }) {
           <tr>
             <th>Card</th>
             <th>Module</th>
+            <th>Kind</th>
             <th>Phase</th>
             <th>Priority</th>
             <th>Status</th>
@@ -348,6 +352,9 @@ export function TableView({ cards, actions }) {
                 </button>
               </td>
               <td>{card.module}</td>
+              <td>
+                <span className={`kind-chip kind-${cardKind(card)}`}>{KIND_META[cardKind(card)].label}</span>
+              </td>
               <td>{card.phase}</td>
               <td>{card.priority}</td>
               <td>
@@ -616,8 +623,10 @@ export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule
 }
 
 export function EvidenceView({ cards, actions }) {
+  // Kind-gated: only cards that owe evidence (study/project kinds, or an
+  // explicit requirement) plus anything that already logged proof.
   const evidenceCards = sortCards(
-    cards.filter((card) => card.evidenceRequirement || hasEvidence(card) || card.notes.length > 0),
+    cards.filter((card) => requiresEvidence(card) || hasEvidence(card)),
   )
 
   return (

@@ -8,6 +8,7 @@ import {
   STATUS_OPTIONS,
   TAG_OPTIONS,
 } from '../data/constants'
+import { KIND_META } from '../utils/progress'
 
 function SelectFilter({ label, value, onChange, options }) {
   return (
@@ -76,6 +77,17 @@ export function FilterBar({
         onChange={(value) => update('module', value)}
         options={moduleOptions}
       />
+      <label className="filter-field">
+        <span>Kind</span>
+        <select value={filters.kind ?? 'all'} onChange={(event) => update('kind', event.target.value)}>
+          <option value="all">All</option>
+          {Object.entries(KIND_META).map(([kind, meta]) => (
+            <option key={kind} value={kind}>
+              {meta.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <SelectFilter
         label="Priority"
         value={filters.priority}

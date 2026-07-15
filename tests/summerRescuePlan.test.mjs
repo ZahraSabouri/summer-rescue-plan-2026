@@ -26,7 +26,7 @@ function mondayOf(dateString) {
 
 test('summer rescue schedule protects capacity and contains no collisions', () => {
   const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, CAMPAIGN_END)
-  assert.equal(days.length, 47)
+  assert.equal(days.length, 44)
 
   for (const day of days) {
     const summary = summariseDay(day.blocks)
@@ -182,7 +182,7 @@ test('v3 tracker state migrates without discarding user work', () => {
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   assert.equal(migrated.settings.referenceDate, today)
-  assert.equal(migrated.settings.campaignStart, '2026-07-13')
+  assert.equal(migrated.settings.campaignStart, '2026-07-16')
   assert.equal(migrated.settings.campaignEnd, '2026-08-28')
   assert.equal(migrated.settings.mat700Active, true)
   assert.equal(migrated.settings.theme, 'dark')

@@ -1,5 +1,14 @@
 import { STATUS_OPTIONS } from '../data/constants'
-import { addDays, checklistDoneCount, checklistPercent, formatDate, hasEvidence } from '../utils/progress'
+import {
+  addDays,
+  cardKind,
+  checklistDoneCount,
+  checklistPercent,
+  formatDate,
+  hasEvidence,
+  kindFeatures,
+  requiresEvidence,
+} from '../utils/progress'
 import { CardSessionTimer } from './CardSessionTimer'
 
 function cardNumberLabel(number) {
@@ -23,9 +32,12 @@ export function CardSummary({
   const doneItems = checklistDoneCount(card)
   const totalItems = card.checklist.length
   const checklist = checklistPercent(card)
+  const kind = cardKind(card)
+  const evidenceExpected = requiresEvidence(card)
   const evidenceReady = hasEvidence(card)
   const latestNote = card.notes[0]?.text ?? ''
-  const overdue = referenceDate && card.dueDate && card.dueDate < referenceDate && !card.done
+  const overdue =
+    referenceDate && kindFeatures(card).overdue && card.dueDate && card.dueDate < referenceDate && !card.done
 
   return (
     <article className={`work-card ${compact ? 'compact' : ''} ${board ? 'board-card' : ''} ${card.done ? 'is-done' : ''}`}>
@@ -38,6 +50,7 @@ export function CardSummary({
         </div>
 
         <div className="meta-strip" aria-label="Card metadata">
+          <span className={`kind-chip kind-${kind}`}>{kindFeatures(card).label}</span>
           <span>{card.phase}</span>
           <span>{card.module}</span>
           <span>{card.priority}</span>
@@ -59,7 +72,7 @@ export function CardSummary({
         <span>
           {doneItems}/{totalItems} checklist
         </span>
-        <span>{evidenceReady ? 'Evidence logged' : 'Evidence open'}</span>
+        {evidenceExpected && <span>{evidenceReady ? 'Evidence logged' : 'Evidence open'}</span>}
       </div>
 
       <div className="work-card-controls">

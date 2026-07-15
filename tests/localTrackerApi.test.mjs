@@ -136,6 +136,52 @@ test('local resource upload stores metadata and serves the uploaded file', async
   })
 })
 
+test('deleting a card attachment removes the file and index entry; other modules are refused', async () => {
+  await withApi(async ({ baseUrl, projectRoot }) => {
+    const uploadFile = async (moduleId, fileName) => {
+      const response = await fetch(`${baseUrl}/api/resources/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleId,
+          moduleKey: moduleId,
+          fileName,
+          title: fileName,
+          dataBase64: Buffer.from('proof').toString('base64'),
+        }),
+      })
+      assert.equal(response.status, 201)
+      return (await response.json()).resource
+    }
+
+    const attachment = await uploadFile('card-attachments', 'email-proof.txt')
+    const studyResource = await uploadFile('time-series', 'notes.txt')
+    const attachmentPath = path.join(projectRoot, attachment.path.replace(/\//g, path.sep))
+    await fs.access(attachmentPath)
+
+    const deleteResponse = await fetch(`${baseUrl}${attachment.url}`, { method: 'DELETE' })
+    assert.equal(deleteResponse.status, 200)
+    const deleted = await deleteResponse.json()
+    assert.equal(deleted.ok, true)
+    assert.equal(deleted.fileDeleted, true)
+    assert.equal(deleted.indexDeleted, true)
+    await assert.rejects(fs.access(attachmentPath))
+
+    const list = await (await fetch(`${baseUrl}/api/resources`)).json()
+    assert.deepEqual(list.resources.map((item) => item.id), [studyResource.id])
+
+    // Second delete is idempotent: the file is already gone.
+    const repeatResponse = await fetch(`${baseUrl}${attachment.url}`, { method: 'DELETE' })
+    assert.equal(repeatResponse.status, 200)
+    assert.equal((await repeatResponse.json()).fileDeleted, false)
+
+    const refusedResponse = await fetch(`${baseUrl}${studyResource.url}`, { method: 'DELETE' })
+    assert.equal(refusedResponse.status, 403)
+    const studyFileResponse = await fetch(`${baseUrl}${studyResource.url}`)
+    assert.equal(studyFileResponse.status, 200)
+  })
+})
+
 test('saving state mirrors it into the SQLite store and reports it in db health', async () => {
   await withApi(async ({ baseUrl }) => {
     const emptyHealth = await (await fetch(`${baseUrl}/api/db/health`)).json()

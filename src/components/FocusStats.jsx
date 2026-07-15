@@ -1,8 +1,22 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { focusRewards } from '../utils/focusRewards'
 import { ACHIEVEMENTS, levelForPoints } from '../utils/focusProgress'
 
 function useRewards() {
+  // Midnight-rollover guard: an app left open past midnight would keep showing
+  // yesterday's "today" counters/streak until the next record* action.
+  useEffect(() => {
+    focusRewards.refreshDay()
+    const timer = window.setInterval(() => focusRewards.refreshDay(), 60_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') focusRewards.refreshDay()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
   return useSyncExternalStore(focusRewards.subscribe, focusRewards.getState)
 }
 

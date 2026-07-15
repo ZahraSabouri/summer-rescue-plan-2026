@@ -1,6 +1,6 @@
 export const TRACKER_STATE_VERSION = 4
-export const PLAN_REVISION = '2026-07-13-private-recovery-plan-v2'
-export const DEFAULT_CAMPAIGN_START = '2026-07-13'
+export const PLAN_REVISION = '2026-07-16-restart-recovery-plan-v3'
+export const DEFAULT_CAMPAIGN_START = '2026-07-16'
 export const DEFAULT_CAMPAIGN_END = '2026-08-28'
 export const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
 
@@ -62,6 +62,7 @@ export function createInitialTrackerState(referenceDate = localToday()) {
     uploadedResources: [],
     recentResourceIds: [],
     snapshots: {},
+    dayLogs: {},
     settings: {
       referenceDate: campaignReferenceDate(referenceDate),
       mat700Active: true,
@@ -88,7 +89,9 @@ export function migrateTrackerState(value) {
   const previousSettings = plainObject(value.settings)
   const planChanged = previousSettings.planRevision !== PLAN_REVISION
   const campaignStart =
-    !previousSettings.campaignStart || previousSettings.campaignStart === '2026-07-04'
+    !previousSettings.campaignStart ||
+    previousSettings.campaignStart === '2026-07-04' ||
+    previousSettings.campaignStart === '2026-07-13'
       ? DEFAULT_CAMPAIGN_START
       : previousSettings.campaignStart
   const campaignEnd =
@@ -113,6 +116,7 @@ export function migrateTrackerState(value) {
     uploadedResources: normaliseUploadedResources(value.uploadedResources),
     recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],
     snapshots: plainObject(value.snapshots),
+    dayLogs: plainObject(value.dayLogs),
     settings: {
       ...fallback.settings,
       ...previousSettings,

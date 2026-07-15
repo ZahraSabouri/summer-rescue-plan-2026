@@ -67,3 +67,48 @@ export async function uploadLocalResource(payload) {
   if (!response.ok) throw new Error(`Local resource upload failed (${response.status})`)
   return response.json()
 }
+
+// Card attachments reuse the resource-upload pipeline but live in their own
+// module directory and are kept out of the study-resource pickers.
+const ATTACHMENT_MODULE_ID = 'card-attachments'
+
+export function isCardAttachmentResource(resource) {
+  return resource?.moduleId === ATTACHMENT_MODULE_ID
+}
+
+export function isCardAttachmentUrl(url) {
+  return typeof url === 'string' && url.startsWith(`${RESOURCES_ENDPOINT}/file/${ATTACHMENT_MODULE_ID}/`)
+}
+
+// Best-effort cleanup when an evidence entry that owns the file is deleted.
+// The server only accepts deletes inside the card-attachments directory.
+export async function deleteCardAttachmentFile(url) {
+  if (!isCardAttachmentUrl(url)) throw new Error('Not a card-attachment URL.')
+  const response = await fetch(url, { method: 'DELETE' })
+  if (!response.ok) throw new Error(`Attachment delete failed (${response.status})`)
+  return response.json()
+}
+
+export async function uploadCardAttachmentFile(file, card) {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const chunks = []
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    chunks.push(String.fromCharCode(...bytes.subarray(index, index + 0x8000)))
+  }
+  const result = await uploadLocalResource({
+    fileName: file.name,
+    mimeType: file.type,
+    size: file.size,
+    title: file.name,
+    group: 'Card attachments',
+    description: `Attached to card ${card?.number ?? ''}: ${card?.title ?? ''}`.trim(),
+    tags: 'attachment',
+    priority: 'normal',
+    dataBase64: window.btoa(chunks.join('')),
+    moduleId: ATTACHMENT_MODULE_ID,
+    moduleKey: ATTACHMENT_MODULE_ID,
+    moduleGroup: card?.moduleGroup ?? '',
+  })
+  if (!result?.resource?.url) throw new Error('Upload did not return a stored file.')
+  return result.resource
+}

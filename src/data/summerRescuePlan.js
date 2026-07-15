@@ -1,6 +1,6 @@
 import { baseCards as legacyCards } from './baseCards.js'
 
-export const CAMPAIGN_START = '2026-07-13'
+export const CAMPAIGN_START = '2026-07-16'
 export const READINESS_DEADLINE = '2026-08-16'
 export const EXAM_WINDOW_START = '2026-08-17'
 export const CAMPAIGN_END = '2026-08-28'
@@ -352,9 +352,9 @@ const projectChecklist = [
 
 const projectCards = [
   datedCard({
-    id: 'project-capacity-w1', number: 201, title: 'CMT501 protected capacity — 13–19 July', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-07-13', dueDate: '2026-07-19', hours: 7, priority: 'High',
+    id: 'project-capacity-w1', number: 201, title: 'CMT501 protected capacity — 16–19 July', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-07-16', dueDate: '2026-07-19', hours: 5, priority: 'High',
     description: 'Generic capacity for the waste-management project. Work on the current bottleneck only; detailed project management stays in GitLab/the project app.', checklist: projectChecklist,
-    evidence: 'GitLab activity + short contribution/risk note', done: 'the week’s protected blocks were used or deliberately released to exam study', tags: ['project', 'capacity', 'gitlab'], slotLabel: 'Mon 2h + Thu class 3h + Sat 2h',
+    evidence: 'GitLab activity + short contribution/risk note', done: 'the week’s protected blocks were used or deliberately released to exam study', tags: ['project', 'capacity', 'gitlab'], slotLabel: 'Thu class 3h + Sat 2h',
   }),
   datedCard({
     id: 'project-capacity-w2', number: 202, title: 'CMT501 protected capacity — 20–26 July', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-07-20', dueDate: '2026-07-26', hours: 7, priority: 'High',
@@ -379,7 +379,7 @@ const projectCards = [
 ]
 
 const JOB_MAINTENANCE_WEEKS = [
-  ['2026-07-13', '2026-07-19', 'Score the master CV once', 'Run Cardiff’s CV checker once, save the baseline feedback, and choose the five highest-value fixes.'],
+  ['2026-07-16', '2026-07-19', 'Score the master CV once', 'Run Cardiff’s CV checker once, save the baseline feedback, and choose the five highest-value fixes.'],
   ['2026-07-20', '2026-07-26', 'Improve one clean master CV', 'Remove repetition, strengthen outcomes and measurements, and lock one clean UK master CV.'],
   ['2026-07-27', '2026-08-02', 'Create two lightweight CV tracks', 'Create Software/Backend/Platform and Data/Analytics/ML variants while keeping roughly 80–85% shared.'],
   ['2026-08-03', '2026-08-09', 'Set up Higherin', 'Create the core profile, upload the CV, set availability/location, and enable useful alerts only.'],

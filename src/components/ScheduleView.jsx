@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import {
   expandScheduleRange,
   findScheduleConflicts,
   resolveScheduledCard,
   summariseDay,
 } from '../utils/schedule'
+import { dayLog } from '../utils/dayLog'
+import { blockLogKey } from '../utils/dayReview'
+import { StatusToggle } from './DayReview'
 import './ScheduleView.css'
 
 const EXAM_LABELS = {
@@ -130,7 +133,9 @@ function DailyTotals({ summary }) {
   )
 }
 
-export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = false, date: agendaDate = '' }) {
+// logDate: when set, each block gets an inline Done/Skipped retro-log toggle
+// writing to the shared day log (same store the Review view reads).
+export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = false, date: agendaDate = '', logDate = '' }) {
   const sortedBlocks = useMemo(
     () => [...blocks].sort(
       (a, b) => clockSortValue(a.start) - clockSortValue(b.start) || clockSortValue(a.end) - clockSortValue(b.end),
@@ -140,6 +145,8 @@ export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = fal
   const summary = useMemo(() => summariseDay(sortedBlocks), [sortedBlocks])
   const conflicts = useMemo(() => findScheduleConflicts(sortedBlocks), [sortedBlocks])
   const date = validDay(agendaDate) || sortedBlocks[0]?.date || ''
+  const log = useSyncExternalStore(dayLog.subscribe, dayLog.getState)
+  const loggedBlocks = logDate ? log.days?.[logDate]?.blocks ?? {} : null
 
   return (
     <section className={`daily-agenda${compact ? ' daily-agenda-compact' : ''}`} aria-label={`Schedule for ${formatDay(date)}`}>
@@ -170,8 +177,17 @@ export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = fal
             const startsAt = clockSortValue(block.start)
             const endsAt = clockSortValue(block.end)
             const endDate = block.date && endsAt < startsAt ? addDays(block.date, 1) : block.date
+            const logKey = loggedBlocks ? blockLogKey(block) : null
+            const logStatus = logKey
+              ? loggedBlocks[logKey] === 'done' || loggedBlocks[logKey] === 'skipped'
+                ? loggedBlocks[logKey]
+                : 'unlogged'
+              : null
             return (
-              <li className={`daily-agenda-item category-${block.category || 'routine'}`} key={block.occurrenceId || `${block.id}-${block.date}-${block.start}`}>
+              <li
+                className={`daily-agenda-item category-${block.category || 'routine'}${logStatus ? ` is-${logStatus}` : ''}`}
+                key={block.occurrenceId || `${block.id}-${block.date}-${block.start}`}
+              >
                 <div className="daily-agenda-time">
                   <time dateTime={block.date ? `${block.date}T${block.start}` : undefined}>{block.start}</time>
                   <span aria-hidden="true">–</span>
@@ -195,6 +211,7 @@ export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = fal
                     {card && <span className="schedule-linked-card">Next: {card.title}</span>}
                   </div>
                 </div>
+                {logKey && <StatusToggle date={logDate} entry={{ key: logKey, status: logStatus }} />}
               </li>
             )
           })}

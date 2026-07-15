@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LOCAL_STATE_FILE_LABEL,
   appendLocalProgressEvent,
+  deleteCardAttachmentFile,
+  isCardAttachmentUrl,
   readLocalTrackerStateFile,
   writeLocalTrackerStateFile,
 } from '../utils/localStateFile'
+import { dayLog } from '../utils/dayLog'
 import { isTrackableCard, todayString } from '../utils/progress'
 import {
   createInitialTrackerState,
@@ -204,11 +207,20 @@ function normaliseEvidenceEntries(cardId, cardState = {}) {
         }
       }
       if (item && typeof item === 'object') {
-        return {
+        const entry = {
           id: item.id || `${cardId}-evidence-${index}`,
           text: String(item.text ?? '').trim(),
           at: item.at ?? '',
         }
+        // File-attachment evidence keeps its link metadata (url points at the
+        // local server's stored copy under local-data/resources).
+        if (item.url) {
+          entry.url = String(item.url)
+          entry.fileName = String(item.fileName ?? '')
+          entry.fileType = String(item.fileType ?? 'FILE')
+          entry.size = Number(item.size ?? 0)
+        }
+        return entry
       }
       return null
     })
@@ -399,6 +411,25 @@ export function useTrackerState(baseCards) {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
+
+  // Durability bridge for retro-logs: the dayLog store stays the only write
+  // surface (DayReview keeps its API), but its days are mirrored into tracker
+  // state so they ride along in backups and the local state file. Loading or
+  // restoring tracker state hydrates the store back; store entries win.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    dayLog.hydrate(state.dayLogs)
+    const syncFromStore = () => {
+      const days = dayLog.getState().days
+      setState((current) => {
+        const currentDays = current.dayLogs ?? {}
+        if (currentDays === days || JSON.stringify(currentDays) === JSON.stringify(days)) return current
+        return { ...current, dayLogs: days, updatedAt: nowIso() }
+      })
+    }
+    syncFromStore()
+    return dayLog.subscribe(syncFromStore)
+  }, [state.dayLogs])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -963,17 +994,26 @@ export function useTrackerState(baseCards) {
   }
 
   // Apply a re-plan: reschedule many cards to their own new due dates in one pass
-  // (each assignment is { cardId, dueDate, status? }). Stretch cards demote to
-  // Backlog via the per-assignment status; undo replays the previous date+status
-  // through the same path. Snapshotted, so it is undoable.
+  // (each assignment is { cardId, dueDate, status?, startDate? }). Stretch cards
+  // demote to Backlog via the per-assignment status; undo replays the previous
+  // date+status through the same path — an empty-string dueDate restores a card
+  // that had none, and an explicit startDate wins over the apply-time clamp.
+  // Snapshotted, so it is undoable.
   function applyReplanSchedule(assignments) {
     if (!Array.isArray(assignments) || assignments.length === 0) return
     setState((current) => {
       const nextCards = { ...current.cards }
       let changed = false
-      for (const { cardId, dueDate, status } of assignments) {
+      for (const assignment of assignments) {
+        const { cardId, dueDate, status } = assignment
         const card = cards.find((item) => item.id === cardId)
-        if (!card || card.done || !dueDate) continue
+        if (!card || card.done || dueDate === undefined || dueDate === null) continue
+        const startDate =
+          'startDate' in assignment
+            ? assignment.startDate
+            : card.startDate && dueDate && card.startDate > dueDate
+              ? dueDate
+              : card.startDate
         const currentCard = getCardState(current, cardId)
         nextCards[cardId] = {
           ...currentCard,
@@ -982,9 +1022,9 @@ export function useTrackerState(baseCards) {
             ...(currentCard.edits ?? {}),
             dueDate,
             dueDateTime: dueDate,
-            startDate: card.startDate && card.startDate > dueDate ? dueDate : card.startDate,
+            startDate,
           },
-          activity: addActivity(currentCard, 'Re-plan reschedule', dueDate),
+          activity: addActivity(currentCard, 'Re-plan reschedule', dueDate || 'no due date'),
           updatedAt: nowIso(),
         }
         changed = true
@@ -1004,13 +1044,14 @@ export function useTrackerState(baseCards) {
     updateCard(cardId, { evidence }, 'Updated evidence')
   }
 
-  function addEvidence(cardId, text) {
+  function addEvidence(cardId, text, attachment = null) {
     const value = text.trim()
     if (!value) return
     const evidenceId = makeId(`${cardId}-evidence`)
     queueCardEvent('evidence.added', cardId, {
       evidenceId,
       text: value,
+      ...(attachment?.url ? { url: attachment.url, fileName: attachment.fileName } : {}),
     })
 
     setState((current) => {
@@ -1022,13 +1063,21 @@ export function useTrackerState(baseCards) {
           id: evidenceId,
           at: nowIso(),
           text: value,
+          ...(attachment?.url
+            ? {
+                url: String(attachment.url),
+                fileName: String(attachment.fileName ?? ''),
+                fileType: String(attachment.fileType ?? 'FILE'),
+                size: Number(attachment.size ?? 0),
+              }
+            : {}),
         },
       ]
       const nextCard = {
         ...currentCard,
         evidenceEntries: nextEntries,
         evidence: evidenceText(nextEntries),
-        activity: addActivity(currentCard, 'Added evidence'),
+        activity: addActivity(currentCard, attachment?.url ? 'Attached file' : 'Added evidence'),
         updatedAt: nowIso(),
       }
 
@@ -1088,6 +1137,11 @@ export function useTrackerState(baseCards) {
       evidenceId,
       text: entry.text,
     })
+    if (isCardAttachmentUrl(entry.url)) {
+      deleteCardAttachmentFile(entry.url).catch((error) => {
+        console.warn('Attachment file cleanup skipped:', error.message)
+      })
+    }
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const entries = normaliseEvidenceEntries(cardId, currentCard)

@@ -1,4 +1,4 @@
-import { addDays, formatDate, getCardDate, localDateString, toDate } from './progress'
+import { addDays, formatDate, getCardDate, kindFeatures, localDateString, toDate } from './progress'
 
 const EXAM_THRESHOLDS = new Set([45, 30, 21, 14, 7, 3, 1])
 
@@ -80,7 +80,7 @@ export function generateNotifications({
         )
       }
 
-      if (daysLate != null && daysLate >= 1 && daysLate % 2 === 1) {
+      if (daysLate != null && daysLate >= 1 && daysLate % 2 === 1 && kindFeatures(card).overdue) {
         records.push(
           notification({
             id: `${card.id}:overdue:${referenceDate}`,

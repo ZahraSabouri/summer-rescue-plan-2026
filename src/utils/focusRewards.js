@@ -4,7 +4,7 @@
 // are queued as transient "notices" for celebration toasts. Persisted to
 // localStorage (notices excluded); components subscribe via useSyncExternalStore.
 
-import { ACHIEVEMENTS, evaluateUnlocks, levelForPoints, treeForMinutes } from './focusProgress'
+import { ACHIEVEMENTS, evaluateUnlocks, levelForPoints, treeForMinutes } from './focusProgress.js'
 
 const STORAGE_KEY = 'summer-rescue-focus-rewards'
 
@@ -72,11 +72,24 @@ function commit(next) {
   listeners.forEach((listener) => listener())
 }
 
+// Pure day-rollover: reset the "today" counters when the calendar day changed,
+// and zero a streak that can no longer be extended (last activity before
+// yesterday). Returns the SAME reference when nothing needs to change.
+// Exported for tests.
+export function rollDayState(current, day, yesterday) {
+  let next = current
+  if (current.today.date !== day) {
+    next = { ...next, today: { date: day, trees: 0, minutes: 0, wilted: 0, treeList: [] } }
+  }
+  if (next.streak !== 0 && next.lastDate !== day && next.lastDate !== yesterday) {
+    next = { ...next, streak: 0 }
+  }
+  return next
+}
+
 // Reset per-day counters when the calendar day changes.
 function rolledToday(current) {
-  const day = todayStr()
-  if (current.today.date === day) return current
-  return { ...current, today: { date: day, trees: 0, minutes: 0, wilted: 0, treeList: [] } }
+  return rollDayState(current, todayStr(), yesterdayStr())
 }
 
 // Continue the streak if we already logged today, extend from yesterday, else reset to 1.
@@ -148,6 +161,13 @@ export const focusRewards = {
       totalWilted: base.totalWilted + 1,
       today: { ...base.today, wilted: base.today.wilted + 1 },
     }))
+  },
+  // Commit a day rollover without any record* action — an app left open past
+  // midnight otherwise shows yesterday's "today" counters until the next action.
+  refreshDay() {
+    const next = rolledToday(state)
+    if (next === state) return
+    commit(next)
   },
   // Guard strictness: true = forfeit on leaving, false = pause & nudge.
   setStrict(next) {

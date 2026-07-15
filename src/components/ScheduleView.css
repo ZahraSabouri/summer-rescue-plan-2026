@@ -483,3 +483,38 @@
     scroll-behavior: auto;
   }
 }
+
+/* ---------- Inline day-log toggles (Today's agenda) ---------- */
+/* When a block is loggable it carries an is-* state class; make room for the
+   Done/Skipped toggle in a third column. */
+.daily-agenda-item.is-done,
+.daily-agenda-item.is-skipped,
+.daily-agenda-item.is-unlogged {
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.daily-agenda-item .review-toggle {
+  justify-self: end;
+}
+
+.daily-agenda-item.is-done {
+  background: color-mix(in srgb, var(--green, #2e8b57) 7%, transparent);
+}
+
+.daily-agenda-item.is-skipped .daily-agenda-content {
+  opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .daily-agenda-item.is-done,
+  .daily-agenda-item.is-skipped,
+  .daily-agenda-item.is-unlogged {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+  }
+
+  .daily-agenda-item .review-toggle {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

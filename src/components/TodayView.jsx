@@ -14,8 +14,38 @@ import { CardSessionTimer } from './CardSessionTimer'
 import { FocusForestPanel } from './FocusStats'
 import { CatchUpPanel } from './CatchUpPanel'
 import { ReplanPanel } from './ReplanPanel'
+import { YesterdayStrip } from './DayReview'
 import { DailyAgenda } from './ScheduleView'
 import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
+
+// A <details> whose open/closed state survives reloads (per-panel storage key).
+function PersistedDetails({ storageKey, className, children }) {
+  const [open, setOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem(storageKey) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  return (
+    <details
+      className={className}
+      open={open}
+      onToggle={(event) => {
+        const next = event.target.open
+        setOpen(next)
+        try {
+          window.localStorage.setItem(storageKey, next ? '1' : '0')
+        } catch {
+          // Storage can be unavailable (private mode); the panel still toggles.
+        }
+      }}
+    >
+      {children}
+    </details>
+  )
+}
 
 function greeting() {
   const hour = new Date().getHours()
@@ -287,28 +317,7 @@ export function TodayView({
         />
       </section>
 
-      <ReplanPanel
-        cards={cards}
-        referenceDate={referenceDate}
-        onApply={actions.onApplyReplan}
-        onUndo={actions.onUndoReplan}
-        canUndo={actions.replanCanUndo}
-      />
-
       <CatchUpPanel catchUp={catchUp} actions={actions} />
-
-      <FocusForestPanel />
-
-      <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>
-        <header className="panel-head">
-          <div>
-            <p className="eyebrow">Protected timetable</p>
-            <h3>{preCampaign ? 'Tomorrow preview, hour by hour' : 'Today, hour by hour'}</h3>
-          </div>
-          <span className="muted small">Routines are blocks; outputs stay checkable cards.</span>
-        </header>
-        <DailyAgenda date={scheduleDate || referenceDate} blocks={dayBlocks} cards={cards} onOpenCard={onOpenCard} compact />
-      </section>
 
       <section className="today-picks" aria-label="Top focus picks">
         <header className="section-head">
@@ -361,15 +370,69 @@ export function TodayView({
         )}
       </section>
 
-      <div className="today-lower">
-        <SplitGuardrail guardrail={guardrail} />
+      <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>
+        <header className="panel-head">
+          <div>
+            <p className="eyebrow">Protected timetable</p>
+            <h3>{preCampaign ? 'Tomorrow preview, hour by hour' : 'Today, hour by hour'}</h3>
+          </div>
+          <span className="muted small">
+            {preCampaign
+              ? 'Routines are blocks; outputs stay checkable cards.'
+              : 'Log each block as it actually went — Done or Skipped, right here.'}
+          </span>
+        </header>
+        <DailyAgenda
+          date={scheduleDate || referenceDate}
+          blocks={dayBlocks}
+          cards={cards}
+          onOpenCard={onOpenCard}
+          logDate={preCampaign ? '' : scheduleDate || referenceDate}
+          compact
+        />
+      </section>
 
+      <YesterdayStrip cards={cards} referenceDate={referenceDate} />
+
+      <PersistedDetails storageKey="srp-today-tools-replan" className="today-tools panel">
+        <summary>
+          <strong>Re-plan overdue cards</strong>
+          <span className="muted small">Sweep slipped dates forward when the backlog piles up.</span>
+        </summary>
+        <ReplanPanel
+          cards={cards}
+          referenceDate={referenceDate}
+          onApply={actions.onApplyReplan}
+          onUndo={actions.onUndoReplan}
+          canUndo={actions.replanCanUndo}
+        />
+      </PersistedDetails>
+
+      <PersistedDetails storageKey="srp-today-tools-forest" className="today-tools panel">
+        <summary>
+          <strong>Focus forest & priority split</strong>
+          <span className="muted small">Rewards and the module-mix guardrail.</span>
+        </summary>
+        <FocusForestPanel />
+        <SplitGuardrail guardrail={guardrail} />
+      </PersistedDetails>
+
+      <div className="today-lower">
         <section className="panel wrapup-panel" aria-label="Day wrap-up">
           <header className="panel-head">
             <div>
               <p className="eyebrow">Wrap-up</p>
               <h3>Shipped today</h3>
             </div>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                window.location.hash = '#/review'
+              }}
+            >
+              Review the day
+            </button>
           </header>
           {daySummary.doneToday.length === 0 ? (
             <p className="empty-note">

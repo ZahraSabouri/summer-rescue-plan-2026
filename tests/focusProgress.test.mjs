@@ -80,3 +80,41 @@ test('every achievement has a stable id, icon, and predicate', () => {
     ids.add(achievement.id)
   }
 })
+
+test('rollDayState resets today counters at a date boundary without any record* action', async () => {
+  const { rollDayState } = await import('../src/utils/focusRewards.js')
+  const state = {
+    points: 120,
+    streak: 3,
+    bestStreak: 5,
+    lastDate: '2026-07-13',
+    today: { date: '2026-07-13', trees: 2, minutes: 95, wilted: 1, treeList: ['oak', 'pine'] },
+  }
+  const rolled = rollDayState(state, '2026-07-14', '2026-07-13')
+  assert.deepEqual(rolled.today, { date: '2026-07-14', trees: 0, minutes: 0, wilted: 0, treeList: [] })
+  assert.equal(rolled.streak, 3, 'streak extendable from yesterday stays visible')
+  assert.equal(rolled.points, 120, 'points are all-time, never reset')
+})
+
+test('rollDayState zeroes a broken streak and no-ops on the same day', async () => {
+  const { rollDayState } = await import('../src/utils/focusRewards.js')
+  const stale = {
+    points: 10,
+    streak: 4,
+    bestStreak: 4,
+    lastDate: '2026-07-11',
+    today: { date: '2026-07-11', trees: 1, minutes: 30, wilted: 0, treeList: ['oak'] },
+  }
+  const rolled = rollDayState(stale, '2026-07-14', '2026-07-13')
+  assert.equal(rolled.streak, 0, 'streak broken two+ days ago reads 0')
+  assert.equal(rolled.bestStreak, 4)
+
+  const fresh = {
+    points: 10,
+    streak: 2,
+    bestStreak: 4,
+    lastDate: '2026-07-14',
+    today: { date: '2026-07-14', trees: 1, minutes: 30, wilted: 0, treeList: ['oak'] },
+  }
+  assert.equal(rollDayState(fresh, '2026-07-14', '2026-07-13'), fresh, 'same day → same reference, no commit')
+})

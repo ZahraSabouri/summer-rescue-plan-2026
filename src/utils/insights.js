@@ -190,14 +190,24 @@ export function daysLate(card, referenceDate) {
   return Math.max(0, Math.round((Date.parse(referenceDate) - Date.parse(card.dueDate)) / 86400000))
 }
 
+// A card that counts as "behind": a planned card (not a resource row), not done,
+// actionable right now (not Waiting/Blocked), and past its due date. Shared by
+// the Catch-up panel and the module workspace so every overdue count (stat tile,
+// progress split, Behind banner) agrees on one definition.
+export function isActionableOverdue(card, referenceDate) {
+  return (
+    isTrackableCard(card) &&
+    !card.done &&
+    card.status !== 'Waiting / Blocked' &&
+    isOverdue(card, referenceDate)
+  )
+}
+
 export function buildCatchUp(cards, referenceDate, mat700Active = true) {
   const behind = (cards ?? [])
     .filter(
       (card) =>
-        isTrackableCard(card) &&
-        !card.done &&
-        card.status !== 'Waiting / Blocked' &&
-        isOverdue(card, referenceDate) &&
+        isActionableOverdue(card, referenceDate) &&
         (mat700Active || card.moduleGroup !== 'MAT700'),
     )
     .map((card) => ({ card, dueDate: card.dueDate, daysLate: Math.max(1, daysLate(card, referenceDate)) }))

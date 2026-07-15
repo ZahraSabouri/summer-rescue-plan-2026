@@ -4,10 +4,10 @@ import {
   checklistDoneCount,
   formatDate,
   getCardDate,
-  isOverdue,
   sortCards,
   sumHours,
 } from '../utils/progress'
+import { isActionableOverdue } from '../utils/insights'
 import { codeLanguage, isPlaceholderResourceUrl, isYouTube, youtubeEmbedUrl } from '../utils/resourceLinks.js'
 import { CardSummary } from './CardSummary'
 
@@ -649,7 +649,7 @@ export function ResourceReader({ resource, onClose, standalone = false }) {
 function ModuleStats({ moduleCards, referenceDate, onOpenPlanning }) {
   const done = moduleCards.filter((card) => card.done).length
   const open = moduleCards.length - done
-  const overdue = moduleCards.filter((card) => isOverdue(card, referenceDate)).length
+  const overdue = moduleCards.filter((card) => isActionableOverdue(card, referenceDate)).length
   const checklistItems = moduleCards.reduce((sum, card) => sum + (card.checklist?.length ?? 0), 0)
   const checklistDone = moduleCards.reduce((sum, card) => sum + checklistDoneCount(card), 0)
 
@@ -770,7 +770,7 @@ const MODULE_TABS = [
 function ModuleProgressBar({ moduleCards, referenceDate }) {
   const total = moduleCards.length
   const done = moduleCards.filter((card) => card.done).length
-  const overdue = moduleCards.filter((card) => !card.done && isOverdue(card, referenceDate)).length
+  const overdue = moduleCards.filter((card) => isActionableOverdue(card, referenceDate)).length
   const open = Math.max(0, total - done - overdue)
   const pct = percent(done, total)
 
@@ -838,7 +838,7 @@ export function ModuleWorkspace({
   const moduleBehind = useMemo(
     () =>
       moduleCards
-        .filter((card) => !card.done && card.status !== 'Waiting / Blocked' && isOverdue(card, referenceDate))
+        .filter((card) => isActionableOverdue(card, referenceDate))
         .map((card) => ({
           card,
           daysLate: Math.max(1, Math.round((Date.parse(referenceDate) - Date.parse(card.dueDate)) / 86400000)),

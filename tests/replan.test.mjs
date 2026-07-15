@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildReplan, computeReplanSchedule } from '../src/utils/replan.js'
+import { addDays } from '../src/utils/progress.js'
 
 function card(overrides) {
   return { number: 1, moduleGroup: 'Applied ML', done: false, estimatedHours: 10, ...overrides }
@@ -119,4 +120,62 @@ test('computeReplanSchedule flags cards beyond readiness as stretch', () => {
   assert.ok(overflow > 0)
   assert.ok(assignments.some((a) => a.stretch))
   assert.ok(assignments.slice(0, 20).every((a) => !a.stretch)) // early ones fit
+})
+
+test('buildStudyCapacityLookup counts only study blocks and guards bad times', async () => {
+  const { buildStudyCapacityLookup } = await import('../src/utils/replan.js')
+  const lookup = buildStudyCapacityLookup(() => [
+    { category: 'study', start: '09:00', end: '12:00' }, // 3h counts
+    { category: 'class', start: '13:00', end: '15:00' }, // busy time — never counts
+    { category: 'study', start: 'nope', end: '17:00' }, // NaN guard — skipped
+    { category: 'study', start: '18:00', end: '19:30' }, // 1.5h counts
+  ])
+  assert.equal(lookup('2026-07-14'), 4.5)
+})
+
+test('buildStudyCapacityLookup memoises per date', async () => {
+  const { buildStudyCapacityLookup } = await import('../src/utils/replan.js')
+  let calls = 0
+  const lookup = buildStudyCapacityLookup(() => {
+    calls += 1
+    return [{ category: 'study', start: '09:00', end: '11:00' }]
+  })
+  assert.equal(lookup('2026-07-14'), 2)
+  assert.equal(lookup('2026-07-14'), 2)
+  assert.equal(lookup('2026-07-15'), 2)
+  assert.equal(calls, 2, 'one expansion per distinct date')
+})
+
+test('computeReplanSchedule caps generous timetable days at dailyHours', () => {
+  const cards = [
+    { id: 'a', number: 1, moduleGroup: 'Applied ML', done: false, priority: 'High', estimatedHours: 16, dueDate: '2026-07-20' },
+  ]
+  // Timetable says 12h free, but the sustainable cap is 8h/day → 16h spans 2 days.
+  const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8, capacityForDate: () => 12 })
+  assert.equal(assignments[0].dueDate, '2026-07-15')
+})
+
+test('computeReplanSchedule is bounded by the packing horizon', () => {
+  const cards = [
+    { id: 'huge', number: 1, moduleGroup: 'Applied ML', done: false, priority: 'High', estimatedHours: 10000, dueDate: '2026-07-20' },
+    { id: 'after', number: 2, moduleGroup: 'Applied ML', done: false, priority: 'Low', estimatedHours: 4, dueDate: '2026-07-20' },
+  ]
+  const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
+  // 10000h can never finish — the horizon stops the walk instead of spinning,
+  // and everything after the monster card lands on the horizon date too.
+  const horizonDate = addDays(REF, 240)
+  assert.equal(assignments[0].dueDate, horizonDate)
+  assert.ok(assignments.every((a) => a.dueDate <= horizonDate))
+  assert.ok(assignments[0].stretch)
+})
+
+test('computeReplanSchedule reports packed vs stretch hours for the headline', () => {
+  const cards = Array.from({ length: 60 }, (_, i) => ({
+    id: `c${i}`, number: i, moduleGroup: 'Applied ML', done: false, priority: 'High', estimatedHours: 8, dueDate: '2026-07-20',
+  }))
+  const result = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
+  assert.equal(result.packedHours + result.stretchHours, 480)
+  const stretchSum = result.assignments.filter((a) => a.stretch).length * 8
+  assert.equal(result.stretchHours, stretchSum)
+  assert.ok(result.stretchHours > 0)
 })

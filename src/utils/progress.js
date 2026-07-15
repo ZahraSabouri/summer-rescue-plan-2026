@@ -54,8 +54,47 @@ export function isCurrentWeek(dateString, referenceDate) {
   return isBetween(dateString, start, end)
 }
 
+// Card kinds: every card belongs to exactly one lane-family, derived from its
+// module group. The kind decides which behaviours apply — evidence requirements
+// are a study/project concept, overdue pressure never applies to life cards
+// (a missed grocery run is not "3 days overdue", it just moves on).
+const KIND_BY_MODULE_GROUP = {
+  'Applied ML': 'study',
+  'Time Series': 'study',
+  MAT700: 'study',
+  'Cross-module': 'study',
+  'Group Project': 'project',
+  'Job Hunt': 'job',
+  Admin: 'admin',
+  Health: 'life',
+  General: 'life',
+}
+
+export const KIND_META = {
+  study: { label: 'Study', evidence: true, overdue: true },
+  project: { label: 'Project', evidence: true, overdue: true },
+  job: { label: 'Job hunt', evidence: false, overdue: true },
+  admin: { label: 'Admin', evidence: false, overdue: true },
+  life: { label: 'Life', evidence: false, overdue: false },
+}
+
+export function cardKind(card) {
+  return KIND_BY_MODULE_GROUP[card?.moduleGroup] ?? 'study'
+}
+
+export function kindFeatures(card) {
+  return KIND_META[cardKind(card)]
+}
+
+// The evidence-requirement nag ("Evidence open") belongs to kinds that owe
+// proof of work, or to any card whose plan explicitly demands evidence.
+export function requiresEvidence(card) {
+  return kindFeatures(card).evidence || Boolean((card?.evidenceRequirement ?? '').trim())
+}
+
 export function isOverdue(card, referenceDate) {
   if (card.done || !card.dueDate) return false
+  if (!kindFeatures(card).overdue) return false
   return card.dueDate < referenceDate
 }
 
@@ -135,6 +174,7 @@ export function filterCards(cards, filters, referenceDate) {
     if (filters.module !== 'all' && card.moduleGroup !== filters.module) return false
     if (filters.priority !== 'all' && card.priority !== filters.priority) return false
     if (filters.status !== 'all' && card.status !== filters.status) return false
+    if (filters.kind && filters.kind !== 'all' && cardKind(card) !== filters.kind) return false
     if (filters.slotType !== 'all' && card.slotType !== filters.slotType) return false
     if (filters.tag !== 'all' && !(card.tags ?? []).includes(filters.tag)) return false
 

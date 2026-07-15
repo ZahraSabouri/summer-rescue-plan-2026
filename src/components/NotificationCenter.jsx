@@ -120,19 +120,26 @@ export function NotificationCenter({
             )}
             {filteredNotices.map((notice) => (
               <div key={notice.id} className={`notif-item ${notice.type} ${notice.read ? 'is-read' : 'is-unread'}`}>
-                <span className="notif-ico" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={TYPE_ICON[notice.type] ?? TYPE_ICON.info} />
-                  </svg>
-                </span>
-                <div className="notif-body">
-                  <strong>
-                    {!notice.read && <i className="unread-dot" aria-hidden="true" />}
-                    {notice.title}
-                  </strong>
-                  {notice.detail && <p>{notice.detail}</p>}
-                  <time>{formatDate(notice.createdAt)}</time>
-                </div>
+                <button
+                  type="button"
+                  className="notif-open-target"
+                  onClick={() => runAction(notice)}
+                  title={notice.cardId ? 'Open this card' : 'Open the related view'}
+                >
+                  <span className="notif-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={TYPE_ICON[notice.type] ?? TYPE_ICON.info} />
+                    </svg>
+                  </span>
+                  <span className="notif-body">
+                    <strong>
+                      {!notice.read && <i className="unread-dot" aria-hidden="true" />}
+                      {notice.title}
+                    </strong>
+                    {notice.detail && <span className="notif-detail">{notice.detail}</span>}
+                    <time>{formatDate(notice.createdAt)}</time>
+                  </span>
+                </button>
                 <div className="notif-row-actions">
                   <button
                     type="button"
@@ -140,9 +147,6 @@ export function NotificationCenter({
                     onClick={() => onSetRead?.(notice.id, !notice.read)}
                   >
                     {notice.read ? 'Unread' : 'Read'}
-                  </button>
-                  <button type="button" className="notif-action" onClick={() => runAction(notice)}>
-                    Open
                   </button>
                 </div>
               </div>

@@ -1,0 +1,893 @@
+{
+  "exportedAt": "2026-07-15T11:14:20.795Z",
+  "app": "summer-rescue-plan-app",
+  "state": {
+    "version": 4,
+    "cards": {
+      "card-001": {
+        "resourceIds": [],
+        "hiddenResourceIds": [
+          "aml-session-2-lab-2-preprocessing-notebook",
+          "aml-session-2-lab-2-solution-notebook",
+          "aml-session-2-s2-preprocessing-slides",
+          "aml-session-3-s3-regression-and-evaluation-slides"
+        ],
+        "activity": [
+          {
+            "id": "log-411cd04e-39b5-4456-b3e5-01686ac519e3",
+            "at": "2026-07-13T20:00:10.495Z",
+            "action": "Unlinked resource",
+            "details": "aml-session-3-s3-regression-and-evaluation-slides"
+          },
+          {
+            "id": "log-2ed79e38-6120-4e42-95de-7ba54e702aeb",
+            "at": "2026-07-13T20:00:07.134Z",
+            "action": "Linked resource",
+            "details": "aml-session-3-s3-regression-and-evaluation-slides"
+          },
+          {
+            "id": "log-f24a7545-8a42-424c-bdf1-0210333dd973",
+            "at": "2026-07-13T19:22:54.159Z",
+            "action": "Focus session",
+            "details": "1 min"
+          },
+          {
+            "id": "log-51d846e3-16e5-4b43-a350-3af4cca6de23",
+            "at": "2026-07-06T17:52:06.835Z",
+            "action": "Updated checklist",
+            "details": ""
+          },
+          {
+            "id": "log-758df912-4ccb-4560-abbb-6fb114fc19c0",
+            "at": "2026-07-06T17:51:58.835Z",
+            "action": "Unlinked resource",
+            "details": "aml-session-2-s2-preprocessing-slides"
+          },
+          {
+            "id": "log-37399a70-929e-4acc-a2ba-b95b05716665",
+            "at": "2026-07-06T17:51:56.307Z",
+            "action": "Unlinked resource",
+            "details": "aml-session-2-lab-2-solution-notebook"
+          },
+          {
+            "id": "log-ecd83720-4a05-425c-80f7-e342e05dc959",
+            "at": "2026-07-06T17:51:54.412Z",
+            "action": "Unlinked resource",
+            "details": "aml-session-2-lab-2-preprocessing-notebook"
+          }
+        ],
+        "updatedAt": "2026-07-13T20:00:10.495Z",
+        "checklist": {
+          "card-001-check-0": true
+        },
+        "actualHours": 0.25,
+        "focusSessions": [
+          {
+            "id": "focus-1c482a02-ffa7-43c6-9902-7ae28d600bf5",
+            "at": "2026-07-13T19:22:54.159Z",
+            "minutes": 1,
+            "hours": 0.25
+          }
+        ]
+      },
+      "mat700-rebuild-l2": {
+        "resourceIds": [],
+        "hiddenResourceIds": [
+          "mat700Plan-study-plan-mat700-planning-guardrails"
+        ],
+        "activity": [
+          {
+            "id": "log-174ab0bb-b639-4f68-9d43-9d1ad91334e9",
+            "at": "2026-07-12T21:45:36.966Z",
+            "action": "Unlinked resource",
+            "details": "mat700Plan-study-plan-mat700-planning-guardrails"
+          },
+          {
+            "id": "log-003a9d51-340c-4f34-8519-e548fdb4cbf6",
+            "at": "2026-07-12T21:45:32.389Z",
+            "action": "Linked resource",
+            "details": "mat700Plan-study-plan-mat700-planning-guardrails"
+          }
+        ],
+        "updatedAt": "2026-07-12T21:45:36.966Z"
+      },
+      "custom-card-99a21b08-3eb6-4122-ae29-dda72adfd42d": {
+        "status": "This Week",
+        "done": false,
+        "activity": [
+          {
+            "id": "log-81334940-268b-41f9-ad75-1a19d473d7ac",
+            "at": "2026-07-14T16:01:27.996Z",
+            "action": "Added card",
+            "details": "LIFE — Groceries + supermarket run (w/c Mon 13 Jul)"
+          }
+        ]
+      },
+      "custom-card-2691d160-4125-430a-8c49-f2a69722efc6": {
+        "status": "This Week",
+        "done": false,
+        "activity": [
+          {
+            "id": "log-589c23e2-bf02-434c-a75d-8ae5a96ecbe0",
+            "at": "2026-07-14T16:01:28.001Z",
+            "action": "Added card",
+            "details": "LIFE — Laundry + room reset (w/c Mon 13 Jul)"
+          }
+        ]
+      },
+      "custom-card-0a0d87a8-a2f8-4819-94e5-92695221a4e8": {
+        "status": "Done",
+        "done": true,
+        "activity": [
+          {
+            "id": "log-de27c629-041f-4b13-823f-f3b66a0f13fc",
+            "at": "2026-07-14T21:31:19.310Z",
+            "action": "Marked done",
+            "details": ""
+          },
+          {
+            "id": "log-0138b268-69c4-4d91-acf3-48f80da06c0a",
+            "at": "2026-07-14T16:01:28.004Z",
+            "action": "Added card",
+            "details": "LIFE — Admin hour: email, forms, bills (w/c Mon 13 Jul)"
+          }
+        ],
+        "previousStatus": "This Week",
+        "updatedAt": "2026-07-14T21:31:19.310Z"
+      },
+      "custom-card-034f499d-127d-4711-8340-8ee823577314": {
+        "status": "This Week",
+        "done": false,
+        "activity": [
+          {
+            "id": "log-aa34d2a4-6051-4311-9779-e20a79c36d4b",
+            "at": "2026-07-14T16:01:28.009Z",
+            "action": "Added card",
+            "details": "HEALTH — Three movement breaks (w/c Mon 13 Jul)"
+          }
+        ]
+      },
+      "admin-summer-assessment-confirmation": {
+        "evidenceEntries": [
+          {
+            "id": "admin-summer-assessment-confirmation-evidence-1c9b8adb-08d2-4e6a-b840-11b2c777b4b4",
+            "text": "sent three emails.\n\nhttps://chatgpt.com/c/6a569194-0598-83eb-ada0-e14b8c183753",
+            "at": "2026-07-14T21:32:45.368Z"
+          }
+        ],
+        "evidence": "sent three emails.\n\nhttps://chatgpt.com/c/6a569194-0598-83eb-ada0-e14b8c183753",
+        "activity": [
+          {
+            "id": "log-c8eede1e-f3a0-4a4f-b1ca-0a1ff127315f",
+            "at": "2026-07-14T21:32:57.027Z",
+            "action": "Marked done",
+            "details": ""
+          },
+          {
+            "id": "log-42bcaba9-39d6-4f60-b677-b52986a9e37b",
+            "at": "2026-07-14T21:32:53.550Z",
+            "action": "Edited evidence",
+            "details": ""
+          },
+          {
+            "id": "log-437448eb-b32e-4815-9179-e789c082d461",
+            "at": "2026-07-14T21:32:45.368Z",
+            "action": "Added evidence",
+            "details": ""
+          }
+        ],
+        "updatedAt": "2026-07-14T21:32:57.027Z",
+        "done": true,
+        "status": "Done",
+        "previousStatus": "This Week"
+      }
+    },
+    "addedCards": [
+      {
+        "id": "custom-card-99a21b08-3eb6-4122-ae29-dda72adfd42d",
+        "number": "A1",
+        "sortOrder": 1000,
+        "title": "LIFE — Groceries + supermarket run (w/c Mon 13 Jul)",
+        "module": "General",
+        "moduleGroup": "General",
+        "phase": "Phase 2",
+        "phaseId": "phase-2",
+        "sourceList": "Added in app",
+        "status": "This Week",
+        "priority": "Low",
+        "slotType": "Flex",
+        "slotLabel": "Life",
+        "startDate": "2026-07-13",
+        "dueDate": "2026-07-18",
+        "dueDateTime": "2026-07-18",
+        "estimatedHours": 1,
+        "description": "One planned supermarket trip including travel there and back; restock the week in one pass.",
+        "checklist": [],
+        "evidenceRequirement": "",
+        "doneCondition": "Fridge and shelf stocked for the week; no midweek emergency runs needed.",
+        "trackerNotes": "Added in tracker app",
+        "tags": [
+          "recovery"
+        ],
+        "custom": true,
+        "createdAt": "2026-07-14T16:01:27.991Z"
+      },
+      {
+        "id": "custom-card-2691d160-4125-430a-8c49-f2a69722efc6",
+        "number": "A1",
+        "sortOrder": 1000,
+        "title": "LIFE — Laundry + room reset (w/c Mon 13 Jul)",
+        "module": "General",
+        "moduleGroup": "General",
+        "phase": "Phase 2",
+        "phaseId": "phase-2",
+        "sourceList": "Added in app",
+        "status": "This Week",
+        "priority": "Low",
+        "slotType": "Flex",
+        "slotLabel": "Life",
+        "startDate": "2026-07-13",
+        "dueDate": "2026-07-19",
+        "dueDateTime": "2026-07-19",
+        "estimatedHours": 1,
+        "description": "Laundry cycle plus a 20-minute desk and room reset so Monday starts clean.",
+        "checklist": [],
+        "evidenceRequirement": "",
+        "doneCondition": "Clean clothes ready and desk cleared for the new week.",
+        "trackerNotes": "Added in tracker app",
+        "tags": [
+          "recovery"
+        ],
+        "custom": true,
+        "createdAt": "2026-07-14T16:01:27.992Z"
+      },
+      {
+        "id": "custom-card-0a0d87a8-a2f8-4819-94e5-92695221a4e8",
+        "number": "A1",
+        "sortOrder": 1000,
+        "title": "LIFE — Admin hour: email, forms, bills (w/c Mon 13 Jul)",
+        "module": "Admin",
+        "moduleGroup": "Admin",
+        "phase": "Phase 2",
+        "phaseId": "phase-2",
+        "sourceList": "Added in app",
+        "status": "This Week",
+        "priority": "Low",
+        "slotType": "Flex",
+        "slotLabel": "Life",
+        "startDate": "2026-07-13",
+        "dueDate": "2026-07-13",
+        "dueDateTime": "2026-07-13",
+        "estimatedHours": 1,
+        "description": "One bounded hour for inbox, university forms, bills, and any date-watch items.",
+        "checklist": [],
+        "evidenceRequirement": "",
+        "doneCondition": "Inbox triaged and no unanswered administrative deadline this week.",
+        "trackerNotes": "Added in tracker app",
+        "tags": [
+          "admin"
+        ],
+        "custom": true,
+        "createdAt": "2026-07-14T16:01:27.992Z"
+      },
+      {
+        "id": "custom-card-034f499d-127d-4711-8340-8ee823577314",
+        "number": "A1",
+        "sortOrder": 1000,
+        "title": "HEALTH — Three movement breaks (w/c Mon 13 Jul)",
+        "module": "Health",
+        "moduleGroup": "Health",
+        "phase": "Phase 2",
+        "phaseId": "phase-2",
+        "sourceList": "Added in app",
+        "status": "This Week",
+        "priority": "Low",
+        "slotType": "Flex",
+        "slotLabel": "Life",
+        "startDate": "2026-07-13",
+        "dueDate": "2026-07-19",
+        "dueDateTime": "2026-07-19",
+        "estimatedHours": 1.5,
+        "description": "Three deliberate movement sessions across the week — walk, stretch, or workout; intensity does not matter, showing up does.",
+        "checklist": [
+          "Movement break 1",
+          "Movement break 2",
+          "Movement break 3"
+        ],
+        "evidenceRequirement": "",
+        "doneCondition": "All three checklist items ticked by Sunday night.",
+        "trackerNotes": "Added in tracker app",
+        "tags": [
+          "health",
+          "recovery"
+        ],
+        "custom": true,
+        "createdAt": "2026-07-14T16:01:27.992Z"
+      }
+    ],
+    "moduleNotes": {},
+    "notifications": {
+      "mat700-foundation-reset:due-tomorrow:2026-07-12": {
+        "createdAt": "2026-07-12",
+        "read": false,
+        "id": "mat700-foundation-reset:due-tomorrow:2026-07-12",
+        "cardId": "mat700-foundation-reset",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "MAT700 foundation reset — build the pass specification"
+      },
+      "admin-summer-assessment-confirmation:due-tomorrow:2026-07-12": {
+        "createdAt": "2026-07-12",
+        "read": true,
+        "id": "admin-summer-assessment-confirmation:due-tomorrow:2026-07-12",
+        "cardId": "admin-summer-assessment-confirmation",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "ADMIN — confirm summer assessment entry and information channels"
+      },
+      "backup-stale:2026-07-12": {
+        "createdAt": "2026-07-12",
+        "read": true,
+        "id": "backup-stale:2026-07-12",
+        "rule": "backup-stale",
+        "type": "warning",
+        "title": "File backup is stale",
+        "detail": "Use Save to refresh the portable JSON copy."
+      },
+      "mat700-foundation-reset:due-today:2026-07-13": {
+        "createdAt": "2026-07-13",
+        "read": false,
+        "id": "mat700-foundation-reset:due-today:2026-07-13",
+        "cardId": "mat700-foundation-reset",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "MAT700 foundation reset — build the pass specification"
+      },
+      "admin-summer-assessment-confirmation:due-today:2026-07-13": {
+        "createdAt": "2026-07-13",
+        "read": true,
+        "id": "admin-summer-assessment-confirmation:due-today:2026-07-13",
+        "cardId": "admin-summer-assessment-confirmation",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "ADMIN — confirm summer assessment entry and information channels"
+      },
+      "card-001:due-tomorrow:2026-07-13": {
+        "createdAt": "2026-07-13",
+        "read": false,
+        "id": "card-001:due-tomorrow:2026-07-13",
+        "cardId": "card-001",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "AML S1 — Run Lab 1 end-to-end + 5-stage workflow page"
+      },
+      "card-002:due-tomorrow:2026-07-13": {
+        "createdAt": "2026-07-13",
+        "read": false,
+        "id": "card-002:due-tomorrow:2026-07-13",
+        "cardId": "card-002",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "TS Pack A — Read L1–L2 + redo every worked example"
+      },
+      "backup-stale:2026-07-13": {
+        "createdAt": "2026-07-13",
+        "read": false,
+        "id": "backup-stale:2026-07-13",
+        "rule": "backup-stale",
+        "type": "warning",
+        "title": "File backup is stale",
+        "detail": "Use Save to refresh the portable JSON copy."
+      },
+      "mat700-foundation-reset:overdue:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": false,
+        "id": "mat700-foundation-reset:overdue:2026-07-14",
+        "cardId": "mat700-foundation-reset",
+        "rule": "overdue",
+        "type": "danger",
+        "title": "1 day overdue",
+        "detail": "MAT700 foundation reset — build the pass specification was due Mon 13 Jul."
+      },
+      "admin-summer-assessment-confirmation:overdue:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": true,
+        "id": "admin-summer-assessment-confirmation:overdue:2026-07-14",
+        "cardId": "admin-summer-assessment-confirmation",
+        "rule": "overdue",
+        "type": "danger",
+        "title": "1 day overdue",
+        "detail": "ADMIN — confirm summer assessment entry and information channels was due Mon 13 Jul."
+      },
+      "card-001:due-today:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": true,
+        "id": "card-001:due-today:2026-07-14",
+        "cardId": "card-001",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "AML S1 — Run Lab 1 end-to-end + 5-stage workflow page"
+      },
+      "card-002:due-today:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": false,
+        "id": "card-002:due-today:2026-07-14",
+        "cardId": "card-002",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "TS Pack A — Read L1–L2 + redo every worked example"
+      },
+      "card-003:due-tomorrow:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": false,
+        "id": "card-003:due-tomorrow:2026-07-14",
+        "cardId": "card-003",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "AML S1 — Concept notes + closed-book workflow self-test"
+      },
+      "card-006:due-tomorrow:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": false,
+        "id": "card-006:due-tomorrow:2026-07-14",
+        "cardId": "card-006",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "TS Pack A — Formula sheet + 10 recall prompts self-test"
+      },
+      "mat700-rebuild-l1:due-tomorrow:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": false,
+        "id": "mat700-rebuild-l1:due-tomorrow:2026-07-14",
+        "cardId": "mat700-rebuild-l1",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "MAT700 L1 — rebuild concepts, formula sheet, and question-bank recall"
+      },
+      "backup-stale:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": true,
+        "id": "backup-stale:2026-07-14",
+        "rule": "backup-stale",
+        "type": "warning",
+        "title": "File backup is stale",
+        "detail": "Use Save to refresh the portable JSON copy."
+      },
+      "custom-card-0a0d87a8-a2f8-4819-94e5-92695221a4e8:overdue:2026-07-14": {
+        "createdAt": "2026-07-14",
+        "read": true,
+        "id": "custom-card-0a0d87a8-a2f8-4819-94e5-92695221a4e8:overdue:2026-07-14",
+        "cardId": "custom-card-0a0d87a8-a2f8-4819-94e5-92695221a4e8",
+        "rule": "overdue",
+        "type": "danger",
+        "title": "1 day overdue",
+        "detail": "LIFE — Admin hour: email, forms, bills (w/c Mon 13 Jul) was due Mon 13 Jul."
+      },
+      "card-001:overdue:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "card-001:overdue:2026-07-15",
+        "cardId": "card-001",
+        "rule": "overdue",
+        "type": "danger",
+        "title": "1 day overdue",
+        "detail": "AML S1 — Run Lab 1 end-to-end + 5-stage workflow page was due Tue 14 Jul."
+      },
+      "card-002:overdue:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "card-002:overdue:2026-07-15",
+        "cardId": "card-002",
+        "rule": "overdue",
+        "type": "danger",
+        "title": "1 day overdue",
+        "detail": "TS Pack A — Read L1–L2 + redo every worked example was due Tue 14 Jul."
+      },
+      "card-003:due-today:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "card-003:due-today:2026-07-15",
+        "cardId": "card-003",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "AML S1 — Concept notes + closed-book workflow self-test"
+      },
+      "card-006:due-today:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "card-006:due-today:2026-07-15",
+        "cardId": "card-006",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "TS Pack A — Formula sheet + 10 recall prompts self-test"
+      },
+      "mat700-rebuild-l1:due-today:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "mat700-rebuild-l1:due-today:2026-07-15",
+        "cardId": "mat700-rebuild-l1",
+        "rule": "due-today",
+        "type": "warning",
+        "title": "Due today",
+        "detail": "MAT700 L1 — rebuild concepts, formula sheet, and question-bank recall"
+      },
+      "card-005:due-tomorrow:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "card-005:due-tomorrow:2026-07-15",
+        "cardId": "card-005",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "AML S2 — Run Lab 2 (Titanic+crx) + preprocessing inventory"
+      },
+      "card-009:due-tomorrow:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "card-009:due-tomorrow:2026-07-15",
+        "cardId": "card-009",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "TS Pack B — Read L3–L4 + write the WSS argument"
+      },
+      "mat700-rebuild-l2:due-tomorrow:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "mat700-rebuild-l2:due-tomorrow:2026-07-15",
+        "cardId": "mat700-rebuild-l2",
+        "rule": "due-tomorrow",
+        "type": "warning",
+        "title": "Due tomorrow",
+        "detail": "MAT700 L2 — rebuild concepts, formula sheet, and question-bank recall"
+      },
+      "backup-stale:2026-07-15": {
+        "createdAt": "2026-07-15",
+        "read": false,
+        "id": "backup-stale:2026-07-15",
+        "rule": "backup-stale",
+        "type": "warning",
+        "title": "File backup is stale",
+        "detail": "Use Save to refresh the portable JSON copy."
+      }
+    },
+    "resourceProgress": {},
+    "uploadedResources": [],
+    "recentResourceIds": [
+      "aml-video-applied-ml-playlist",
+      "aml-session-1-lab-1-sheet",
+      "aml-study-notes-lab-1-ex2-study-notes",
+      "aml-study-notes-lab-1-ex1-study-notes",
+      "mat700-question-banks-lecture-1-question-bank",
+      "mat700-formula-sheets-master-formula-cheat-sheet",
+      "aml-session-1-lab-1-ex1-notebook"
+    ],
+    "snapshots": {
+      "2026-07-06": {
+        "done": 0,
+        "total": 127,
+        "loggedHours": 0,
+        "byModule": {
+          "Applied ML": {
+            "done": 0,
+            "total": 43,
+            "hours": 0
+          },
+          "Time Series": {
+            "done": 0,
+            "total": 38,
+            "hours": 0
+          },
+          "Group Project": {
+            "done": 0,
+            "total": 17,
+            "hours": 0
+          },
+          "MAT700": {
+            "done": 0,
+            "total": 15,
+            "hours": 0
+          },
+          "Health": {
+            "done": 0,
+            "total": 8,
+            "hours": 0
+          },
+          "Admin": {
+            "done": 0,
+            "total": 5,
+            "hours": 0
+          },
+          "Cross-module": {
+            "done": 0,
+            "total": 1,
+            "hours": 0
+          }
+        }
+      },
+      "2026-07-07": {
+        "done": 0,
+        "total": 127,
+        "loggedHours": 0,
+        "byModule": {
+          "Applied ML": {
+            "done": 0,
+            "total": 43,
+            "hours": 0
+          },
+          "Time Series": {
+            "done": 0,
+            "total": 38,
+            "hours": 0
+          },
+          "Group Project": {
+            "done": 0,
+            "total": 17,
+            "hours": 0
+          },
+          "MAT700": {
+            "done": 0,
+            "total": 15,
+            "hours": 0
+          },
+          "Health": {
+            "done": 0,
+            "total": 8,
+            "hours": 0
+          },
+          "Admin": {
+            "done": 0,
+            "total": 5,
+            "hours": 0
+          },
+          "Cross-module": {
+            "done": 0,
+            "total": 1,
+            "hours": 0
+          }
+        }
+      },
+      "2026-07-12": {
+        "done": 0,
+        "total": 113,
+        "loggedHours": 0,
+        "byModule": {
+          "MAT700": {
+            "done": 0,
+            "total": 24,
+            "hours": 0
+          },
+          "Admin": {
+            "done": 0,
+            "total": 6,
+            "hours": 0
+          },
+          "Applied ML": {
+            "done": 0,
+            "total": 36,
+            "hours": 0
+          },
+          "Time Series": {
+            "done": 0,
+            "total": 35,
+            "hours": 0
+          },
+          "Group Project": {
+            "done": 0,
+            "total": 5,
+            "hours": 0
+          },
+          "Job Hunt": {
+            "done": 0,
+            "total": 7,
+            "hours": 0
+          }
+        }
+      },
+      "2026-07-13": {
+        "done": 0,
+        "total": 113,
+        "loggedHours": 0.3,
+        "byModule": {
+          "MAT700": {
+            "done": 0,
+            "total": 24,
+            "hours": 0
+          },
+          "Admin": {
+            "done": 0,
+            "total": 6,
+            "hours": 0
+          },
+          "Applied ML": {
+            "done": 0,
+            "total": 36,
+            "hours": 0.25
+          },
+          "Time Series": {
+            "done": 0,
+            "total": 35,
+            "hours": 0
+          },
+          "Group Project": {
+            "done": 0,
+            "total": 5,
+            "hours": 0
+          },
+          "Job Hunt": {
+            "done": 0,
+            "total": 7,
+            "hours": 0
+          }
+        }
+      },
+      "2026-07-14": {
+        "done": 2,
+        "total": 117,
+        "loggedHours": 0.3,
+        "byModule": {
+          "MAT700": {
+            "done": 0,
+            "total": 24,
+            "hours": 0
+          },
+          "Admin": {
+            "done": 2,
+            "total": 7,
+            "hours": 0
+          },
+          "Applied ML": {
+            "done": 0,
+            "total": 36,
+            "hours": 0.25
+          },
+          "Time Series": {
+            "done": 0,
+            "total": 35,
+            "hours": 0
+          },
+          "Group Project": {
+            "done": 0,
+            "total": 5,
+            "hours": 0
+          },
+          "Job Hunt": {
+            "done": 0,
+            "total": 7,
+            "hours": 0
+          },
+          "General": {
+            "done": 0,
+            "total": 2,
+            "hours": 0
+          },
+          "Health": {
+            "done": 0,
+            "total": 1,
+            "hours": 0
+          }
+        }
+      },
+      "2026-07-15": {
+        "done": 2,
+        "total": 117,
+        "loggedHours": 0.3,
+        "byModule": {
+          "MAT700": {
+            "done": 0,
+            "total": 24,
+            "hours": 0
+          },
+          "Admin": {
+            "done": 2,
+            "total": 7,
+            "hours": 0
+          },
+          "Applied ML": {
+            "done": 0,
+            "total": 36,
+            "hours": 0.25
+          },
+          "Time Series": {
+            "done": 0,
+            "total": 35,
+            "hours": 0
+          },
+          "Group Project": {
+            "done": 0,
+            "total": 5,
+            "hours": 0
+          },
+          "Job Hunt": {
+            "done": 0,
+            "total": 7,
+            "hours": 0
+          },
+          "General": {
+            "done": 0,
+            "total": 2,
+            "hours": 0
+          },
+          "Health": {
+            "done": 0,
+            "total": 1,
+            "hours": 0
+          }
+        }
+      }
+    },
+    "dayLogs": {
+      "2026-07-13": {
+        "blocks": {
+          "morning-reset@07:00": "done",
+          "breakfast@08:00": "done",
+          "mon-commute-out@08:30": "done",
+          "mon-aml-1@09:00": "skipped",
+          "mon-break-1@11:00": "done",
+          "mon-aml-2@11:15": "skipped",
+          "mon-lunch@13:15": "done",
+          "mon-ts@13:45": "skipped",
+          "mon-break-2@15:45": "done",
+          "mon-project@16:15": "skipped",
+          "mon-commute-home@18:15": "done",
+          "mon-dinner@18:45": "done",
+          "mat700-reset-block@19:15": "done",
+          "admin-summer-assessment-confirmation-block@20:15": "done",
+          "job-scan-mon@20:45": "skipped",
+          "wind-down@22:00": "skipped",
+          "sleep@23:00": "done"
+        },
+        "note": ""
+      },
+      "2026-07-14": {
+        "blocks": {
+          "morning-reset@07:00": "skipped",
+          "breakfast@08:00": "done",
+          "tue-ts-1@08:30": "skipped",
+          "tue-break-1@10:30": "done",
+          "tue-ts-2@10:45": "skipped",
+          "tue-lunch@12:45": "done",
+          "tue-mat@13:15": "skipped",
+          "tue-walk@15:15": "done",
+          "tue-aml@15:45": "skipped",
+          "tue-dinner@18:30": "done",
+          "mom-call@20:30": "done",
+          "job-scan-tue@20:45": "skipped",
+          "shower-tue@21:00": "skipped",
+          "wind-down@22:00": "done"
+        },
+        "note": ""
+      }
+    },
+    "settings": {
+      "referenceDate": "2026-07-15",
+      "mat700Active": true,
+      "theme": "light",
+      "campaignStart": "2026-07-13",
+      "campaignEnd": "2026-08-28",
+      "examWindowStart": "2026-08-17",
+      "moduleExamDates": {},
+      "customModules": [],
+      "customPhases": [],
+      "lastExportedAt": null,
+      "saveHintDismissed": true,
+      "planRevision": "2026-07-13-private-recovery-plan-v2",
+      "planResetId": "2026-07-04-reset-local-date"
+    },
+    "createdAt": "2026-07-03T21:00:39.747Z",
+    "updatedAt": "2026-07-15T11:14:19.981Z"
+  }
+}
