@@ -46,7 +46,7 @@ function moduleTargets(mat700Active) {
     : { 'Applied ML': 52, 'Time Series': 48 }
 }
 
-function PrioritySplitGuardrail({ cards, mat700Active }) {
+function PrioritySplitGuardrail({ cards, mat700Active, onNavigateMeta }) {
   const targets = moduleTargets(mat700Active)
   const rows = Object.entries(targets).map(([module, target]) => {
     const moduleCards = cards.filter((card) => card.moduleGroup === module)
@@ -85,7 +85,7 @@ function PrioritySplitGuardrail({ cards, mat700Active }) {
       </div>
       <div className="priority-split-bars">
         {withShare.map((row) => (
-          <div key={row.module} className="priority-split-row">
+          <button type="button" key={row.module} className="priority-split-row" onClick={() => onNavigateMeta?.('module', row.module)}>
             <div>
               <strong>{row.module}</strong>
               <span>Target {row.target}% / actual {row.share}%</span>
@@ -94,7 +94,7 @@ function PrioritySplitGuardrail({ cards, mat700Active }) {
               <span className="target" style={{ width: `${row.target}%`, background: `var(${row.color})` }} />
               <span className="actual" style={{ width: `${row.share}%`, background: `var(${row.color})` }} />
             </div>
-          </div>
+          </button>
         ))}
       </div>
       <p className="chart-caption">
@@ -104,7 +104,7 @@ function PrioritySplitGuardrail({ cards, mat700Active }) {
   )
 }
 
-export function ProgressView({ cards, snapshots, referenceDate, mat700Active, schedule }) {
+export function ProgressView({ cards, snapshots, referenceDate, mat700Active, schedule, onNavigateMeta }) {
   const [grain, setGrain] = useState('day')
 
   const scopedCards = useMemo(
@@ -162,9 +162,13 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
           </p>
         </div>
         <DonutRing value={pace.done} total={pace.total} sublabel="done" color={pace.onTrack ? '--chart-ts' : '--chart-mat700'} />
+        <div className="pace-actions">
+          <button type="button" className="secondary-button" onClick={() => onNavigateMeta?.('status', 'Done')}>Completed history</button>
+          <button type="button" className="secondary-button" onClick={() => onNavigateMeta?.('status', 'Backlog')}>Open backlog</button>
+        </div>
       </section>
 
-      <PrioritySplitGuardrail cards={scopedCards} mat700Active={mat700Active} />
+      <PrioritySplitGuardrail cards={scopedCards} mat700Active={mat700Active} onNavigateMeta={onNavigateMeta} />
 
       <section className="workspace-section">
         <div className="section-heading with-toggle">
@@ -221,20 +225,15 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
         <div className="workspace-section">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">By module</p>
+              <p className="eyebrow">By module / area</p>
               <h2>Completion share</h2>
             </div>
           </div>
           <div className="ring-row">
             {topModules.map((m) => (
-              <DonutRing
-                key={m.label}
-                value={m.done}
-                total={m.total}
-                label={m.label}
-                color={m.color}
-                size={104}
-              />
+              <button type="button" className="ring-link" key={m.label} onClick={() => onNavigateMeta?.('module', m.label)}>
+                <DonutRing value={m.done} total={m.total} label={m.label} color={m.color} size={104} />
+              </button>
             ))}
           </div>
         </div>
@@ -244,11 +243,11 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
         <div className="workspace-section">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Module load</p>
-              <h2>Progress per module</h2>
+              <p className="eyebrow">Workload mix</p>
+              <h2>Progress per module / area</h2>
             </div>
           </div>
-          <StackedModuleBars rows={moduleRows} />
+          <StackedModuleBars rows={moduleRows} onSelect={(module) => onNavigateMeta?.('module', module)} />
         </div>
 
         <div className="workspace-section">
@@ -258,7 +257,7 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
               <h2>Activity heatmap</h2>
             </div>
           </div>
-          <CalendarHeatmap days={heatmap} />
+          <CalendarHeatmap days={heatmap} onSelectDate={(date) => onNavigateMeta?.('date', date)} />
           <div className="heat-legend">
             <span>Less</span>
             <span className="heat-cell heat-1" />

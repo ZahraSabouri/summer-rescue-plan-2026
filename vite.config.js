@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { localTrackerStatePlugin } from './src/server/localTrackerApi.js'
 

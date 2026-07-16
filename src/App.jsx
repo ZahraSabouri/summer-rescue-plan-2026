@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { AddCardDialog } from './components/AddCardDialog'
+import { AccessibleDialog } from './components/AccessibleDialog'
 import { AppIntro } from './components/AppIntro'
 import { CardDetailDrawer } from './components/CardDetailDrawer'
 import { CommandPalette } from './components/CommandPalette'
@@ -38,7 +39,7 @@ import {
 } from './data/summerRescuePlan'
 import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
 import { attachCardResourceLinks } from './data/cardResources'
-import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, VIEW_OPTIONS } from './data/constants'
+import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, TAG_OPTIONS, VIEW_OPTIONS } from './data/constants'
 import { STUDY_MODULES } from './data/studyModules'
 import { useTrackerState } from './state/useTrackerState'
 import {
@@ -51,7 +52,9 @@ import {
 } from './utils/fileBackup'
 import {
   isCardAttachmentResource,
+  readLocalDataHealth,
   readLocalResources,
+  rebuildLocalDatabase,
   uploadCardAttachmentFile,
   uploadLocalResource,
 } from './utils/localStateFile'
@@ -104,8 +107,10 @@ const NAV_GROUPS = [
   { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
   { label: 'Planning', items: ['schedule', 'review', 'dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
-  { label: 'Focus', items: ['rescue', 'project', 'jobs', 'admin'] },
+  { label: 'Focus', items: ['rescue', 'areas', 'project', 'jobs', 'admin'] },
 ]
+
+const FILTERABLE_VIEWS = new Set(['evidence', 'rescue', 'table', 'dashboard', 'analytics', 'week', 'board'])
 
 const VIEW_META = {
   today: { title: 'Today', subtitle: 'Your mission control — now, next, and protected capacity.' },
@@ -127,6 +132,7 @@ const VIEW_META = {
   project: { title: 'Project Capacity', subtitle: 'Bounded CMT501 space without duplicating the project app.' },
   jobs: { title: 'Job Hunt', subtitle: 'A bounded opportunity lane that cannot consume exam preparation.' },
   admin: { title: 'Admin & Dates', subtitle: 'Exam logistics and date watch.' },
+  areas: { title: 'Life, Health & Admin', subtitle: 'Personal routines and logistics, tracked separately from academic pace.' },
 }
 
 const VALID_VIEW_IDS = new Set(Object.keys(VIEW_META))
@@ -342,6 +348,14 @@ function Icon({ name }) {
         </>
       )
       break
+    case 'areas':
+      body = (
+        <>
+          <path {...p} d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.7A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z" />
+          <path {...p} d="M12 8v8M8 12h8" />
+        </>
+      )
+      break
     case 'jobs':
       body = (
         <>
@@ -408,6 +422,15 @@ function scopeCardsForView(view, cards) {
 function buildBackupName() {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   return `summer-rescue-tracker-backup-${stamp}.json`
+}
+
+function canonicalCardTitle(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/(?:â€”|[‐‑‒–—―])/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
 }
 
 function formatExportStamp(value) {
@@ -499,6 +522,8 @@ export default function App() {
       return false
     }
   })
+  const [dataHealth, setDataHealth] = useState(null)
+  const [dataHealthStatus, setDataHealthStatus] = useState('idle')
   const autosaveSupported = fileBackupSupported()
   const [assetManifest, setAssetManifest] = useState(null)
   const [localResources, setLocalResources] = useState([])
@@ -509,10 +534,11 @@ export default function App() {
   const autosaveTimerRef = useRef(null)
   const autosaveRunRef = useRef(0)
   const saveNowRef = useRef(null)
-  const addNotificationsRef = useRef(tracker.addNotifications)
   const hashResourceRef = useRef('')
+  const pageHeadingRef = useRef(null)
 
-  const referenceDate = tracker.state.settings.referenceDate
+  const configuredReferenceDate = tracker.state.settings.referenceDate
+  const referenceDate = configuredReferenceDate < todayString() ? todayString() : configuredReferenceDate
   const mat700Active = tracker.state.settings.mat700Active
   const theme = tracker.state.settings.theme ?? 'light'
   const referenceDateRef = useRef(referenceDate)
@@ -554,6 +580,10 @@ export default function App() {
     () => mergeOptions(PHASE_OPTIONS, customPhases),
     [customPhases],
   )
+  const tagOptions = useMemo(
+    () => mergeOptions(TAG_OPTIONS, tracker.cards.flatMap((card) => card.tags ?? [])),
+    [tracker.cards],
+  )
   const lastExportedAt = tracker.state.settings.lastExportedAt
   const localFileSavedAt = tracker.localFile.savedAt
   const localFileActive = ['ready', 'saved', 'saving'].includes(tracker.localFile.status)
@@ -571,7 +601,9 @@ export default function App() {
       ? 'Local state file: checking'
       : tracker.localFile.status === 'unavailable'
         ? 'Local state file unavailable; using browser cache fallback.'
-        : tracker.localFile.status === 'error'
+        : tracker.localFile.status === 'conflict'
+          ? `Save conflict: ${tracker.localFile.error}`
+          : tracker.localFile.status === 'error'
           ? `Local state file error: ${tracker.localFile.error}`
           : tracker.localFile.status === 'saving'
             ? `Saving ${tracker.localFile.path}`
@@ -619,6 +651,48 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!settingsOpen) return undefined
+    let cancelled = false
+    readLocalDataHealth()
+      .then((result) => {
+        if (cancelled) return
+        setDataHealth(result)
+        setDataHealthStatus('ready')
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setDataHealth(null)
+        setDataHealthStatus(`error:${error.message}`)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [settingsOpen, tracker.localFile.revision])
+
+  useEffect(() => {
+    referenceDateRef.current = referenceDate
+  }, [referenceDate])
+
+  useEffect(() => {
+    updateSettingsRef.current = tracker.updateSettings
+  }, [tracker.updateSettings])
+
+  useEffect(() => {
+    const today = todayString()
+    if (configuredReferenceDate < today) updateSettingsRef.current({ referenceDate: today })
+  }, [configuredReferenceDate, tracker.localFile.status])
+
+  useEffect(() => {
+    function syncToday() {
+      const today = todayString()
+      if (today > referenceDateRef.current) updateSettingsRef.current({ referenceDate: today })
+    }
+    syncToday()
+    const id = window.setInterval(syncToday, 60000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
     readLocalResources()
       .then((resources) => {
@@ -632,18 +706,6 @@ export default function App() {
       cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    referenceDateRef.current = referenceDate
-  }, [referenceDate])
-
-  useEffect(() => {
-    updateSettingsRef.current = tracker.updateSettings
-  }, [tracker.updateSettings])
-
-  useEffect(() => {
-    addNotificationsRef.current = tracker.addNotifications
-  }, [tracker.addNotifications])
 
   useEffect(() => {
     try {
@@ -681,6 +743,8 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
     document.querySelector('.app-main')?.scrollTo?.(0, 0)
+    const frame = window.requestAnimationFrame(() => pageHeadingRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
   }, [activeView])
 
   useEffect(() => {
@@ -694,29 +758,9 @@ export default function App() {
     }
   }, [activeView])
 
-  // Repair a stale planning date after the async local-file state arrives while
-  // keeping 12 July as the real current day; the launch preview is handled separately.
-  useEffect(() => {
-    const today = todayString()
-    if (referenceDate < today) updateSettingsRef.current({ referenceDate: today })
-  }, [referenceDate, tracker.localFile.status])
-
-  // Keep "today" live so overdue cards update automatically (advances forward only;
-  // a manually-set future planning date is respected). Persists via localStorage.
-  useEffect(() => {
-    function syncToday() {
-      const today = todayString()
-      if (today > referenceDateRef.current) updateSettingsRef.current({ referenceDate: today })
-    }
-    syncToday()
-    const id = window.setInterval(syncToday, 60000)
-    return () => window.clearInterval(id)
-  }, [])
-
   useEffect(() => {
     function onKey(event) {
       if (event.key === 'Escape') {
-        setSettingsOpen(false)
         setNavOpen(false)
       }
     }
@@ -854,7 +898,7 @@ export default function App() {
   )
   const activeResource = allResources.find((resource) => resource.id === openResourceId) ?? null
   const standaloneResource = activeResource && resourceModeFromHash() === 'reader' ? activeResource : null
-  const isStudyView = ['today', 'schedule', 'hub', 'aml', 'time-series', 'team-project', 'mat700'].includes(activeView)
+  const showCardFilters = FILTERABLE_VIEWS.has(activeView)
 
   useEffect(() => {
     function openHashResource() {
@@ -938,8 +982,8 @@ export default function App() {
     return Math.round((to - from) / 86400000)
   }, [examTarget.date, referenceDate])
 
-  useEffect(() => {
-    addNotificationsRef.current?.(
+  const generatedNotifications = useMemo(
+    () =>
       generateNotifications({
         cards: tracker.cards,
         referenceDate,
@@ -950,32 +994,64 @@ export default function App() {
         campaignStart: schedule.campaignStart,
         createdAt: tracker.state.createdAt,
       }),
-    )
-  }, [
-    examCountdown,
-    lastBackupAt,
-    mat700Active,
-    referenceDate,
-    schedule.campaignStart,
-    tracker.cards,
-    tracker.state.createdAt,
-    unsavedSinceBackup,
-  ])
+    [
+      examCountdown,
+      lastBackupAt,
+      mat700Active,
+      referenceDate,
+      schedule.campaignStart,
+      tracker.cards,
+      tracker.state.createdAt,
+      unsavedSinceBackup,
+    ],
+  )
+  const displayNotifications = useMemo(
+    () => ({
+      ...Object.fromEntries(generatedNotifications.map((notice) => [notice.id, notice])),
+      ...(tracker.state.notifications ?? {}),
+    }),
+    [generatedNotifications, tracker.state.notifications],
+  )
 
-  // Seed this week's recurring life-admin and health cards once the local file
-  // has finished loading (so we never race the async import and duplicate).
-  // Idempotent: titles embed the week-commencing label, and a card is only added
-  // when no card with that exact title exists yet.
+  function setDisplayNotificationRead(notificationId, read = true) {
+    if (tracker.state.notifications?.[notificationId]) {
+      tracker.setNotificationRead(notificationId, read)
+      return
+    }
+    const generated = generatedNotifications.find((notice) => notice.id === notificationId)
+    if (generated) tracker.addNotifications([{ ...generated, read }])
+  }
+
+  function markAllDisplayNotificationsRead() {
+    const missing = generatedNotifications
+      .filter((notice) => !tracker.state.notifications?.[notice.id])
+      .map((notice) => ({ ...notice, read: true }))
+    tracker.addNotifications(missing)
+    tracker.markAllNotificationsRead()
+  }
+
+  function generateWeeklyLifeCards() {
+    const calendarWeekStart = startOfWeek(referenceDate)
+    const weekStart = calendarWeekStart < schedule.campaignStart ? schedule.campaignStart : calendarWeekStart
+    const inputs = buildWeeklyLifeCardInputs(weekStart)
+    const existingTitles = new Set(tracker.cards.map((card) => canonicalCardTitle(card.title)))
+    const missing = inputs.filter((input) => !existingTitles.has(canonicalCardTitle(input.title)))
+    missing.forEach((input) => tracker.addCard(input))
+    setMessage(missing.length ? `Added ${missing.length} bounded routine cards for the week.` : 'This week’s routine cards already exist.')
+  }
+
   const seededWeekRef = useRef('')
   useEffect(() => {
     if (tracker.localFile.status === 'checking') return
-    const weekStart = startOfWeek(referenceDate)
+    const calendarWeekStart = startOfWeek(referenceDate)
+    const weekStart = calendarWeekStart < schedule.campaignStart ? schedule.campaignStart : calendarWeekStart
     if (seededWeekRef.current === weekStart) return
     seededWeekRef.current = weekStart
+    const existingTitles = new Set(tracker.cards.map((card) => canonicalCardTitle(card.title)))
     for (const input of buildWeeklyLifeCardInputs(weekStart)) {
-      if (!tracker.cards.some((card) => card.title === input.title)) tracker.addCard(input)
+      if (!existingTitles.has(canonicalCardTitle(input.title))) tracker.addCard(input)
     }
-  }, [referenceDate, tracker])
+  }, [referenceDate, schedule.campaignStart, tracker])
 
   // A card can already be the active timer card, so setState alone is a no-op and
   // the timer effect never re-fires. Bump a signal on every request so re-clicking
@@ -1025,6 +1101,7 @@ export default function App() {
     onUndoReplan: undoReplan,
     replanCanUndo: replanUndo != null && replanUndo.length > 0,
     referenceDate,
+    onNavigateMeta: openCardFacet,
   }
 
   function downloadBackup(exportedAt) {
@@ -1354,17 +1431,41 @@ export default function App() {
     setMessage(`Logged ${minutes} min focus session.`)
   }
 
+  async function verifyDatabaseMirror() {
+    if (!window.confirm('Rebuild the SQLite mirror from the audit event log? JSON remains authoritative.')) return
+    try {
+      const result = await rebuildLocalDatabase()
+      setMessage(`Database mirror rebuilt from ${result.eventCount ?? 0} valid audit events.`)
+      setDataHealth(await readLocalDataHealth())
+      setDataHealthStatus('ready')
+    } catch (error) {
+      setMessage(`Database rebuild failed: ${error.message}`)
+    }
+  }
+
+  async function reloadAfterConflict() {
+    if (!window.confirm('Reload the newer local file? Export JSON first if you need to keep this tab’s unsaved edits.')) return
+    try {
+      await tracker.reloadLocalFileNow()
+      setMessage('Reloaded the latest local tracker file.')
+    } catch (error) {
+      setMessage(`Reload failed: ${error.message}`)
+    }
+  }
+
   function resetTracker() {
-    const confirmed = window.confirm('Reset local tracker progress? A JSON backup will be downloaded first.')
+    const confirmed = window.confirm(
+      'Restore the unfinished canonical 16 July plan? Completed cards and past day/focus history are retained, and a JSON backup is downloaded first. This does not move the campaign start to today; use Re-plan remaining exam cards for slippage.',
+    )
     if (!confirmed) return
     downloadBackup(new Date().toISOString())
     tracker.resetTrackerState()
     setSelectedCardId(null)
-    setMessage('Backup exported, then local tracker reset to the 13 July recovery plan.')
+    setMessage('Backup exported; unfinished work restored to the 16 July plan while completed history was retained.')
   }
 
   function openGlobalView(view) {
-    setFilters((current) => (current.module === 'all' ? current : { ...current, module: 'all' }))
+    setFilters(FILTER_DEFAULTS)
     setActiveView(view)
     setNavOpen(false)
   }
@@ -1372,6 +1473,40 @@ export default function App() {
   function openModuleView(view, moduleGroup) {
     setFilters({ ...FILTER_DEFAULTS, module: moduleGroup })
     setActiveView(view)
+    setNavOpen(false)
+  }
+
+  function openCardFacet(type, value) {
+    if (type !== 'all' && !value) return
+    const moduleViews = {
+      'Applied ML': 'aml',
+      'Time Series': 'time-series',
+      MAT700: 'mat700',
+      'Group Project': 'team-project',
+      'Job Hunt': 'jobs',
+      Admin: 'admin',
+      Health: 'areas',
+      General: 'areas',
+    }
+    if (type === 'module' && moduleViews[value]) {
+      openModuleView(moduleViews[value], value)
+      setSelectedCardId(null)
+      return
+    }
+    const next = { ...FILTER_DEFAULTS }
+    if (type === 'all') {
+      setFilters(next)
+      setActiveView('table')
+      setSelectedCardId(null)
+      setNavOpen(false)
+      return
+    }
+    if (type === 'date') next.exactDate = value
+    else if (Object.hasOwn(next, type)) next[type] = value
+    else return
+    setFilters(next)
+    setActiveView('table')
+    setSelectedCardId(null)
     setNavOpen(false)
   }
 
@@ -1390,6 +1525,7 @@ export default function App() {
           scheduleDate={dayScheduleDate}
           campaignStart={schedule.campaignStart}
           onOpenCard={setSelectedCardId}
+          onOpenView={openGlobalView}
           activeTimerCard={activeTimerCard}
         />
       )
@@ -1404,6 +1540,7 @@ export default function App() {
           actions={actions}
           setActiveView={openGlobalView}
           openModuleView={openModuleView}
+          onGenerateWeeklyLifeCards={generateWeeklyLifeCards}
         />
       )
     }
@@ -1465,10 +1602,11 @@ export default function App() {
           referenceDate={referenceDate}
           mat700Active={mat700Active}
           schedule={schedule}
+          onNavigateMeta={openCardFacet}
         />
       )
     }
-    if (activeView === 'review') return <DayReview cards={tracker.cards} referenceDate={referenceDate} />
+    if (activeView === 'review') return <DayReview cards={tracker.cards} referenceDate={referenceDate} onOpenCard={setSelectedCardId} />
     if (activeView === 'board') return <BoardView cards={visibleCards} actions={actions} />
     if (activeView === 'table') return <TableView cards={visibleCards} actions={actions} />
     if (activeView === 'week') return <WeekView cards={visibleCards} referenceDate={dayScheduleDate} actions={actions} />
@@ -1480,6 +1618,7 @@ export default function App() {
           snapshots={tracker.snapshots}
           referenceDate={referenceDate}
           schedule={schedule}
+          actions={actions}
         />
       )
     }
@@ -1530,6 +1669,34 @@ export default function App() {
         />
       )
     }
+    if (activeView === 'areas') {
+      const areaCards = tracker.cards.filter((card) => ['Admin', 'Health', 'General'].includes(card.moduleGroup))
+      const currentRoutines = areaCards.filter((card) => card.custom && card.startDate >= schedule.campaignStart && !card.done)
+      const campaignAdmin = areaCards.filter((card) => card.moduleGroup === 'Admin' && !card.custom)
+      const historical = areaCards.filter((card) => card.done)
+      return (
+        <div className="view-grid">
+          <section className="panel area-boundary-note">
+            <p className="eyebrow">Separate operating lane</p>
+            <h2>Life, health and admin</h2>
+            <p>These cards remain visible and checkable, but they never count as academic backlog or consume exam re-planning capacity.</p>
+            <div className="area-count-links">
+              <button type="button" className="metric-tile" onClick={() => openCardFacet('kind', 'life')}><strong>{currentRoutines.length}</strong><span>current weekly routines</span></button>
+              <button type="button" className="metric-tile" onClick={() => openCardFacet('module', 'Admin')}><strong>{campaignAdmin.length}</strong><span>fixed campaign admin checkpoints</span></button>
+              <button type="button" className="metric-tile" onClick={() => openCardFacet('status', 'Done')}><strong>{historical.length}</strong><span>completed records</span></button>
+            </div>
+            <p className="muted small">The routine set is deliberately generated as two household cards, one movement card, and one bounded admin card per week. Add personal chores only when they are real; the app does not invent a household inventory.</p>
+          </section>
+          <FocusView
+            eyebrow="Personal operations"
+            title="Live routines and records"
+            description="Weekly essentials, movement, room reset, forms, and exam administration—including completed history."
+            cards={areaCards}
+            actions={actions}
+          />
+        </div>
+      )
+    }
     if (activeView === 'admin') {
       return (
         <FocusView
@@ -1576,7 +1743,7 @@ export default function App() {
           try {
             localStorage.setItem('srp-skip-intro', value ? '1' : '0')
           } catch {
-            /* ignore */
+            /* keep the current-session preference */
           }
         }}
         onEnter={() => setEntered(true)}
@@ -1593,7 +1760,7 @@ export default function App() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} />}
 
       <aside className="app-sidebar" aria-label="Primary navigation">
-        <div className="sidebar-brand">
+        <button type="button" className="sidebar-brand" onClick={() => openGlobalView('today')} title="Open Today">
           <span className="brand-mark">
             <Icon name="brand" />
           </span>
@@ -1601,7 +1768,7 @@ export default function App() {
             <strong>Summer Rescue</strong>
             <small>Cardiff University · MSc</small>
           </span>
-        </div>
+        </button>
 
         <nav className="sidebar-nav" aria-label="Views">
           {NAV_GROUPS.map((group) => (
@@ -1614,6 +1781,7 @@ export default function App() {
                   className={`nav-item${activeView === id ? ' active' : ''}`}
                   onClick={() => openGlobalView(id)}
                   title={LABEL_BY_ID[id]}
+                  aria-current={activeView === id ? 'page' : undefined}
                 >
                   <span className="nav-ico">
                     <Icon name={id} />
@@ -1637,7 +1805,12 @@ export default function App() {
             />
             <span>Cardiff University</span>
           </div>
-          <div className="mini-progress" title={`${doneCount} of ${totalCount} cards done`}>
+          <button
+            type="button"
+            className="mini-progress"
+            title="Open the full progress record"
+            onClick={() => openGlobalView('progress')}
+          >
             <div className="mini-progress-head">
               <span>Campaign progress</span>
               <strong>{donePct}%</strong>
@@ -1646,9 +1819,9 @@ export default function App() {
               <span style={{ width: `${donePct}%` }} />
             </div>
             <small>
-              {doneCount} of {totalCount} cards · {tracker.state.addedCards.length} added
+              {doneCount} of {totalCount} completed · {tracker.state.addedCards.length} personal/routine
             </small>
-          </div>
+          </button>
           <button
             type="button"
             className="collapse-btn"
@@ -1676,7 +1849,7 @@ export default function App() {
               >
                 {campaignMeta.title}
               </button>
-              <h1>{viewMeta.title}</h1>
+              <h1 ref={pageHeadingRef} tabIndex={-1}>{viewMeta.title}</h1>
               {viewMeta.subtitle && <p className="topbar-sub">{viewMeta.subtitle}</p>}
             </div>
           </div>
@@ -1702,7 +1875,7 @@ export default function App() {
               <strong>{saveButtonLabel}</strong>
               <span>{saveButtonDetail}</span>
             </button>
-            <button type="button" className="primary-button" onClick={() => setAddDialogOpen(true)}>
+            <button type="button" className="primary-button" onClick={() => setAddDialogOpen(true)} aria-label="Add card">
               <Icon name="plus" />
               <span>Add card</span>
             </button>
@@ -1723,12 +1896,12 @@ export default function App() {
             />
             <MusicPopover theme={theme} />
             <NotificationCenter
-              notifications={tracker.state.notifications}
+              notifications={displayNotifications}
               referenceDate={referenceDate}
               onGoView={openGlobalView}
               onOpenCard={setSelectedCardId}
-              onSetRead={tracker.setNotificationRead}
-              onMarkAllRead={tracker.markAllNotificationsRead}
+              onSetRead={setDisplayNotificationRead}
+              onMarkAllRead={markAllDisplayNotificationsRead}
             />
             <button
               type="button"
@@ -1763,13 +1936,14 @@ export default function App() {
           </div>
         )}
 
-        {!isStudyView && (
+        {showCardFilters && (
           <FilterBar
             filters={filters}
             setFilters={setFilters}
             resultCount={visibleCards.length}
             moduleOptions={moduleOptions}
             phaseOptions={phaseOptions}
+            tagOptions={tagOptions}
           />
         )}
 
@@ -1780,18 +1954,17 @@ export default function App() {
         </section>
       </main>
 
-      {settingsOpen && (
-        <div
-          className="drawer-shell settings-shell"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setSettingsOpen(false)
-          }}
-        >
-          <div className="settings-panel" role="dialog" aria-label="Settings and data">
+      <AccessibleDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        className="settings-panel"
+        overlayClassName="settings-shell"
+        labelledBy="settings-title"
+      >
             <div className="drawer-header">
               <div>
                 <p className="eyebrow">Controls</p>
-                <h2>Settings &amp; data</h2>
+                <h2 id="settings-title">Settings &amp; data</h2>
               </div>
               <button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="Close settings">
                 <Icon name="close" />
@@ -1803,7 +1976,7 @@ export default function App() {
               <div className="settings-grid">
                 <label>
                   <span>Planning date</span>
-                  <input type="date" value={referenceDate} onChange={(event) => tracker.updateSettings({ referenceDate: event.target.value })} />
+                  <input type="date" value={configuredReferenceDate} onChange={(event) => tracker.updateSettings({ referenceDate: event.target.value })} />
                 </label>
                 <label>
                   <span>Campaign start</span>
@@ -1849,8 +2022,12 @@ export default function App() {
                 </label>
               </div>
               <label className="toggle-field">
-                <input type="checkbox" checked={mat700Active} readOnly disabled />
-                <span>Data Mining study lane active</span>
+                <input
+                  type="checkbox"
+                  checked={mat700Active}
+                  onChange={(event) => tracker.updateSettings({ mat700Active: event.target.checked })}
+                />
+                <span>Data Mining study lane active (pause only after a safely passed result)</span>
               </label>
             </div>
 
@@ -1984,6 +2161,37 @@ export default function App() {
                   Reset tracker
                 </button>
               </div>
+              {tracker.localFile.status === 'conflict' && (
+                <div className="data-conflict" role="alert">
+                  <strong>A newer local revision exists.</strong>
+                  <p>Export this tab first if needed, then reload the authoritative local file.</p>
+                  <button type="button" className="secondary-button" onClick={reloadAfterConflict}>Reload newer file</button>
+                </div>
+              )}
+            </div>
+
+            <div className="settings-section">
+              <h3>Data health</h3>
+              {dataHealthStatus === 'loading' && <p className="muted">Checking state, audit log, database, and assets…</p>}
+              {dataHealthStatus.startsWith('error:') && <p className="data-health-error">{dataHealthStatus.slice(6)}</p>}
+              {dataHealth && (
+                <dl className="data-health-grid">
+                  <div><dt>Authoritative store</dt><dd>{dataHealth.authoritativeStore}</dd></div>
+                  <div><dt>State revision</dt><dd>{dataHealth.state?.revision ?? 0}</dd></div>
+                  <div><dt>State schema</dt><dd>{dataHealth.state?.schemaVersion ?? 'unknown'}</dd></div>
+                  <div><dt>Last committed</dt><dd>{formatExportStamp(dataHealth.state?.writtenAt) || 'not written'}</dd></div>
+                  <div><dt>SQLite integrity</dt><dd>{dataHealth.database?.integrity ?? 'unavailable'}</dd></div>
+                  <div><dt>Audit events</dt><dd>{dataHealth.eventLog?.validCount ?? 0} valid</dd></div>
+                  <div><dt>Quarantined</dt><dd>{dataHealth.eventLog?.malformedCount ?? 0} malformed</dd></div>
+                  <div><dt>Study assets</dt><dd>{dataHealth.assets?.available ? `${dataHealth.assets.count ?? 0} indexed` : 'unavailable'}</dd></div>
+                </dl>
+              )}
+              <p className="muted small">The event log is partial audit history, not a full recovery source.</p>
+              <details className="advanced-data-action">
+                <summary>Advanced database repair</summary>
+                <p className="muted small">Replays only valid audit events into the SQLite mirror. JSON remains authoritative and is not replaced.</p>
+                <button type="button" className="secondary-button" onClick={verifyDatabaseMirror}>Rebuild audit projection</button>
+              </details>
             </div>
 
             <div className="settings-section">
@@ -2013,16 +2221,24 @@ export default function App() {
               <div className="settings-stat-row">
                 <span>{campaignMeta.cardCount} campaign cards</span>
                 <span>{sortCards(tracker.cards).filter((card) => card.done).length} done</span>
-                <span>{tracker.state.addedCards.length} added</span>
-                <span>{studyModules.length} module workspaces</span>
+                <span>{tracker.state.addedCards.length} personal/routine cards</span>
+                <span>{studyModules.length} academic workspaces</span>
                 <span>
                   Assets {assetManifest?.syncedAt ? `synced ${formatExportStamp(assetManifest.syncedAt)}` : 'not stamped'}
                 </span>
               </div>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setSettingsOpen(false)
+                  setEntered(false)
+                }}
+              >
+                Open About / welcome screen
+              </button>
             </div>
-          </div>
-        </div>
-      )}
+      </AccessibleDialog>
 
       <CardDetailDrawer
         key={selectedCard?.id ?? 'closed-card-drawer'}
@@ -2057,6 +2273,7 @@ export default function App() {
         onOpenAttachment={openAttachment}
         onAddResource={tracker.addCardResource}
         onRemoveResource={tracker.removeCardResource}
+        onNavigateMeta={openCardFacet}
         moduleOptions={moduleOptions}
         phaseOptions={phaseOptions}
       />

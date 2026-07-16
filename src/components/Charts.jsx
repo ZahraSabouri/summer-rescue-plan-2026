@@ -220,7 +220,7 @@ export function Sparkline({ values, color = '--chart-1', width = 120, height = 3
   )
 }
 
-export function CalendarHeatmap({ days }) {
+export function CalendarHeatmap({ days, onSelectDate }) {
   if (!days || days.length === 0) return <ChartEmpty message="No activity recorded yet." />
 
   const cell = 13
@@ -266,6 +266,12 @@ export function CalendarHeatmap({ days }) {
               height={cell}
               rx="2.5"
               className={`heat-cell heat-${day.isFuture ? 'future' : level(day.value)}`}
+              role={onSelectDate ? 'button' : undefined}
+              tabIndex={onSelectDate ? 0 : undefined}
+              onClick={() => onSelectDate?.(day.day)}
+              onKeyDown={(event) => {
+                if (onSelectDate && (event.key === 'Enter' || event.key === ' ')) onSelectDate(day.day)
+              }}
             >
               <title>{`${day.day}: ${day.value} completed`}</title>
             </rect>
@@ -276,7 +282,7 @@ export function CalendarHeatmap({ days }) {
   )
 }
 
-export function StackedModuleBars({ rows }) {
+export function StackedModuleBars({ rows, onSelect }) {
   if (!rows || rows.length === 0) return <ChartEmpty message="No module data." />
 
   const max = Math.max(...rows.map((row) => row.total), 1)
@@ -286,7 +292,7 @@ export function StackedModuleBars({ rows }) {
         const donePct = row.total ? (row.done / row.total) * 100 : 0
         const widthPct = (row.total / max) * 100
         return (
-          <div className="stack-row" key={row.label}>
+          <button type="button" className="stack-row" key={row.label} onClick={() => onSelect?.(row.label)}>
             <span className="stack-label" style={{ color: `var(${row.color ?? '--muted'})` }}>
               {row.label}
             </span>
@@ -296,7 +302,7 @@ export function StackedModuleBars({ rows }) {
             <span className="stack-meta">
               {row.done}/{row.total}
             </span>
-          </div>
+          </button>
         )
       })}
     </div>

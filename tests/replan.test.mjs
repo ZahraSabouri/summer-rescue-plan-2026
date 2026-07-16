@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildReplan, computeReplanSchedule } from '../src/utils/replan.js'
-import { addDays } from '../src/utils/progress.js'
 
 function card(overrides) {
   return { number: 1, moduleGroup: 'Applied ML', done: false, estimatedHours: 10, ...overrides }
 }
 
-const REF = '2026-07-14' // 33 days to 2026-08-16
+const REF = '2026-07-14' // 34 usable calendar days, including today and 16 Aug
 
 test('capacity = days left x daily hours', () => {
   const r = buildReplan([], { referenceDate: REF, dailyHours: 8, projectHours: 0 })
-  assert.equal(r.daysLeft, 33)
-  assert.equal(r.capacity, 264)
+  assert.equal(r.daysLeft, 34)
+  assert.equal(r.capacity, 272)
 })
 
 test('compression ratio reflects study capacity vs exam hours', () => {
@@ -22,7 +21,7 @@ test('compression ratio reflects study capacity vs exam hours', () => {
   ]
   const r = buildReplan(cards, { referenceDate: REF, dailyHours: 8, projectHours: 40 })
   assert.equal(r.examHours, 400)
-  assert.equal(r.studyCapacity, 224) // 264 - 40
+  assert.equal(r.studyCapacity, 232) // 272 - 40
   assert.equal(r.fits, false)
   assert.ok(r.overBy > 0)
   assert.ok(r.ratio > 0 && r.ratio < 1)
@@ -155,7 +154,7 @@ test('computeReplanSchedule caps generous timetable days at dailyHours', () => {
   assert.equal(assignments[0].dueDate, '2026-07-15')
 })
 
-test('computeReplanSchedule is bounded by the packing horizon', () => {
+test('computeReplanSchedule never fabricates dates after readiness', () => {
   const cards = [
     { id: 'huge', number: 1, moduleGroup: 'Applied ML', done: false, priority: 'High', estimatedHours: 10000, dueDate: '2026-07-20' },
     { id: 'after', number: 2, moduleGroup: 'Applied ML', done: false, priority: 'Low', estimatedHours: 4, dueDate: '2026-07-20' },
@@ -163,10 +162,9 @@ test('computeReplanSchedule is bounded by the packing horizon', () => {
   const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
   // 10000h can never finish — the horizon stops the walk instead of spinning,
   // and everything after the monster card lands on the horizon date too.
-  const horizonDate = addDays(REF, 240)
-  assert.equal(assignments[0].dueDate, horizonDate)
-  assert.ok(assignments.every((a) => a.dueDate <= horizonDate))
-  assert.ok(assignments[0].stretch)
+  assert.ok(assignments.every((a) => a.stretch))
+  assert.ok(assignments.every((a) => a.dueDate === '' && a.startDate === ''))
+  assert.ok(assignments.every((a) => a.status === 'Backlog'))
 })
 
 test('computeReplanSchedule reports packed vs stretch hours for the headline', () => {
@@ -178,4 +176,23 @@ test('computeReplanSchedule reports packed vs stretch hours for the headline', (
   const stretchSum = result.assignments.filter((a) => a.stretch).length * 8
   assert.equal(result.stretchHours, stretchSum)
   assert.ok(result.stretchHours > 0)
+})
+
+test('phase order protects foundations before later critical polish', () => {
+  const cards = [
+    { id: 'final', number: 2, moduleGroup: 'Applied ML', phase: 'Phase 2', done: false, priority: 'Critical', estimatedHours: 2 },
+    { id: 'foundation', number: 1, moduleGroup: 'Applied ML', phase: 'Phase 0', done: false, priority: 'High', estimatedHours: 2 },
+  ]
+  const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
+  assert.deepEqual(assignments.map((item) => item.cardId), ['foundation', 'final'])
+})
+
+test('life and admin routines never enter the academic packer', () => {
+  const cards = [
+    { id: 'study', number: 1, moduleGroup: 'Applied ML', phase: 'Phase 0', done: false, estimatedHours: 2 },
+    { id: 'wash', custom: true, moduleGroup: 'General', phase: 'Phase 0', done: false, estimatedHours: 2 },
+    { id: 'admin', custom: true, moduleGroup: 'Admin', phase: 'Phase 0', done: false, estimatedHours: 2 },
+  ]
+  const { assignments } = computeReplanSchedule(cards, { referenceDate: REF, dailyHours: 8 })
+  assert.deepEqual(assignments.map((item) => item.cardId), ['study'])
 })

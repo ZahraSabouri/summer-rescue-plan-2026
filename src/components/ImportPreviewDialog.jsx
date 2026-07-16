@@ -1,4 +1,4 @@
-import { createPortal } from 'react-dom'
+import { AccessibleDialog } from './AccessibleDialog'
 
 function Row({ label, incoming, current, highlightDrop = false }) {
   const drop = highlightDrop && Number(incoming) < Number(current)
@@ -15,19 +15,19 @@ function Row({ label, incoming, current, highlightDrop = false }) {
 // the local tracker state. A backup of the current state is downloaded on
 // confirm (handled by the caller), so this action is always reversible.
 export function ImportPreviewDialog({ open, sourceName, incoming, current, onCancel, onConfirm }) {
-  if (!open || typeof document === 'undefined') return null
+  if (!open) return null
 
   const losesProgress =
     Number(incoming.done) < Number(current.done) || Number(incoming.hours) < Number(current.hours)
 
-  return createPortal(
-    <div
-      className="drawer-shell import-shell"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onCancel()
-      }}
+  return (
+    <AccessibleDialog
+      open={open}
+      onClose={onCancel}
+      className="import-dialog"
+      overlayClassName="import-shell"
+      ariaLabel="Import preview"
     >
-      <div className="import-dialog" role="dialog" aria-modal="true" aria-label="Import preview">
         <header className="drawer-header">
           <div>
             <p className="eyebrow">Import preview</p>
@@ -67,8 +67,6 @@ export function ImportPreviewDialog({ open, sourceName, incoming, current, onCan
             Back up current, then import
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AccessibleDialog>
   )
 }

@@ -49,3 +49,10 @@ test('the health card carries a three-item movement checklist', () => {
   assert.ok(health)
   assert.equal(health.checklist.split('\n').filter(Boolean).length, 3)
 })
+
+test('a midweek campaign reset keeps routine cards inside the partial week', () => {
+  const inputs = buildWeeklyLifeCardInputs('2026-07-16')
+  assert.ok(inputs.every((input) => input.startDate === '2026-07-16'))
+  assert.ok(inputs.every((input) => input.dueDate >= '2026-07-16' && input.dueDate <= '2026-07-19'))
+  assert.ok(inputs.every((input) => input.phase === 'Phase 0'))
+})

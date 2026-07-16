@@ -30,23 +30,39 @@ const defaultState = {
   today: { date: null, trees: 0, minutes: 0, wilted: 0, treeList: [] },
 }
 
+function normaliseSnapshot(value) {
+  const parsed = value && typeof value === 'object' ? value : {}
+  return {
+    ...defaultState,
+    ...parsed,
+    unlocked: Array.isArray(parsed.unlocked) ? parsed.unlocked : [],
+    notices: [],
+    today: {
+      ...defaultState.today,
+      ...(parsed.today ?? {}),
+      treeList: Array.isArray(parsed.today?.treeList) ? parsed.today.treeList : [],
+    },
+  }
+}
+
+function persistedSnapshot(value = state) {
+  const persisted = { ...value }
+  delete persisted.notices
+  return {
+    ...persisted,
+    today: {
+      ...persisted.today,
+      treeList: Array.isArray(persisted.today?.treeList) ? persisted.today.treeList : [],
+    },
+  }
+}
+
 function load() {
   try {
     if (typeof localStorage === 'undefined') return { ...defaultState }
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...defaultState }
-    const parsed = JSON.parse(raw)
-    return {
-      ...defaultState,
-      ...parsed,
-      unlocked: Array.isArray(parsed.unlocked) ? parsed.unlocked : [],
-      notices: [],
-      today: {
-        ...defaultState.today,
-        ...(parsed.today ?? {}),
-        treeList: Array.isArray(parsed.today?.treeList) ? parsed.today.treeList : [],
-      },
-    }
+    return normaliseSnapshot(JSON.parse(raw))
   } catch {
     return { ...defaultState }
   }
@@ -60,7 +76,7 @@ function persist() {
   try {
     if (typeof localStorage === 'undefined') return
     // Notices are transient celebration cues — persist everything else.
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, notices: undefined }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedSnapshot()))
   } catch {
     /* storage unavailable — keep in-memory only */
   }
@@ -123,6 +139,17 @@ function finalize(base, next) {
 export const focusRewards = {
   getState() {
     return state
+  },
+  getPersistedState() {
+    return persistedSnapshot()
+  },
+  hydrate(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return
+    const hydrated = normaliseSnapshot(snapshot)
+    if (JSON.stringify(persistedSnapshot()) === JSON.stringify(persistedSnapshot(hydrated))) return
+    state = { ...hydrated, notices: state.notices }
+    persist()
+    listeners.forEach((listener) => listener())
   },
   subscribe(listener) {
     listeners.add(listener)

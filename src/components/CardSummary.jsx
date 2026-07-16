@@ -27,6 +27,7 @@ export function CardSummary({
   onStartSession,
   activeSessionCardId,
   referenceDate,
+  onNavigateMeta,
 }) {
   const isActiveSession = activeSessionCardId != null && activeSessionCardId === card.id
   const doneItems = checklistDoneCount(card)
@@ -50,12 +51,12 @@ export function CardSummary({
         </div>
 
         <div className="meta-strip" aria-label="Card metadata">
-          <span className={`kind-chip kind-${kind}`}>{kindFeatures(card).label}</span>
-          <span>{card.phase}</span>
-          <span>{card.module}</span>
-          <span>{card.priority}</span>
-          <span>{card.slotType}</span>
-          <span>{formatDate(card.dueDate || card.startDate)}</span>
+          <button type="button" className={`meta-chip-button kind-chip kind-${kind}`} onClick={() => onNavigateMeta?.('kind', kind)}>{kindFeatures(card).label}</button>
+          <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('phase', card.phase)}>{card.phase}</button>
+          <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('module', card.moduleGroup)}>{card.module}</button>
+          <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('priority', card.priority)}>{card.priority}</button>
+          <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('slotType', card.slotType)}>{card.slotType}</button>
+          <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('date', card.dueDate || card.startDate)}>{formatDate(card.dueDate || card.startDate)}</button>
         </div>
 
         {!compact && !board && (

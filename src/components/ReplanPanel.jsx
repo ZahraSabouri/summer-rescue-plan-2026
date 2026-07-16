@@ -9,7 +9,7 @@ const MODULE_LABELS = {
   MAT700: 'Data Mining (MAT700)',
 }
 
-const STORAGE_KEY = 'summer-rescue-replan-config'
+const STORAGE_KEY = 'summer-rescue-replan-config-v2'
 
 function loadConfig() {
   try {
@@ -24,7 +24,7 @@ function loadConfig() {
 // remaining exam work is and how much each module must compress to fit the days
 // left at the chosen daily load.
 export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) {
-  const [config, setConfig] = useState(() => ({ dailyHours: 8, projectHours: 40, ...loadConfig() }))
+  const [config, setConfig] = useState(() => ({ dailyHours: 8, projectHours: 35, ...loadConfig() }))
 
   useEffect(() => {
     try {
@@ -55,9 +55,9 @@ export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) 
     if (!onApply || schedule.assignments.length === 0) return
     const ok = window.confirm(
       `Re-plan will reschedule ${schedule.count} exam cards into your timetable's free study blocks only ` +
-        `(classes, travel, and routines stay untouched), capped at ${config.dailyHours}h/day, highest priority first.\n\n` +
+        `(classes, travel, and routines stay untouched), capped at ${config.dailyHours}h/day, phase order first.\n\n` +
         `${schedule.trimmed} low-yield "timed re-run" repeats are deprioritised to the end, and ` +
-        `${schedule.overflow} cards land beyond the readiness date (marked Backlog — do only if time allows).\n\n` +
+        `${schedule.overflow} cards cannot fit before the readiness date and remain unscheduled Backlog.\n\n` +
         'A backup is downloaded first and you can undo. Apply now?',
     )
     if (ok) onApply(schedule.assignments)
@@ -172,8 +172,8 @@ export function ReplanPanel({ cards, referenceDate, onApply, onUndo, canUndo }) 
           )}
           <small>
             Packs into your timetable's free study blocks only (never classes, travel, or routines), capped at{' '}
-            {config.dailyHours}h/day. {schedule.trimmed} timed re-runs deprioritised; {schedule.overflow} cards land
-            beyond {plan.daysLeft} days and become Backlog. Backs up first; fully reversible.
+            {config.dailyHours}h/day. {schedule.trimmed} timed re-runs deprioritised; {schedule.overflow} cards cannot
+            fit inside the closed window and remain unscheduled Backlog. Backs up first; fully reversible.
           </small>
         </div>
       )}

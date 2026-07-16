@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { STATUS_COLUMNS } from '../data/constants'
 import { buildActivityHeatmap, buildBurnUp, buildHoursSeries, buildPace, bucketSeries } from '../utils/history'
 import {
@@ -30,6 +31,31 @@ const MODULE_COLORS = {
   General: '--muted',
 }
 
+function usePagedItems(items, pageSize = 24) {
+  const [page, setPage] = useState(1)
+  const [showAll, setShowAll] = useState(false)
+  const pageCount = showAll ? 1 : Math.max(1, Math.ceil(items.length / pageSize))
+  const safePage = Math.min(page, pageCount)
+  const start = showAll ? 0 : (safePage - 1) * pageSize
+  const pageItems = showAll ? items : items.slice(start, start + pageSize)
+  return { page: safePage, pageCount, pageItems, setPage, start, showAll, setShowAll }
+}
+
+function Pagination({ page, pageCount, setPage, total, start, pageSize, showAll, setShowAll }) {
+  if (total <= pageSize) return null
+  return (
+    <nav className="collection-pagination" aria-label="Collection pages">
+      <span>{showAll ? `All ${total}` : `${start + 1}–${Math.min(total, start + pageSize)} of ${total}`}</span>
+      {!showAll && <button type="button" className="secondary-button" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>}
+      {!showAll && <span>Page {page} of {pageCount}</span>}
+      {!showAll && <button type="button" className="secondary-button" disabled={page === pageCount} onClick={() => setPage(page + 1)}>Next</button>}
+      <button type="button" className="secondary-button" onClick={() => { setShowAll(!showAll); setPage(1) }}>
+        {showAll ? 'Use pages' : 'Show all'}
+      </button>
+    </nav>
+  )
+}
+
 function moduleColor(label) {
   return MODULE_COLORS[label] ?? '--chart-1'
 }
@@ -49,20 +75,22 @@ function rate(value) {
   return Number.isInteger(number) ? String(number) : number.toFixed(1)
 }
 
-function MetricTile({ label, value, detail, tone = 'neutral' }) {
+function MetricTile({ label, value, detail, tone = 'neutral', onClick }) {
+  const Tag = onClick ? 'button' : 'article'
   return (
-    <article className={`metric-tile ${tone}`}>
+    <Tag type={onClick ? 'button' : undefined} className={`metric-tile ${tone}${onClick ? ' is-clickable' : ''}`} onClick={onClick}>
       <span>{label}</span>
       <strong>{value}</strong>
       {detail && <p>{detail}</p>}
-    </article>
+    </Tag>
   )
 }
 
-function BarRow({ label, value, max, detail }) {
+function BarRow({ label, value, max, detail, onClick }) {
   const width = max ? Math.max(4, Math.round((value / max) * 100)) : 0
+  const Tag = onClick ? 'button' : 'div'
   return (
-    <div className="bar-row">
+    <Tag type={onClick ? 'button' : undefined} className={`bar-row${onClick ? ' is-clickable' : ''}`} onClick={onClick}>
       <div>
         <strong>{label}</strong>
         <span>{detail}</span>
@@ -70,7 +98,7 @@ function BarRow({ label, value, max, detail }) {
       <div className="bar-track" aria-hidden="true">
         <span style={{ width: `${width}%` }} />
       </div>
-    </div>
+    </Tag>
   )
 }
 
@@ -83,6 +111,36 @@ function MiniCardList({ cards, empty, actions }) {
         <CardSummary key={card.id} card={card} compact {...actions} />
       ))}
     </div>
+  )
+}
+
+function ModuleCardInventory({ cards, scopeLabel, actions }) {
+  const sortedCards = sortCards(cards)
+  const openCount = sortedCards.filter((card) => !card.done).length
+  const doneCount = sortedCards.length - openCount
+
+  return (
+    <section className="workspace-section planner-card-inventory" aria-label={`${scopeLabel} complete card inventory`}>
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Complete inventory</p>
+          <h2>Every {scopeLabel} card</h2>
+          <p>All module cards are listed here. The controls above only narrow this list when you deliberately apply a filter.</p>
+        </div>
+        <div className="planner-inventory-counts" aria-label={`${sortedCards.length} cards: ${openCount} open and ${doneCount} done`}>
+          <span>{sortedCards.length} total</span>
+          <span>{openCount} open</span>
+          <span>{doneCount} done</span>
+        </div>
+      </div>
+      <div className="focus-list">
+        {sortedCards.length > 0 ? (
+          sortedCards.map((card) => <CardSummary key={card.id} card={card} {...actions} />)
+        ) : (
+          <p className="empty-state">No cards match the current module filters.</p>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -170,24 +228,24 @@ export function DashboardView({ cards, stats, referenceDate, weekReferenceDate =
               <h2>{displayScope ? `${displayScope} completion` : 'Completion split'}</h2>
             </div>
           </div>
-          <StackedModuleBars rows={moduleRows} />
+          <StackedModuleBars rows={moduleRows} onSelect={(module) => actions.onNavigateMeta?.('module', module)} />
         </article>
       </section>
 
       <section className="metric-grid" aria-label="Campaign metrics">
-        <MetricTile label={displayScope ? `${displayScope} cards` : 'Campaign cards'} value={stats.baseTotal} detail={`${stats.done} done / ${stats.notDone} open`} />
-        <MetricTile label="Completion" value={`${donePct}%`} detail="Done across active tracker" tone="green" />
+        <MetricTile label={displayScope ? `${displayScope} cards` : 'Campaign cards'} value={stats.baseTotal} detail={`${stats.done} done / ${stats.notDone} open`} onClick={() => actions.onNavigateMeta?.('all')} />
+        <MetricTile label="Completion" value={`${donePct}%`} detail="Done across active tracker" tone="green" onClick={() => actions.onNavigateMeta?.('status', 'Done')} />
         <MetricTile
           label="Hours"
           value={`${hours(stats.loggedHours)} / ${hours(stats.estimatedHours)}`}
           detail="Logged vs estimated"
         />
         <MetricTile label={weekReferenceDate > referenceDate ? 'Launch week' : 'Current week'} value={weekOpen.length} detail={`${hours(weekHours)} planned`} tone="amber" />
-        <MetricTile label="Overdue" value={stats.overdueCards.length} detail="Open cards past due date" tone="red" />
-        <MetricTile label="Due today" value={stats.dueToday.length} detail={formatDate(referenceDate)} />
-        <MetricTile label="Next 7 days" value={stats.nextSevenCards.length} detail={`${formatDate(referenceDate)} - ${formatDate(next7End)}`} />
-        {!displayScope && <MetricTile label="Rescue lane" value={stats.rescueCards.length} detail="Buffer and recovery cards" tone="amber" />}
-        <MetricTile label="Waiting" value={stats.waitingCards.length} detail="Blocked or date-dependent" />
+        <MetricTile label="Overdue" value={stats.overdueCards.length} detail="Open cards past due date" tone="red" onClick={() => actions.onNavigateMeta?.('dateMode', 'overdue')} />
+        <MetricTile label="Due today" value={stats.dueToday.length} detail={formatDate(referenceDate)} onClick={() => actions.onNavigateMeta?.('date', referenceDate)} />
+        <MetricTile label="Next 7 days" value={stats.nextSevenCards.length} detail={`${formatDate(referenceDate)} - ${formatDate(next7End)}`} onClick={() => actions.onNavigateMeta?.('dateMode', 'next7')} />
+        {!displayScope && <MetricTile label="Rescue lane" value={stats.rescueCards.length} detail="Buffer and recovery cards" tone="amber" onClick={() => actions.onNavigateMeta?.('status', 'Rescue Lane')} />}
+        <MetricTile label="Waiting" value={stats.waitingCards.length} detail="Blocked or date-dependent" onClick={() => actions.onNavigateMeta?.('status', 'Waiting / Blocked')} />
         {(!displayScope || scopeLabel === 'MAT700') && (
           <MetricTile label="Data Mining" value={mat700Active ? 'Study lane active' : 'Paused'} detail="Tutorial-first recovery lane" tone="green" />
         )}
@@ -206,6 +264,8 @@ export function DashboardView({ cards, stats, referenceDate, weekReferenceDate =
           />
         )}
       </section>
+
+      {displayScope && <ModuleCardInventory cards={cards} scopeLabel={displayScope} actions={actions} />}
 
       <section className="split-grid">
         <div className="workspace-section">
@@ -245,6 +305,7 @@ export function DashboardView({ cards, stats, referenceDate, weekReferenceDate =
                 value={item.total}
                 max={phaseMax}
                 detail={`${item.done}/${item.total} done, ${hours(item.estimated)} est`}
+                onClick={() => actions.onNavigateMeta?.('phase', item.label)}
               />
             ))}
           </div>
@@ -265,6 +326,7 @@ export function DashboardView({ cards, stats, referenceDate, weekReferenceDate =
                 value={item.estimated}
                 max={moduleMax}
                 detail={`${item.total} cards, ${hours(item.logged)} logged`}
+                onClick={() => actions.onNavigateMeta?.('module', item.label)}
               />
             ))}
           </div>
@@ -298,34 +360,44 @@ export function DashboardView({ cards, stats, referenceDate, weekReferenceDate =
 }
 
 export function BoardView({ cards, actions }) {
-  const grouped = groupBy(cards, (card) => card.status)
+  const sorted = sortCards(cards)
+  const paging = usePagedItems(sorted, 28)
+  const grouped = groupBy(paging.pageItems, (card) => card.status)
+  const totals = groupBy(sorted, (card) => card.status)
 
   return (
-    <section className="board-view" aria-label="Status columns">
-      {STATUS_COLUMNS.map((column) => {
-        const columnCards = sortCards(grouped[column.id] ?? [])
-        return (
-          <div className="board-column" key={column.id}>
-            <header>
-              <h2>{column.label}</h2>
-              <span>{columnCards.length}</span>
-            </header>
-            <div className="board-card-list">
-              {columnCards.map((card) => (
-                <CardSummary key={card.id} card={card} compact board {...actions} />
-              ))}
-              {columnCards.length === 0 && <p className="empty-state">No cards.</p>}
+    <section aria-label="Status columns">
+      <Pagination {...paging} total={sorted.length} pageSize={28} />
+      <div className="board-view">
+        {STATUS_COLUMNS.map((column) => {
+          const columnCards = sortCards(grouped[column.id] ?? [])
+          return (
+            <div className="board-column" key={column.id}>
+              <header>
+                <h2>{column.label}</h2>
+                <span>{columnCards.length} shown · {(totals[column.id] ?? []).length} total</span>
+              </header>
+              <div className="board-card-list">
+                {columnCards.map((card) => (
+                  <CardSummary key={card.id} card={card} compact board {...actions} />
+                ))}
+                {columnCards.length === 0 && <p className="empty-state">No cards on this page.</p>}
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+      <Pagination {...paging} total={sorted.length} pageSize={28} />
     </section>
   )
 }
 
 export function TableView({ cards, actions }) {
+  const sorted = sortCards(cards)
+  const paging = usePagedItems(sorted, 25)
   return (
     <section className="table-shell" aria-label="Card table">
+      <Pagination {...paging} total={sorted.length} pageSize={25} />
       <p className="table-scroll-note">Card titles stay pinned; scroll sideways for status, hours, evidence, and completion.</p>
       <table className="card-table">
         <thead>
@@ -344,7 +416,7 @@ export function TableView({ cards, actions }) {
           </tr>
         </thead>
         <tbody>
-          {sortCards(cards).map((card) => (
+          {paging.pageItems.map((card) => (
             <tr key={card.id}>
               <td>
                 <button type="button" className="text-button strong" onClick={() => actions.onOpen(card.id)}>
@@ -389,6 +461,7 @@ export function TableView({ cards, actions }) {
           ))}
         </tbody>
       </table>
+      <Pagination {...paging} total={sorted.length} pageSize={25} />
     </section>
   )
 }
@@ -445,7 +518,7 @@ export function WeekView({ cards, referenceDate, actions }) {
   )
 }
 
-export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule }) {
+export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule, actions }) {
   const weekCards = cards.filter((card) => isCurrentWeek(getCardDate(card), referenceDate))
   const statusMax = Math.max(...stats.byStatus.map((item) => item.total), 1)
   const burn = buildBurnUp(cards, referenceDate, { schedule })
@@ -521,14 +594,9 @@ export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule
         </div>
         <div className="ring-row">
           {moduleRows.slice(0, 5).map((module) => (
-            <DonutRing
-              key={module.label}
-              value={module.done}
-              total={module.total}
-              label={module.label}
-              color={module.color}
-              size={104}
-            />
+            <button type="button" className="ring-link" key={module.label} onClick={() => actions.onNavigateMeta?.('module', module.label)}>
+              <DonutRing value={module.done} total={module.total} label={module.label} color={module.color} size={104} />
+            </button>
           ))}
         </div>
       </section>
@@ -540,7 +608,7 @@ export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule
             <h2>Completion heatmap</h2>
           </div>
         </div>
-        <CalendarHeatmap days={heatmap} />
+        <CalendarHeatmap days={heatmap} onSelectDate={(date) => actions.onNavigateMeta?.('date', date)} />
         <div className="heat-legend">
           <span>Less</span>
           <span className="heat-cell heat-1" />
@@ -566,6 +634,7 @@ export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule
               value={item.total}
               max={statusMax}
               detail={`${item.done}/${item.total} done, ${hours(item.logged)} logged`}
+              onClick={() => actions.onNavigateMeta?.('status', item.label)}
             />
           ))}
         </div>
@@ -580,11 +649,11 @@ export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule
         </div>
         <div className="stat-table">
           {Object.entries(groupBy(weekCards, (card) => card.moduleGroup)).map(([module, group]) => (
-            <div key={module}>
+            <button type="button" className="stat-table-row" key={module} onClick={() => actions.onNavigateMeta?.('module', module)}>
               <span>{module}</span>
               <strong>{group.length}</strong>
               <span>{hours(sumHours(group, 'estimatedHours'))}</span>
-            </div>
+            </button>
           ))}
         </div>
       </section>
@@ -596,7 +665,7 @@ export function AnalyticsView({ cards, stats, snapshots, referenceDate, schedule
             <h2>Progress per module</h2>
           </div>
         </div>
-        <StackedModuleBars rows={moduleRows} />
+        <StackedModuleBars rows={moduleRows} onSelect={(module) => actions.onNavigateMeta?.('module', module)} />
       </section>
 
       <section className="workspace-section wide">
@@ -628,6 +697,7 @@ export function EvidenceView({ cards, actions }) {
   const evidenceCards = sortCards(
     cards.filter((card) => requiresEvidence(card) || hasEvidence(card)),
   )
+  const paging = usePagedItems(evidenceCards, 20)
 
   return (
     <section className="evidence-view" aria-label="Evidence logbook">
@@ -637,8 +707,9 @@ export function EvidenceView({ cards, actions }) {
           <h2>Evidence and notes</h2>
         </div>
       </div>
+      <Pagination {...paging} total={evidenceCards.length} pageSize={20} />
       <div className="evidence-list">
-        {evidenceCards.map((card) => (
+        {paging.pageItems.map((card) => (
           <article key={card.id} className="evidence-row">
             <div>
               <button type="button" className="text-button strong" onClick={() => actions.onOpen(card.id)}>
@@ -657,6 +728,7 @@ export function EvidenceView({ cards, actions }) {
           </article>
         ))}
       </div>
+      <Pagination {...paging} total={evidenceCards.length} pageSize={20} />
     </section>
   )
 }
@@ -685,9 +757,9 @@ export function FocusView({
           {description && <p>{description}</p>}
         </div>
         <div className="focus-stats">
-          <MetricTile label="Open" value={openCards.length} />
-          <MetricTile label="Done" value={doneCards.length} />
-          <MetricTile label="Estimate" value={hours(sumHours(sorted, 'estimatedHours'))} />
+          <MetricTile label="Open" value={openCards.length} onClick={() => actions.onNavigateMeta?.('all')} />
+          <MetricTile label="Done" value={doneCards.length} onClick={() => actions.onNavigateMeta?.('status', 'Done')} />
+          <MetricTile label="Estimate" value={hours(sumHours(sorted, 'estimatedHours'))} onClick={() => actions.onNavigateMeta?.('all')} />
         </div>
       </header>
 

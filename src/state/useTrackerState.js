@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LOCAL_STATE_FILE_LABEL,
+  StateConflictError,
   appendLocalProgressEvent,
   deleteCardAttachmentFile,
   isCardAttachmentUrl,
@@ -8,6 +9,7 @@ import {
   writeLocalTrackerStateFile,
 } from '../utils/localStateFile'
 import { dayLog } from '../utils/dayLog'
+import { focusRewards } from '../utils/focusRewards'
 import { isTrackableCard, todayString } from '../utils/progress'
 import {
   createInitialTrackerState,
@@ -18,6 +20,8 @@ import {
 export const STORAGE_KEY = 'summer-rescue-tracker-state-v3'
 const LEGACY_MODULE_NOTE_PREFIX = 'summer-rescue-module-note-'
 const LEGACY_MODULE_NOTE_SUFFIX = '-v1'
+const TRACKER_CHANNEL = 'summer-rescue-tracker-state'
+const WRITER_ID_KEY = 'summer-rescue-writer-id'
 const RESOURCE_PREFIXES_BY_MODULE = {
   'Applied ML': ['aml-', 'amlPlan-'],
   'Time Series': ['timeSeries-', 'timeSeriesPlan-'],
@@ -35,6 +39,23 @@ function makeId(prefix = 'item') {
 
 function nowIso() {
   return new Date().toISOString()
+}
+
+function stateFingerprint(value) {
+  return JSON.stringify(value)
+}
+
+function browserWriterId() {
+  if (typeof window === 'undefined') return 'server-render'
+  try {
+    const existing = window.sessionStorage.getItem(WRITER_ID_KEY)
+    if (existing) return existing
+    const created = makeId('writer')
+    window.sessionStorage.setItem(WRITER_ID_KEY, created)
+    return created
+  } catch {
+    return makeId('writer')
+  }
 }
 
 function createInitialState() {
@@ -339,26 +360,48 @@ function buildDailySnapshot(cards) {
 export function useTrackerState(baseCards) {
   const [initialSnapshot] = useState(readStoredStateSnapshot)
   const [state, setState] = useState(initialSnapshot.state)
+  const addedCardSequenceRef = useRef(initialSnapshot.state.addedCards.length)
+  const stateRef = useRef(initialSnapshot.state)
   const browserStateExistedRef = useRef(initialSnapshot.browserStateExisted)
+  const serverFingerprintRef = useRef(null)
+  const revisionRef = useRef(0)
+  const writerIdRef = useRef(browserWriterId())
+  const channelRef = useRef(null)
   const localFileTimerRef = useRef(null)
   const progressLogReadyRef = useRef(false)
   const progressFlushTimerRef = useRef(null)
+  const progressFlushInFlightRef = useRef(false)
   const pendingProgressEventsRef = useRef([])
   const [localFile, setLocalFile] = useState({
     status: 'checking',
     savedAt: null,
+    revision: 0,
+    writerId: '',
+    conflict: null,
     path: LOCAL_STATE_FILE_LABEL,
     error: '',
   })
 
-  const flushProgressEvents = useCallback(() => {
-    if (typeof window === 'undefined' || !progressLogReadyRef.current) return
-    const events = pendingProgressEventsRef.current.splice(0)
-    for (const event of events) {
-      appendLocalProgressEvent(event).catch((error) => {
-        pendingProgressEventsRef.current.push(event)
-        console.warn('Local progress log unavailable:', error)
-      })
+  const flushProgressEvents = useCallback(async () => {
+    if (
+      typeof window === 'undefined' ||
+      !progressLogReadyRef.current ||
+      progressFlushInFlightRef.current
+    ) return
+    progressFlushInFlightRef.current = true
+    try {
+      while (pendingProgressEventsRef.current.length > 0) {
+        const event = pendingProgressEventsRef.current[0]
+        try {
+          await appendLocalProgressEvent(event)
+          pendingProgressEventsRef.current.shift()
+        } catch (error) {
+          console.warn('Local progress log unavailable:', error)
+          break
+        }
+      }
+    } finally {
+      progressFlushInFlightRef.current = false
     }
   }, [])
 
@@ -374,11 +417,26 @@ export function useTrackerState(baseCards) {
   )
 
   useEffect(
-    () => () => {
-      if (progressFlushTimerRef.current) window.clearTimeout(progressFlushTimerRef.current)
+    () => {
+      const flushWithBeacon = () => {
+        if (!navigator.sendBeacon) return
+        for (const event of pendingProgressEventsRef.current) {
+          navigator.sendBeacon('/api/events', new Blob([JSON.stringify(event)], { type: 'application/json' }))
+        }
+      }
+      window.addEventListener('pagehide', flushWithBeacon)
+      return () => {
+        if (progressFlushTimerRef.current) window.clearTimeout(progressFlushTimerRef.current)
+        window.removeEventListener('pagehide', flushWithBeacon)
+      }
     },
     [],
   )
+
+  useEffect(() => {
+    stateRef.current = state
+    addedCardSequenceRef.current = Math.max(addedCardSequenceRef.current, state.addedCards.length)
+  }, [state])
 
   const withCurrentSnapshot = useCallback(
     (nextState) => {
@@ -431,24 +489,59 @@ export function useTrackerState(baseCards) {
     return dayLog.subscribe(syncFromStore)
   }, [state.dayLogs])
 
+  // Focus rewards are a real campaign subsystem, not a disposable UI effect.
+  // Mirror planting, points, streaks, achievements, goals and guard mode into the
+  // revisioned tracker state while retaining the dedicated reactive focus store.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    if (state.focusRewards) focusRewards.hydrate(state.focusRewards)
+
+    const syncFromFocus = () => {
+      const rewardState = focusRewards.getPersistedState()
+      setState((current) => {
+        if (JSON.stringify(current.focusRewards) === JSON.stringify(rewardState)) return current
+        return { ...current, focusRewards: rewardState, updatedAt: nowIso() }
+      })
+    }
+
+    syncFromFocus()
+    return focusRewards.subscribe(syncFromFocus)
+  }, [state.focusRewards])
+
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
     let cancelled = false
 
     readLocalTrackerStateFile()
-      .then((payload) => {
+      .then((result) => {
         if (cancelled) return
+        const payload = result.payload
         const incoming = payload?.state ?? payload
 
         if (incoming) {
-          setState(() => {
-            const fileState = normaliseState(incoming)
-            return withCurrentSnapshot(fileState)
-          })
+          const normalisedIncoming = normaliseState(incoming)
+          const migrationChangedState = stateFingerprint(normalisedIncoming) !== stateFingerprint(incoming)
+          const fileState = withCurrentSnapshot(normalisedIncoming)
+          stateRef.current = fileState
+          // A migrated file must be written back. Treating its normalised
+          // fingerprint as already durable leaves the obsolete plan on disk.
+          serverFingerprintRef.current = migrationChangedState ? null : stateFingerprint(fileState)
+          revisionRef.current = result.revision
+          setState(fileState)
           browserStateExistedRef.current = false
         } else if (browserStateExistedRef.current) {
-          setState(createInitialState())
+          const browserState = withCurrentSnapshot(stateRef.current)
+          stateRef.current = browserState
+          serverFingerprintRef.current = null
+          revisionRef.current = 0
+          setState(browserState)
           browserStateExistedRef.current = false
+        } else {
+          const initialState = withCurrentSnapshot(stateRef.current)
+          stateRef.current = initialState
+          serverFingerprintRef.current = stateFingerprint(initialState)
+          revisionRef.current = 0
+          setState(initialState)
         }
 
         progressLogReadyRef.current = true
@@ -456,6 +549,10 @@ export function useTrackerState(baseCards) {
         setLocalFile((current) => ({
           ...current,
           status: 'ready',
+          savedAt: result.writtenAt || null,
+          revision: result.revision,
+          writerId: result.writerId ?? '',
+          conflict: null,
           error: '',
         }))
       })
@@ -505,25 +602,47 @@ export function useTrackerState(baseCards) {
 
   const saveLocalFileNow = useCallback(async () => {
     const exportedAt = nowIso()
+    const persistedState = withCurrentSnapshot(stateRef.current)
+    const fingerprint = stateFingerprint(persistedState)
     setLocalFile((current) => ({ ...current, status: 'saving', error: '' }))
 
     try {
       const result = await writeLocalTrackerStateFile({
         exportedAt,
         app: 'summer-rescue-plan-app',
-        state: {
-          ...state,
-          snapshots,
-        },
+        schemaVersion: persistedState.version,
+        writerId: writerIdRef.current,
+        state: persistedState,
+      }, {
+        revision: revisionRef.current,
+        writerId: writerIdRef.current,
       })
+      stateRef.current = persistedState
+      serverFingerprintRef.current = fingerprint
+      revisionRef.current = result.revision
+      setState((current) => (current === persistedState ? current : persistedState))
       setLocalFile((current) => ({
         ...current,
         status: 'saved',
         savedAt: result.savedAt ?? exportedAt,
+        revision: result.revision,
+        writerId: writerIdRef.current,
+        conflict: null,
         error: '',
       }))
+      channelRef.current?.postMessage({ revision: result.revision, writerId: writerIdRef.current })
       return result
     } catch (error) {
+      if (error instanceof StateConflictError) {
+        setLocalFile((current) => ({
+          ...current,
+          status: 'conflict',
+          revision: Number(error.current?.revision ?? current.revision),
+          conflict: error.current,
+          error: error.message,
+        }))
+        throw error
+      }
       setLocalFile((current) => ({
         ...current,
         status: 'error',
@@ -531,12 +650,12 @@ export function useTrackerState(baseCards) {
       }))
       throw error
     }
-  }, [snapshots, state])
+  }, [withCurrentSnapshot])
 
   useEffect(() => {
     const canWrite = localFile.status === 'ready' || localFile.status === 'saved'
-    const savedAt = localFile.savedAt ?? ''
-    if (!canWrite || (savedAt && state.updatedAt <= savedAt)) return undefined
+    const persistedState = withCurrentSnapshot(state)
+    if (!canWrite || stateFingerprint(persistedState) === serverFingerprintRef.current) return undefined
 
     if (localFileTimerRef.current) window.clearTimeout(localFileTimerRef.current)
     localFileTimerRef.current = window.setTimeout(() => {
@@ -548,7 +667,59 @@ export function useTrackerState(baseCards) {
     return () => {
       if (localFileTimerRef.current) window.clearTimeout(localFileTimerRef.current)
     }
-  }, [localFile.savedAt, localFile.status, saveLocalFileNow, state.updatedAt])
+  }, [localFile.status, saveLocalFileNow, state, withCurrentSnapshot])
+
+  const reloadLocalFileNow = useCallback(async () => {
+    const result = await readLocalTrackerStateFile()
+    const incoming = result.payload?.state ?? result.payload
+    if (!incoming) throw new Error('The local tracker file is empty.')
+    const normalisedIncoming = normaliseState(incoming)
+    const migrationChangedState = stateFingerprint(normalisedIncoming) !== stateFingerprint(incoming)
+    const fileState = withCurrentSnapshot(normalisedIncoming)
+    stateRef.current = fileState
+    serverFingerprintRef.current = migrationChangedState ? null : stateFingerprint(fileState)
+    revisionRef.current = result.revision
+    setState(fileState)
+    setLocalFile((current) => ({
+      ...current,
+      status: 'ready',
+      savedAt: result.writtenAt || null,
+      revision: result.revision,
+      writerId: result.writerId ?? '',
+      conflict: null,
+      error: '',
+    }))
+    return result
+  }, [withCurrentSnapshot])
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return undefined
+    const channel = new BroadcastChannel(TRACKER_CHANNEL)
+    channelRef.current = channel
+    channel.onmessage = async (event) => {
+      const remoteRevision = Number(event.data?.revision ?? 0)
+      if (event.data?.writerId === writerIdRef.current || remoteRevision <= revisionRef.current) return
+      const currentPersisted = withCurrentSnapshot(stateRef.current)
+      if (stateFingerprint(currentPersisted) !== serverFingerprintRef.current) {
+        setLocalFile((current) => ({
+          ...current,
+          status: 'conflict',
+          conflict: { revision: remoteRevision, writerId: event.data?.writerId ?? 'another tab' },
+          error: 'Another app tab saved while this tab has unsaved changes.',
+        }))
+        return
+      }
+      try {
+        await reloadLocalFileNow()
+      } catch (error) {
+        setLocalFile((current) => ({ ...current, status: 'error', error: error.message }))
+      }
+    }
+    return () => {
+      channel.close()
+      if (channelRef.current === channel) channelRef.current = null
+    }
+  }, [reloadLocalFileNow, withCurrentSnapshot])
 
   function updateSettings(patch) {
     setState((current) => ({
@@ -1266,7 +1437,8 @@ export function useTrackerState(baseCards) {
   }
 
   function addCard(input) {
-    const card = buildCustomCard(input, state.addedCards.length)
+    const card = buildCustomCard(input, addedCardSequenceRef.current)
+    addedCardSequenceRef.current += 1
     queueProgressEvent('card.added', card.id, cardEventPayload(card, {
       status: card.status,
       priority: card.priority,
@@ -1439,7 +1611,23 @@ export function useTrackerState(baseCards) {
 
   function resetTrackerState() {
     clearLegacyModuleNotes()
-    setState(createInitialState())
+    setState((current) => {
+      const initial = createInitialState()
+      const completedCards = Object.fromEntries(
+        Object.entries(current.cards ?? {}).filter(([, card]) => card?.done || card?.status === 'Done'),
+      )
+      const completedCustomCards = (current.addedCards ?? []).filter((card) => completedCards[card.id])
+      return {
+        ...initial,
+        cards: completedCards,
+        addedCards: completedCustomCards,
+        snapshots: current.snapshots ?? {},
+        dayLogs: current.dayLogs ?? {},
+        focusRewards: current.focusRewards ?? null,
+        moduleNotes: current.moduleNotes ?? {},
+        updatedAt: nowIso(),
+      }
+    })
   }
 
   return {
@@ -1484,6 +1672,7 @@ export function useTrackerState(baseCards) {
     resetTrackerState,
     localFile,
     saveLocalFileNow,
+    reloadLocalFileNow,
     storageKey: STORAGE_KEY,
   }
 }

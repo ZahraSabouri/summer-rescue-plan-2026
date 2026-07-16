@@ -1,7 +1,7 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { dayLog } from '../utils/dayLog'
 import { buildDayReview } from '../utils/dayReview'
-import { expandScheduleForDate } from '../utils/schedule'
+import { expandScheduleForDate, resolveScheduledCard } from '../utils/schedule'
 import { scheduleRules, scheduleExceptions } from '../data/summerRescuePlan'
 import { addDays, formatDate } from '../utils/progress'
 
@@ -115,7 +115,7 @@ export function StatusToggle({ date, entry }) {
 // Walk back through any past day: the full planned timetable (wake, wash-up,
 // meals, travel, classes, study blocks), retro-loggable block by block, joined
 // with what verifiably happened (cards completed, focus minutes).
-export function DayReview({ cards, referenceDate }) {
+export function DayReview({ cards, referenceDate, onOpenCard }) {
   const [selectedDate, setSelectedDate] = useState(() => addDays(referenceDate, -1))
   const review = useDayReview(selectedDate, cards)
   const isToday = selectedDate === referenceDate
@@ -206,18 +206,28 @@ export function DayReview({ cards, referenceDate }) {
           <p className="empty-note">No schedule blocks are defined for this day.</p>
         ) : (
           <ul className="review-blocks">
-            {review.entries.map((entry) => (
-              <li key={entry.key} className={`review-block is-${entry.status}`}>
+            {review.entries.map((entry) => {
+              const linkedCard = resolveScheduledCard(entry.block, cards)
+              return <li key={entry.key} className={`review-block is-${entry.status}`}>
                 <span className="review-time">
                   {entry.block.start}–{entry.block.end}
                 </span>
                 <span className={`review-cat cat-${entry.block.category ?? 'routine'}`}>
                   {CATEGORY_LABELS[entry.block.category] ?? 'Routine'}
                 </span>
-                <span className="review-title">{entry.block.title}</span>
+                <button
+                  type="button"
+                  className="review-title review-title-button"
+                  onClick={() => {
+                    if (linkedCard) onOpenCard?.(linkedCard.id)
+                  }}
+                  disabled={!onOpenCard || !linkedCard}
+                >
+                  {entry.block.title}
+                </button>
                 <StatusToggle date={selectedDate} entry={entry} />
               </li>
-            ))}
+            })}
           </ul>
         )}
         <p className="review-footnote">
@@ -283,7 +293,9 @@ export function DayReview({ cards, referenceDate }) {
             <ul className="review-cards-done">
               {review.cardsDone.map((card) => (
                 <li key={card.id}>
-                  <strong>#{card.number}</strong> {card.title}
+                  <button type="button" className="text-button" onClick={() => onOpenCard?.(card.id)}>
+                    <strong>#{card.number}</strong> {card.title}
+                  </button>
                 </li>
               ))}
             </ul>

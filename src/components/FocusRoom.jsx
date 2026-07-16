@@ -129,11 +129,8 @@ export function FocusRoom({
 
   const rewards = useSyncExternalStore(focusRewards.subscribe, focusRewards.getState)
 
-  // Focus guard: when a block is running and the user leaves this screen — switches
-  // tab, minimises, or alt-tabs to another app — react based on the strictness mode.
-  //   Gentle: pause the timer and hold a "come back" overlay; nothing is lost.
-  //   Strict: forfeit the block (no points, no card credit), wilt a tree, and show
-  //   a "block forfeited" overlay.
+  // The selected guard policy is explicit. Gentle pauses and preserves the run;
+  // Strict forfeits the current block and records a wilted tree.
   const [away, setAway] = useState(false)
   const [forfeited, setForfeited] = useState(false)
   const runningRef = useRef(running)
@@ -152,17 +149,16 @@ export function FocusRoom({
   useEffect(() => {
     strictRef.current = rewards.strict
   }, [rewards.strict])
-
   useEffect(() => {
     let blurTimer = null
     const leave = () => {
       if (!runningRef.current) return
       if (strictRef.current) {
-        forfeitRef.current?.() // discard the run — no points, no credit
-        focusRewards.recordBlockForfeit() // wilt a tree
+        forfeitRef.current?.()
+        focusRewards.recordBlockForfeit()
         setForfeited(true)
       } else {
-        toggleRef.current?.() // pause; the partial focus segment is logged
+        toggleRef.current?.()
         setAway(true)
       }
     }
@@ -208,8 +204,6 @@ export function FocusRoom({
     if (!runningRef.current) toggleRef.current?.()
   }
 
-  // Strict mode: the block was forfeited and the timer reset to a fresh focus block.
-  // Start a new one right away.
   function startAgainAfterForfeit() {
     setForfeited(false)
     if (!runningRef.current) toggleRef.current?.()
@@ -270,7 +264,7 @@ export function FocusRoom({
           <div className="focus-room-guard-card">
             <span className="focus-room-guard-kicker">🥀 Block forfeited</span>
             <strong>You left the focus screen.</strong>
-            <p>Strict mode: that block is gone — no points, and a tree wilted. The timer is reset. Start again when you’re ready to commit.</p>
+            <p>Strict mode ended that block without points or card credit and wilted one tree. The timer is reset for a fresh commitment.</p>
             <button type="button" className="focus-room-start" onClick={startAgainAfterForfeit}>
               Start a new block
             </button>
@@ -364,7 +358,7 @@ export function FocusRoom({
               {sessions} focus {sessions === 1 ? 'block' : 'blocks'} completed this app session
             </p>
 
-            <div className="focus-room-rewards" aria-label="Focus rewards">
+            <div className="focus-room-rewards" aria-label="Focus rewards and guard policy">
               <div className="focus-room-guard-mode" role="group" aria-label="Focus guard strictness">
                 <span>Focus guard</span>
                 <div className="focus-room-guard-toggle">
@@ -387,8 +381,8 @@ export function FocusRoom({
                 </div>
                 <small>
                   {rewards.strict
-                    ? 'Leaving forfeits the block and wilts a tree.'
-                    : 'Leaving pauses the timer — nothing lost.'}
+                    ? 'Leaving forfeits the active block and wilts one tree.'
+                    : 'Leaving pauses the timer and preserves the block for resuming.'}
                 </small>
               </div>
 
@@ -406,12 +400,13 @@ export function FocusRoom({
                 <span>Today’s forest</span>
                 <div className="focus-room-trees" aria-hidden="true">
                   {rewards.today.trees === 0 && rewards.today.wilted === 0 ? (
-                    <em>Finish a block to grow your first tree.</em>
+                    <em>Finish a block to plant your first tree.</em>
                   ) : (
                     <>
-                      {Array.from({ length: Math.min(rewards.today.trees, 12) }).map((_, index) => (
-                        <span key={`t${index}`}>🌳</span>
-                      ))}
+                      {(rewards.today.treeList?.length
+                        ? rewards.today.treeList.slice(0, 12)
+                        : Array.from({ length: Math.min(rewards.today.trees, 12) }, () => '🌳')
+                      ).map((tree, index) => <span key={`t${index}`}>{tree}</span>)}
                       {Array.from({ length: Math.min(rewards.today.wilted, 12) }).map((_, index) => (
                         <span key={`w${index}`}>🥀</span>
                       ))}
@@ -419,7 +414,7 @@ export function FocusRoom({
                   )}
                 </div>
                 <small>
-                  {rewards.today.trees} grown · {rewards.today.wilted} wilted today · {rewards.totalTrees} all time
+                  {rewards.today.trees} planted · {rewards.today.wilted} wilted today · {rewards.totalTrees} all time
                 </small>
               </div>
             </div>

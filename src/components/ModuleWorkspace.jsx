@@ -542,7 +542,8 @@ function ResourcePreview({ resource, frameRef }) {
     )
   }
   if (resource.viewer === 'frame') {
-    // HTML gets sandboxed (it can run scripts safely); PDFs render in the native viewer (no sandbox).
+    // Local HTML is treated as untrusted static material. It receives a unique
+    // origin and no script permission, so it cannot reach the parent app/API.
     const html = isHtmlResource(resource)
     return (
       <iframe
@@ -550,7 +551,7 @@ function ResourcePreview({ resource, frameRef }) {
         className="reader-frame"
         title={resource.title}
         src={resource.url}
-        {...(html ? { sandbox: 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals' } : {})}
+        {...(html ? { sandbox: 'allow-popups allow-forms' } : {})}
       />
     )
   }
@@ -897,7 +898,7 @@ export function ModuleWorkspace({
       <section className="module-hero">
         <div className="module-hero-copy">
           <p className="eyebrow">{module.code}</p>
-          <h1>{module.title}</h1>
+          <h2>{module.title}</h2>
           <p>{module.examShape}</p>
           {moduleExamDate && <span className="module-exam-chip">Exam date: {formatDate(moduleExamDate)}</span>}
           <div className="hub-command-strip">
@@ -957,7 +958,7 @@ export function ModuleWorkspace({
           >
             {item.label}
             {item.id === 'materials' && <span className="module-tab-count">{module.resources.length}</span>}
-            {item.id === 'planning' && <span className="module-tab-count">{openCards.length}</span>}
+            {item.id === 'planning' && <span className="module-tab-count">{moduleCards.length}</span>}
           </button>
         ))}
       </div>
@@ -1006,7 +1007,7 @@ export function ModuleWorkspace({
                 <details className="done-details">
                   <summary>{doneCards.length} done cards</summary>
                   <div className="focus-list">
-                    {doneCards.slice(0, 12).map((card) => (
+                    {doneCards.map((card) => (
                       <CardSummary key={card.id} card={card} compact {...actions} />
                     ))}
                   </div>

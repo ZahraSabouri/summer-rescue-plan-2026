@@ -184,6 +184,7 @@ export function filterCards(cards, filters, referenceDate) {
     if (filters.dateMode === 'next7' && !isBetween(cardDate, referenceDate, next7)) return false
     if (filters.dateMode === 'overdue' && !isOverdue(card, referenceDate)) return false
     if (filters.dateMode === 'no-date' && cardDate) return false
+    if (filters.exactDate && cardDate !== filters.exactDate) return false
 
     return true
   })

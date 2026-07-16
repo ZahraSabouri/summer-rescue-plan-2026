@@ -26,6 +26,11 @@ dist-ssr
 # Tracker JSON backups exported/autosaved by the app (personal progress)
 *tracker-backup*.json
 summer-rescue-tracker-backup-*.json
+backup_*.json
+backup_*.sqlite
+*.sqlite
+summer-rescue-tracker-state.json
+progress-log*.ndjson
 local-data/
 
 # Local study materials — large, personal, and university-copyrighted.

@@ -3,12 +3,21 @@ import { baseCards as legacyCards } from './baseCards.js'
 export const CAMPAIGN_START = '2026-07-16'
 export const READINESS_DEADLINE = '2026-08-16'
 export const EXAM_WINDOW_START = '2026-08-17'
-export const CAMPAIGN_END = '2026-08-28'
+export const EXAM_WINDOW_END = '2026-08-28'
+export const CAMPAIGN_END = READINESS_DEADLINE
 
 const PHASE_WINDOWS = {
-  'Phase 2': [CAMPAIGN_START, '2026-07-31'],
-  'Phase 3': ['2026-08-01', '2026-08-09'],
-  'Phase 4': ['2026-08-10', READINESS_DEADLINE],
+  'Phase 0': [CAMPAIGN_START, '2026-07-31'],
+  'Phase 1': ['2026-08-01', '2026-08-09'],
+  'Phase 2': ['2026-08-10', READINESS_DEADLINE],
+}
+
+const RESET_PHASE = { 'Phase 2': 'Phase 0', 'Phase 3': 'Phase 1', 'Phase 4': 'Phase 2' }
+
+function resetPhaseText(value) {
+  return typeof value === 'string'
+    ? value.replace(/Phase [234]/g, (phase) => RESET_PHASE[phase] ?? phase)
+    : value
 }
 
 const AML_KEEP = new Set([
@@ -27,6 +36,15 @@ const MODULE_SLOTS = {
   'Applied ML': 'AM / protected AML blocks',
   'Time Series': 'PM / protected Time Series blocks',
   MAT700: 'Protected MAT700 blocks',
+}
+
+// Protected module hours between the 16 July restart and 16 August readiness
+// lock. The full card inventory remains intact, but estimates must fit these
+// real timetable lanes instead of the superseded June plan.
+const PHASE_CAPACITY_HOURS = {
+  'Applied ML': { 'Phase 0': 33, 'Phase 1': 19, 'Phase 2': 18 },
+  'Time Series': { 'Phase 0': 44, 'Phase 1': 22, 'Phase 2': 22 },
+  MAT700: { 'Phase 0': 27, 'Phase 1': 13, 'Phase 2': 12 },
 }
 
 function dateRange(start, end) {
@@ -72,49 +90,63 @@ function spreadCardsAcrossWindow(cards, start, end) {
 
     return {
       ...card,
-      sourceList: '13 July rescue plan',
+      sourceList: '16 July 32-day reset',
       status: statusForDate(dueDate),
       startDate,
       dueDate,
       dueDateTime: `${dueDate} 18:15`,
       slotLabel: `${MODULE_SLOTS[card.moduleGroup] ?? 'Protected study blocks'} · ${startDate}${startDate === dueDate ? '' : ` to ${dueDate}`} (${hours}h)`,
-      tags: [...new Set([...(card.tags ?? []), '13-july-rescue'])],
+      tags: [...new Set([...(card.tags ?? []), '16-july-reset'])],
     }
   })
 }
 
 function selectedLegacyExamCards() {
-  const selected = legacyCards
+  return legacyCards
     .filter((card) => {
       if (card.moduleGroup === 'Applied ML') return AML_KEEP.has(card.number)
       if (card.moduleGroup === 'Time Series') return TIME_SERIES_KEEP.has(card.number)
       return false
     })
-    .map((card) => ({
+    .map((card) => {
+      const phase = RESET_PHASE[card.phase] ?? card.phase
+      return {
       ...card,
-      trackerNotes: [card.trackerNotes, 'Rebased from the 4 July plan after zero completed work was confirmed.']
+      phase,
+      phaseId: phase.toLowerCase().replace(/\s+/g, '-'),
+      title: resetPhaseText(card.title),
+      description: resetPhaseText(card.description),
+      checklist: (card.checklist ?? []).map(resetPhaseText),
+      evidenceRequirement: resetPhaseText(card.evidenceRequirement),
+      doneCondition: resetPhaseText(card.doneCondition),
+      trackerNotes: [resetPhaseText(card.trackerNotes), 'Rebased from zero on 16 July for the closed 32-day readiness window.']
         .filter(Boolean)
         .join(' '),
-    }))
+      }
+    })
+}
 
-  // Normalise the inherited AML estimates to the 80 protected AML hours in
-  // the actual timetable. Quarter-hour rounding keeps every card usable while
-  // making the giant list genuinely fit its lane.
-  const aml = selected.filter((card) => card.moduleGroup === 'Applied ML')
-  const total = aml.reduce((sum, card) => sum + Number(card.estimatedHours || 0), 0) || 1
+function fitCardsToTotal(cards, targetHours) {
+  const sourceHours = cards.reduce((sum, card) => sum + Number(card.estimatedHours || 0), 0) || 1
   let allocated = 0
-  const fittedAml = aml.map((card, index) => {
-    const estimatedHours = index === aml.length - 1
-      ? Math.round((80 - allocated) * 4) / 4
-      : Math.max(0.25, Math.round((Number(card.estimatedHours || 0) * 80 / total) * 4) / 4)
+  return cards.map((card, index) => {
+    const estimatedHours = index === cards.length - 1
+      ? Math.round((targetHours - allocated) * 4) / 4
+      : Math.max(0.25, Math.round((Number(card.estimatedHours || 0) * targetHours / sourceHours) * 4) / 4)
     allocated += estimatedHours
     return { ...card, estimatedHours }
   })
+}
 
-  return [
-    ...fittedAml,
-    ...selected.filter((card) => card.moduleGroup === 'Time Series'),
-  ]
+function fitExamCardsToTimetable(cards) {
+  return Object.entries(PHASE_CAPACITY_HOURS).flatMap(([moduleGroup, phases]) =>
+    Object.entries(phases).flatMap(([phase, targetHours]) =>
+      fitCardsToTotal(
+        cards.filter((card) => card.moduleGroup === moduleGroup && card.phase === phase),
+        targetHours,
+      ),
+    ),
+  )
 }
 
 function makeCard({
@@ -140,7 +172,7 @@ function makeCard({
     moduleGroup,
     phase,
     phaseId: phase.toLowerCase().replace(/\s+/g, '-'),
-    sourceList: '13 July rescue plan',
+    sourceList: '16 July 32-day reset',
     status: 'Backlog',
     priority,
     slotType: moduleGroup === 'MAT700' ? 'PM' : 'Flex',
@@ -153,7 +185,7 @@ function makeCard({
     checklist,
     evidenceRequirement: evidence,
     doneCondition: done,
-    trackerNotes: 'Created for the 13 July MAT700 recovery plan.',
+    trackerNotes: 'Created for the 16 July 32-day recovery reset.',
     tags: [...new Set(tags)],
   }
 }
@@ -165,7 +197,7 @@ const MAT700_LECTURES = Array.from({ length: 7 }, (_, index) => {
     number: 301 + index,
     title: `MAT700 L${lecture} — rebuild concepts, formula sheet, and question-bank recall`,
     moduleGroup: 'MAT700',
-    phase: 'Phase 2',
+    phase: 'Phase 0',
     hours: 2.5,
     priority: 'Critical',
     description: `Relearn Lecture ${lecture} from near-zero familiarity. Use the local study notes and question bank; the output must be usable without rereading the whole lecture.`,
@@ -181,24 +213,34 @@ const MAT700_LECTURES = Array.from({ length: 7 }, (_, index) => {
   })
 })
 
-const MAT700_TUTORIALS = Array.from({ length: 7 }, (_, index) => {
+const MAT700_TUTORIAL_TASKS = [
+  'Tutorial 1 — first attempt and correction',
+  'Tutorial 2 — first attempt and correction',
+  'Tutorial 3 — first attempt and correction',
+  'Tutorial 1 — delayed closed-book repeat',
+  'Tutorial 2 — delayed closed-book repeat',
+  'Tutorial 3 — delayed closed-book repeat',
+  'Tutorials 1–3 — timed mixed synthesis set',
+]
+
+const MAT700_TUTORIALS = MAT700_TUTORIAL_TASKS.map((task, index) => {
   const tutorial = index + 1
   return makeCard({
     id: `mat700-tutorial-${tutorial}`,
     number: 311 + index,
-    title: `MAT700 Tutorial ${tutorial} — attempt, solution check, correction, repeat`,
+    title: `MAT700 ${task}`,
     moduleGroup: 'MAT700',
-    phase: 'Phase 2',
+    phase: 'Phase 0',
     hours: 2,
     priority: 'Critical',
-    description: 'Tutorial problems are the centre of MAT700 revision. Slides support the attempt; they do not replace it.',
+    description: 'The available Tutorials 1–3 and their worked solutions are the centre of MAT700 revision. Slides support the attempt; they do not replace it.',
     checklist: [
       'Attempt the core questions without the solution open',
       'Check every line against the worked solution',
       'Redo incorrect questions immediately from a blank page',
       'Add 2–3 recall prompts and one error-log entry',
     ],
-    evidence: `Tutorial ${tutorial} attempt + corrected redo`,
+    evidence: `${task} attempt + corrected redo`,
     done: 'Core questions are attempted, checked, corrected, and one failed question is successfully repeated',
     tags: ['exam', 'recovery', 'tutorial', 'worked-problems'],
   })
@@ -215,7 +257,7 @@ const MAT700_PHASE_3 = [
     number,
     title,
     moduleGroup: 'MAT700',
-    phase: 'Phase 3',
+    phase: 'Phase 1',
     hours: 2,
     priority: 'Critical',
     description: 'Convert the rebuilt material into a repeatable exam answer under time pressure.',
@@ -233,28 +275,28 @@ const MAT700_PHASE_3 = [
 
 const MAT700_PHASE_4 = [
   makeCard({
-    id: 'mat700-paper-a', number: 331, title: 'MAT700 full past paper A — timed and closed-book', moduleGroup: 'MAT700', phase: 'Phase 4', hours: 3,
-    priority: 'Critical', description: 'Sit the strongest available recent paper under exam conditions, then mark it strictly.',
+    id: 'mat700-paper-a', number: 331, title: 'MAT700 mixed question-bank set A — timed and closed-book', moduleGroup: 'MAT700', phase: 'Phase 2', hours: 3,
+    priority: 'Critical', description: 'Build a representative set from the real tutorials and question bank, sit it under exam conditions, then mark it strictly.',
     checklist: ['Two-hour timed attempt', 'Mark every question', 'Calculate topic-level score', 'Rank the top three repair needs'],
-    evidence: 'timed paper + score + ranked repair list', done: 'paper is completed, marked, and the next repair is unambiguous', tags: ['exam', 'recovery', 'past-paper'],
+    evidence: 'timed mixed set + score + ranked repair list', done: 'set is completed, marked, and the next repair is unambiguous', tags: ['exam', 'recovery', 'question-bank'],
   }),
   makeCard({
-    id: 'mat700-repair-a', number: 332, title: 'MAT700 weak-topic repair after paper A', moduleGroup: 'MAT700', phase: 'Phase 4', hours: 2,
-    description: 'Repair only the failures exposed by paper A; no broad rereading.', checklist: ['Redo failed questions', 'Return to one targeted tutorial/lecture source', 'Repeat from blank', 'Update formula sheet'],
+    id: 'mat700-repair-a', number: 332, title: 'MAT700 weak-topic repair after mixed set A', moduleGroup: 'MAT700', phase: 'Phase 2', hours: 2,
+    description: 'Repair only the failures exposed by mixed set A; no broad rereading.', checklist: ['Redo failed questions', 'Return to one targeted tutorial/lecture source', 'Repeat from blank', 'Update formula sheet'],
     evidence: 'corrected questions + error-log closure', done: 'the highest-value errors can be solved from a blank page', tags: ['exam', 'recovery', 'repair'],
   }),
   makeCard({
-    id: 'mat700-paper-b', number: 333, title: 'MAT700 full past paper B — timed and closed-book', moduleGroup: 'MAT700', phase: 'Phase 4', hours: 3,
-    priority: 'Critical', description: 'Second full simulation to prove the pass margin is repeatable.', checklist: ['Two-hour timed attempt', 'Mark strictly', 'Compare with paper A', 'Identify any repeated error'],
-    evidence: 'timed paper + score comparison', done: 'a second marked paper shows a credible pass path', tags: ['exam', 'recovery', 'past-paper'],
+    id: 'mat700-paper-b', number: 333, title: 'MAT700 mixed question-bank set B — timed and closed-book', moduleGroup: 'MAT700', phase: 'Phase 2', hours: 3,
+    priority: 'Critical', description: 'Second full simulation to prove the pass margin is repeatable.', checklist: ['Two-hour timed attempt', 'Mark strictly', 'Compare with mixed set A', 'Identify any repeated error'],
+    evidence: 'timed mixed set + score comparison', done: 'a second marked set shows a credible pass path', tags: ['exam', 'recovery', 'question-bank'],
   }),
   makeCard({
-    id: 'mat700-repair-b', number: 334, title: 'MAT700 final weak-topic repair', moduleGroup: 'MAT700', phase: 'Phase 4', hours: 2,
+    id: 'mat700-repair-b', number: 334, title: 'MAT700 final weak-topic repair', moduleGroup: 'MAT700', phase: 'Phase 2', hours: 2,
     description: 'Close repeated errors only. Protect recall and confidence.', checklist: ['Fix repeated errors', 'Redo one question per weak template', 'Check formula recall', 'Stop adding new material'],
     evidence: 'final corrected set', done: 'no repeated high-value error remains unaddressed', tags: ['exam', 'recovery', 'repair'],
   }),
   makeCard({
-    id: 'mat700-final-recall', number: 335, title: 'MAT700 final formula, procedure, and error-log sweep', moduleGroup: 'MAT700', phase: 'Phase 4', hours: 1.5,
+    id: 'mat700-final-recall', number: 335, title: 'MAT700 final formula, procedure, and error-log sweep', moduleGroup: 'MAT700', phase: 'Phase 2', hours: 1.5,
     priority: 'Critical', description: 'Final retrieval pass before the exam window. Recall first; check second.', checklist: ['Write core formulas from memory', 'Recite procedure triggers', 'Review only unresolved error-log lines', 'Prepare exam materials'],
     evidence: 'final closed-book recall sheet', done: 'the high-yield sheet can be reproduced without notes', tags: ['exam', 'recovery', 'final-recall'],
   }),
@@ -265,13 +307,13 @@ const MAT700_DIAGNOSTIC = makeCard({
   number: 300,
   title: 'MAT700 foundation reset — build the pass specification',
   moduleGroup: 'MAT700',
-  phase: 'Phase 2',
+  phase: 'Phase 0',
   hours: 1,
   priority: 'Critical',
   description: 'Set the working target, inventory the seven lectures/tutorials, and define the evidence needed for exam readiness. This is planning, not rumination.',
   checklist: [
     'Record the assessment scope and working target',
-    'Inventory Lectures 1–7, tutorials, question banks, and past papers',
+    'Inventory Lectures 1–7, Tutorials 1–3, solutions, and question banks',
     'Create one MAT700 error log',
     'Write the pass rule: tutorials first, timed retrieval, strict marking',
   ],
@@ -303,7 +345,7 @@ function phaseSpread(cards) {
   })
 }
 
-const examCards = phaseSpread([...selectedLegacyExamCards(), ...mat700Cards]).map((card) => {
+const examCards = phaseSpread(fitExamCardsToTimetable([...selectedLegacyExamCards(), ...mat700Cards])).map((card) => {
   if (card.moduleGroup !== 'MAT700') return card
   return {
     ...card,
@@ -352,27 +394,27 @@ const projectChecklist = [
 
 const projectCards = [
   datedCard({
-    id: 'project-capacity-w1', number: 201, title: 'CMT501 protected capacity — 16–19 July', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-07-16', dueDate: '2026-07-19', hours: 5, priority: 'High',
+    id: 'project-capacity-w1', number: 201, title: 'CMT501 protected capacity — 16–19 July', moduleGroup: 'Group Project', phase: 'Phase 0', startDate: '2026-07-16', dueDate: '2026-07-19', hours: 5, priority: 'High',
     description: 'Generic capacity for the waste-management project. Work on the current bottleneck only; detailed project management stays in GitLab/the project app.', checklist: projectChecklist,
     evidence: 'GitLab activity + short contribution/risk note', done: 'the week’s protected blocks were used or deliberately released to exam study', tags: ['project', 'capacity', 'gitlab'], slotLabel: 'Thu class 3h + Sat 2h',
   }),
   datedCard({
-    id: 'project-capacity-w2', number: 202, title: 'CMT501 protected capacity — 20–26 July', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-07-20', dueDate: '2026-07-26', hours: 7, priority: 'High',
+    id: 'project-capacity-w2', number: 202, title: 'CMT501 protected capacity — 20–26 July', moduleGroup: 'Group Project', phase: 'Phase 0', startDate: '2026-07-20', dueDate: '2026-07-26', hours: 7, priority: 'High',
     description: 'Continue backend/integration leadership and coordination without allowing CMT501 to consume the exam plan.', checklist: projectChecklist,
     evidence: 'GitLab activity + contribution/risk note', done: 'current integration risk has an owner and next action', tags: ['project', 'capacity', 'gitlab'], slotLabel: 'Mon 2h + Thu class 3h + Sat 2h',
   }),
   datedCard({
-    id: 'project-internal-cutoff', number: 203, title: 'CMT501 integration surge — internal handoff by 2 August', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-07-27', dueDate: '2026-08-02', hours: 12, priority: 'Critical',
+    id: 'project-internal-cutoff', number: 203, title: 'CMT501 integration surge — internal handoff by 2 August', moduleGroup: 'Group Project', phase: 'Phase 0', startDate: '2026-07-27', dueDate: '2026-08-02', hours: 12, priority: 'Critical',
     description: 'Protected surge toward the team’s 2 August internal deadline. Stabilise one integrated product on main; stop adding scope.', checklist: [...projectChecklist, 'Confirm backend, ML, database, frontend, and Docker integration path', 'Confirm a 20-minute demonstration plan and recording owner'],
     evidence: 'integrated-main evidence + demo readiness/risk note', done: 'the team has a runnable integration path and a bounded list for final submission', tags: ['project', 'deadline', 'integration'], slotLabel: 'Mon/Wed/Sat/Sun 2h blocks + Thu class 4h',
   }),
   datedCard({
-    id: 'project-submit', number: 204, title: 'CMT501 finalisation and 20-minute team video — submit by 6 August', moduleGroup: 'Group Project', phase: 'Phase 3', startDate: '2026-08-03', dueDate: '2026-08-06', hours: 8, priority: 'Critical',
+    id: 'project-submit', number: 204, title: 'CMT501 finalisation and 20-minute team video — submit by 6 August', moduleGroup: 'Group Project', phase: 'Phase 1', startDate: '2026-08-03', dueDate: '2026-08-06', hours: 8, priority: 'Critical',
     description: 'Only integration, QA, recording, coversheet, and submission work. The team video is nominally 20 minutes and worth 60%.', checklist: ['Freeze scope', 'Run integrated demo from main', 'Verify claims against working functionality', 'Record/review 20-minute video', 'Submit required files and preserve confirmation'],
     evidence: 'final video + coversheet + submission confirmation + contribution record', done: 'team submission is confirmed before the real deadline', tags: ['project', 'deadline', 'submission', 'fixed'], slotLabel: 'Mon/Wed protected blocks + Thu 10:00–14:00 class/submission window',
   }),
   datedCard({
-    id: 'project-evidence-reserve', number: 205, title: 'CMT501 post-submit evidence/report reserve', moduleGroup: 'Group Project', phase: 'Phase 4', startDate: '2026-08-08', dueDate: '2026-08-12', hours: 3, priority: 'High',
+    id: 'project-evidence-reserve', number: 205, title: 'CMT501 post-submit evidence/report reserve', moduleGroup: 'Group Project', phase: 'Phase 1', startDate: '2026-08-08', dueDate: '2026-08-12', hours: 3, priority: 'High',
     description: 'Small protected reserve for contribution evidence and the individual 1,500-word report lane. Release unused time to the three exams.', checklist: ['Save issues/MRs/reviews/decisions/testing evidence', 'Update contribution log', 'Capture report points: 400/700/400 word structure', 'Record the official report deadline when confirmed'],
     evidence: 'organised evidence folder + report outline/deadline note', done: 'evidence is safe and any remaining report action is explicit', tags: ['project', 'evidence', 'report', 'flex'], slotLabel: 'Sat 8 Aug 1.5h + Wed 12 Aug 1.5h; release if closed',
   }),
@@ -384,8 +426,6 @@ const JOB_MAINTENANCE_WEEKS = [
   ['2026-07-27', '2026-08-02', 'Create two lightweight CV tracks', 'Create Software/Backend/Platform and Data/Analytics/ML variants while keeping roughly 80–85% shared.'],
   ['2026-08-03', '2026-08-09', 'Set up Higherin', 'Create the core profile, upload the CV, set availability/location, and enable useful alerts only.'],
   ['2026-08-10', '2026-08-16', 'Set up Bright Network', 'Reuse the same core profile information and enable relevant graduate/internship alerts.'],
-  ['2026-08-17', '2026-08-23', 'Set up Gradcracker', 'Create the STEM profile and alerts for software, data, AI/ML, data engineering, and relevant UK locations.'],
-  ['2026-08-24', '2026-08-28', 'Build a minimum viable GitHub profile', 'Improve the profile README, pin three relevant repositories, and make one project README presentable.'],
 ]
 
 const jobCards = JOB_MAINTENANCE_WEEKS.map(([startDate, dueDate, task, detail], index) => datedCard({
@@ -393,22 +433,22 @@ const jobCards = JOB_MAINTENANCE_WEEKS.map(([startDate, dueDate, task, detail], 
   number: 401 + index,
   title: `Job maintenance week ${index + 1} — ${task}`,
   moduleGroup: 'Job Hunt',
-  phase: startDate < '2026-08-01' ? 'Phase 2' : startDate < '2026-08-10' ? 'Phase 3' : 'Phase 4',
+  phase: startDate < '2026-08-01' ? 'Phase 0' : startDate < '2026-08-10' ? 'Phase 1' : 'Phase 2',
   startDate,
   dueDate,
   hours: 2,
   priority: 'Medium',
-  description: `Two-hour weekly ceiling, including a 30-minute urgent-role reserve. ${detail}`,
+  description: `Two-hour weekly ceiling, including a 25-minute urgent-role reserve. ${detail}`,
   checklist: [
-    'Complete five 5-minute Student Futures scans without starting applications (25m total)',
+    'Complete two usable 15-minute Student Futures scans without starting applications (30m total)',
     'Review accumulated agent, Student Futures, LinkedIn, and Indeed results once (20m)',
     `Complete the one weekly development task: ${task} (45m)`,
-    'Use the 30m reserve only for a strong role closing within seven days; otherwise return it to study',
+    'Use the 25m reserve only for a strong role closing within seven days; otherwise return it to study',
   ],
   evidence: 'one maintenance note + weekly development output + reserve used/released decision',
   done: 'the weekly system stopped at two hours and produced the single intended development output',
   tags: ['job-hunt', 'maintenance-mode', 'two-hour-cap'],
-  slotLabel: 'Weekday 5m scans + one 20m review + one 45m build; 30m reserve stays unallocated',
+  slotLabel: 'Two 15m scans + one 20m review + one 45m build; 25m reserve stays unallocated',
 }))
 
 const jobSundayDates = JOB_MAINTENANCE_WEEKS
@@ -417,19 +457,19 @@ const jobSundayDates = JOB_MAINTENANCE_WEEKS
 
 const adminCards = [
   datedCard({
-    id: 'admin-summer-assessment-confirmation', number: 501, title: 'ADMIN — confirm summer assessment entry and information channels', moduleGroup: 'Admin', phase: 'Phase 2', startDate: '2026-07-13', dueDate: '2026-07-13', hours: 0.5, priority: 'Critical',
+    id: 'admin-summer-assessment-confirmation', number: 501, title: 'ADMIN — confirm summer assessment entry and information channels', moduleGroup: 'Admin', phase: 'Phase 0', startDate: '2026-07-16', dueDate: '2026-07-16', hours: 0.5, priority: 'Critical',
     description: 'The current notice confirms the summer assessment window but does not state whether any registration action is required. Send one concise confirmation to the COMSC School Office.',
     checklist: ['Ask whether any MAT700 summer-assessment registration action is required', 'Ask where the CMT307, MAT508, and MAT700 date/time/location will be published', 'Ask how the MAT700 summer assessment mark will be recorded', 'Record the answer in the app; do not start a broad complaint thread'],
-    evidence: 'sent confirmation message + reply/action logged', done: 'entry/action requirements and publication channels are confirmed or formally chased', tags: ['admin', 'exam', 'date-watch'], slotLabel: 'Mon 13 Jul 20:15–20:45',
+    evidence: 'sent confirmation message + reply/action logged', done: 'entry/action requirements and publication channels are confirmed or formally chased', tags: ['admin', 'exam', 'date-watch'], slotLabel: 'Thu 16 Jul 20:15–20:45',
   }),
   ...['2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10'].map((date, index) => datedCard({
-    id: `admin-date-watch-${index + 1}`, number: 502 + index, title: `ADMIN — summer timetable watch ${index + 1}`, moduleGroup: 'Admin', phase: date < '2026-08-01' ? 'Phase 2' : date < '2026-08-10' ? 'Phase 3' : 'Phase 4', startDate: date, dueDate: date, hours: index === 2 ? 0.5 : 0.25, priority: 'Critical',
+    id: `admin-date-watch-${index + 1}`, number: 502 + index, title: `ADMIN — summer timetable watch ${index + 1}`, moduleGroup: 'Admin', phase: date < '2026-08-01' ? 'Phase 0' : date < '2026-08-10' ? 'Phase 1' : 'Phase 2', startDate: date, dueDate: date, hours: index === 2 ? 0.5 : 0.25, priority: 'Critical',
     description: index === 2 ? 'The Registry timetable should be available by the start of August. Treat this as the hard publication checkpoint.' : 'Check only the official channels for CMT307, MAT508, and MAT700 date/time/location changes.',
     checklist: ['Check SIMS/student intranet timetable', 'Check Learning Central announcements', 'Check Cardiff email/School notice', 'Enter confirmed module dates in app Settings immediately'],
     evidence: 'dated check and any confirmed date/location', done: 'official channels checked and settings updated if anything changed', tags: ['admin', 'date-watch', 'exam'], slotLabel: 'Monday 20:00–20:15',
   })),
   datedCard({
-    id: 'admin-exam-logistics', number: 506, title: 'ADMIN — final exam logistics and materials lock', moduleGroup: 'Admin', phase: 'Phase 4', startDate: '2026-08-15', dueDate: '2026-08-15', hours: 1, priority: 'Critical',
+    id: 'admin-exam-logistics', number: 506, title: 'ADMIN — final exam logistics and materials lock', moduleGroup: 'Admin', phase: 'Phase 2', startDate: '2026-08-15', dueDate: '2026-08-15', hours: 1, priority: 'Critical',
     description: 'Lock confirmed dates, routes, permitted materials, IDs, calculator rules, and the order of post-exam recovery.',
     checklist: ['Confirm every date/time/location', 'Confirm AML open-book/no-internet requirements', 'Pack ID, stationery, calculator, water, and permitted AML materials', 'Plan travel arrival buffer', 'Write the next-exam-only warm-up order'],
     evidence: 'exam logistics sheet + packed materials checklist', done: 'no unresolved logistics remain before the exam window', tags: ['admin', 'exam', 'fixed', 'logistics'], slotLabel: 'Sat 15 Aug 20:00–21:00',
@@ -454,8 +494,8 @@ export const campaignMeta = {
   runway: `${CAMPAIGN_START} to ${CAMPAIGN_END}`,
   readinessDeadline: READINESS_DEADLINE,
   examWindowStart: EXAM_WINDOW_START,
-  examWindowEnd: CAMPAIGN_END,
-  generatedFrom: '13 July recovery rebase over the legacy Trello card catalogue',
+  examWindowEnd: EXAM_WINDOW_END,
+  generatedFrom: '16 July zero-based reset over the legacy Trello card catalogue',
   cardCount: rescueCards.length,
   projectInternalDeadline: '2026-08-02',
   projectSubmissionDeadline: '2026-08-06',
@@ -499,11 +539,8 @@ const coreRoutineRules = [
   rule({ id: 'sister-call', title: 'Short family catch-up', category: 'recovery', weekdays: [5], start: '21:30', end: '22:00' }),
   rule({ id: 'friend-call', title: 'Weekly friend catch-up', category: 'recovery', weekdays: [7], start: '20:30', end: '21:00' }),
   rule({ id: 'laundry', title: 'Laundry load / collect', category: 'chores', weekdays: [3], start: '20:15', end: '20:30' }),
-  rule({ id: 'job-scan-mon', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [1], start: '20:45', end: '20:50', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
-  rule({ id: 'job-scan-tue', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [2], start: '20:45', end: '20:50', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
-  rule({ id: 'job-scan-wed', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [3], start: '20:30', end: '20:35', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
-  rule({ id: 'job-scan-thu', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [4], start: '20:30', end: '20:35', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
-  rule({ id: 'job-scan-fri', title: 'Student Futures — save/ignore only', category: 'job', weekdays: [5], start: '20:25', end: '20:30', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
+  rule({ id: 'job-scan-mon', title: 'Student Futures — focused save/ignore scan', category: 'job', weekdays: [1], start: '20:45', end: '21:00', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
+  rule({ id: 'job-scan-thu', title: 'Student Futures — focused save/ignore scan', category: 'job', weekdays: [4], start: '20:45', end: '21:00', moduleGroup: 'Job Hunt', countsToward: ['job'] }),
 ]
 
 const weekdayStudyRules = [
@@ -642,28 +679,15 @@ const oneOffStudyRules = [
       oneOff(`sun-job-build-${index}`, date, reviewEnd, buildEnd, 'Complete this week’s single job-development task', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
     ]
   }),
-  oneOff('fri-job-review-0828', '2026-08-28', '19:00', '19:20', 'Review accumulated job leads once', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
-  oneOff('fri-job-build-0828', '2026-08-28', '19:20', '20:05', 'Complete minimum viable GitHub task', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
-  oneOff('mat700-reset-block', '2026-07-13', '19:15', '20:15', 'MAT700 planning reset — build the pass specification', 'admin', { moduleGroup: 'MAT700', protected: true }),
-  oneOff('admin-summer-assessment-confirmation-block', '2026-07-13', '20:15', '20:45', 'Confirm summer assessment entry and publication channels', 'admin', { moduleGroup: 'Admin', protected: true }),
+  oneOff('mat700-reset-block', '2026-07-16', '19:15', '20:15', 'MAT700 planning reset — build the pass specification', 'admin', { moduleGroup: 'MAT700', protected: true }),
+  oneOff('admin-summer-assessment-confirmation-block', '2026-07-16', '20:15', '20:45', 'Confirm summer assessment entry and publication channels', 'admin', { moduleGroup: 'Admin', protected: true }),
   ...['2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10'].map((date, index) =>
     oneOff(`admin-date-watch-block-${index}`, date, '20:00', index === 2 ? '20:30' : '20:15', 'Official summer assessment timetable watch', 'admin', { moduleGroup: 'Admin', protected: true }),
   ),
   oneOff('admin-logistics-block', '2026-08-15', '21:00', '22:00', 'Final exam logistics and materials lock', 'admin', { moduleGroup: 'Admin', protected: true }),
 ]
 
-const examWindowRules = [
-  rule({ id: 'exam-window-study-1', title: 'Next confirmed exam — targeted maintenance / warm-up', category: 'study', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '08:30', end: '10:30', moduleGroup: 'Cross-module', countsToward: ['academic'], protected: true, notes: 'Generic placeholder until the exact exam time, location, travel, and recovery plan are confirmed.' }),
-  rule({ id: 'exam-window-break-1', title: 'Break', category: 'recovery', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '10:30', end: '10:45' }),
-  rule({ id: 'exam-window-study-2', title: 'Next confirmed exam — past-paper/error-log work', category: 'study', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '10:45', end: '12:45', moduleGroup: 'Cross-module', countsToward: ['academic'], protected: true }),
-  rule({ id: 'exam-window-lunch', title: 'Make and eat lunch', category: 'meal', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '12:45', end: '13:15', protected: true }),
-  rule({ id: 'exam-window-study-3', title: 'Targeted maintenance or post-exam reset', category: 'study', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '13:15', end: '15:15', moduleGroup: 'Cross-module', countsToward: ['academic'], protected: true }),
-  rule({ id: 'exam-window-walk', title: 'Outside walk / nervous-system reset', category: 'recovery', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '15:15', end: '15:45', location: 'Outside', protected: true }),
-  rule({ id: 'exam-window-study-4', title: 'Light recall for the next exam only', category: 'study', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '15:45', end: '17:15', moduleGroup: 'Cross-module', countsToward: ['academic'], protected: true }),
-  rule({ id: 'exam-window-dinner', title: 'Make and eat dinner', category: 'meal', from: EXAM_WINDOW_START, to: CAMPAIGN_END, start: '18:30', end: '19:00', protected: true }),
-]
-
-export const scheduleRules = [...coreRoutineRules, ...weekdayStudyRules, ...oneOffStudyRules, ...examWindowRules]
+export const scheduleRules = [...coreRoutineRules, ...weekdayStudyRules, ...oneOffStudyRules]
 export const scheduleExceptions = []
 
 export const scheduleAssumptions = {
@@ -671,6 +695,6 @@ export const scheduleAssumptions = {
   academicCeiling: '8 protected hours/day; short breaks are outside those blocks',
   locations: 'Library/uni at least every other day; home days include an outside walk',
   project: 'Generic capacity only; detailed waste-project management stays elsewhere',
-  jobs: 'Five 5-minute scans + 20-minute review + one 45-minute output; any urgent reserve stays inside the hard 2-hour weekly cap',
+  jobs: 'Two 15-minute scans + 20-minute review + one 45-minute output; a 25-minute urgent reserve stays inside the hard 2-hour weekly cap',
   fallback: 'If overloaded: protect sleep, fixed class/exam, today’s top exam card, then reduce project scope/job activity',
 }

@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import http from 'node:http'
 import path from 'node:path'
-import { createLocalTrackerApi } from './localTrackerApi.js'
+import { APP_CSP, createLocalTrackerApi } from './localTrackerApi.js'
 
 export const LOCAL_APP_HOST = '127.0.0.1'
 export const LOCAL_APP_PORT = 5173
@@ -45,6 +45,8 @@ function setStaticHeaders(res, filePath, stat, isIndex) {
   res.setHeader('Last-Modified', stat.mtime.toUTCString())
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('Referrer-Policy', 'no-referrer')
+  res.setHeader('Content-Security-Policy', APP_CSP)
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
   res.setHeader('Accept-Ranges', 'bytes')
   res.setHeader('Cache-Control', isIndex || extension === '.webmanifest' ? 'no-cache' : 'public, max-age=3600')
 }

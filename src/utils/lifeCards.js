@@ -6,13 +6,18 @@
 import { addDays, formatDate } from './progress.js'
 
 export function weekLabel(weekStart) {
-  return `w/c ${formatDate(weekStart)}`
+  const day = new Date(`${weekStart}T12:00:00`).getDay()
+  return `${day === 1 ? 'w/c' : 'from'} ${formatDate(weekStart)}`
 }
 
 export function buildWeeklyLifeCardInputs(weekStart) {
   const label = weekLabel(weekStart)
+  const day = new Date(`${weekStart}T12:00:00`).getDay() || 7
+  const daysToSunday = 7 - day
+  const groceriesDue = addDays(weekStart, Math.max(0, daysToSunday - 1))
+  const weekEnd = addDays(weekStart, daysToSunday)
   const base = {
-    phase: 'Phase 2',
+    phase: 'Phase 0',
     status: 'This Week',
     priority: 'Low',
     slotType: 'Flex',
@@ -28,7 +33,7 @@ export function buildWeeklyLifeCardInputs(weekStart) {
       ...base,
       title: `LIFE — Groceries + supermarket run (${label})`,
       module: 'General',
-      dueDate: addDays(weekStart, 5),
+      dueDate: groceriesDue,
       estimatedHours: '1',
       description: 'One planned supermarket trip including travel there and back; restock the week in one pass.',
       doneCondition: 'Fridge and shelf stocked for the week; no midweek emergency runs needed.',
@@ -38,7 +43,7 @@ export function buildWeeklyLifeCardInputs(weekStart) {
       ...base,
       title: `LIFE — Laundry + room reset (${label})`,
       module: 'General',
-      dueDate: addDays(weekStart, 6),
+      dueDate: weekEnd,
       estimatedHours: '1',
       description: 'Laundry cycle plus a 20-minute desk and room reset so Monday starts clean.',
       doneCondition: 'Clean clothes ready and desk cleared for the new week.',
@@ -58,7 +63,7 @@ export function buildWeeklyLifeCardInputs(weekStart) {
       ...base,
       title: `HEALTH — Three movement breaks (${label})`,
       module: 'Health',
-      dueDate: addDays(weekStart, 6),
+      dueDate: weekEnd,
       estimatedHours: '1.5',
       description: 'Three deliberate movement sessions across the week — walk, stretch, or workout; intensity does not matter, showing up does.',
       checklist: 'Movement break 1\nMovement break 2\nMovement break 3',

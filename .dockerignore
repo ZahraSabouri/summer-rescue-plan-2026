@@ -5,3 +5,20 @@ node_modules
 dist
 .git
 *.log
+
+# Personal tracker data and recovery copies must never enter an image layer.
+local-data/
+backup_*.json
+backup_*.sqlite
+*tracker-backup*.json
+summer-rescue-tracker-state.json
+progress-log*.ndjson
+*.sqlite
+
+# Local university materials are mounted/served on the host and are not image assets.
+public/study-assets/
+
+# Local QA output.
+.chrome-smoke*/
+.edge-smoke*/
+*.png.tmp

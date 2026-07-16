@@ -116,6 +116,12 @@ test('projectState mirrors live progress, checklist done-state, notes, and setti
           },
         ],
         resourceProgress: { 'aml-session-1-lab-1-sheet': true },
+        focusRewards: {
+          points: 140,
+          streak: 3,
+          strict: false,
+          today: { date: '2026-07-07', trees: 2, minutes: 50, wilted: 0, treeList: ['🌱', '🌳'] },
+        },
       },
     })
 
@@ -140,6 +146,10 @@ test('projectState mirrors live progress, checklist done-state, notes, and setti
 
     const theme = db.db.prepare('SELECT value FROM settings WHERE key = ?').get('theme')
     assert.equal(JSON.parse(theme.value), 'dark')
+
+    const focusRewards = db.db.prepare('SELECT value FROM settings WHERE key = ?').get('focusRewards')
+    assert.equal(JSON.parse(focusRewards.value).points, 140)
+    assert.equal(JSON.parse(focusRewards.value).strict, false)
 
     const moduleNote = db.db.prepare('SELECT note FROM module_notes WHERE module_id = ?').get('aml')
     assert.equal(moduleNote.note, 'Focus on labs')

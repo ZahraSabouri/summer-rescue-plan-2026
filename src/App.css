@@ -56,6 +56,7 @@
 
 .header-metrics span,
 .meta-strip span,
+.meta-strip .meta-chip-button,
 .status-pill {
   min-height: 24px;
   display: inline-flex;
@@ -68,6 +69,18 @@
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.meta-chip-button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.meta-chip-button:hover,
+.meta-chip-button:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .header-metrics .backup-status.warn {
@@ -496,7 +509,7 @@ button:disabled {
 .work-card {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(140px, 0.3fr) minmax(240px, 0.5fr);
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.26fr) minmax(390px, 0.58fr);
   gap: 16px;
   align-items: start;
   padding: 14px;
@@ -549,6 +562,7 @@ button:disabled {
 }
 
 .work-card-progress {
+  min-width: 0;
   align-content: start;
   display: grid;
   gap: 6px;
@@ -572,6 +586,7 @@ button:disabled {
 }
 
 .work-card-controls {
+  min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(120px, 1fr) 86px auto;
   gap: 8px;
@@ -1563,6 +1578,111 @@ rect.heat-future { fill: transparent; stroke: var(--line); stroke-dasharray: 2 2
   grid-template-columns: 110px 1fr auto;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  padding: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.stack-row:hover,
+.stack-row:focus-visible {
+  background: var(--panel-2);
+}
+
+.ring-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 4px;
+  font: inherit;
+}
+.ring-link:hover,
+.ring-link:focus-visible {
+  background: var(--panel-2);
+  transform: translateY(-2px);
+}
+
+.priority-split-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.priority-split-row:hover,
+.priority-split-row:focus-visible {
+  background: var(--panel-2);
+}
+
+.pace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.area-count-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+.area-count-links .metric-tile {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.area-count-links .metric-tile:hover,
+.area-count-links .metric-tile:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.metric-tile.is-clickable,
+.bar-row.is-clickable,
+.stat-table-row {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.metric-tile.is-clickable:hover,
+.metric-tile.is-clickable:focus-visible,
+.bar-row.is-clickable:hover,
+.bar-row.is-clickable:focus-visible,
+.stat-table-row:hover,
+.stat-table-row:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.stat-table-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 6px;
+}
+
+.heatmap rect[role='button'] {
+  cursor: pointer;
+}
+.heatmap rect[role='button']:hover,
+.heatmap rect[role='button']:focus-visible {
+  stroke: var(--accent);
+  stroke-width: 2px;
 }
 .stack-label {
   font-size: 12px;
@@ -2688,6 +2808,17 @@ button:hover,
   align-items: center;
   gap: 11px;
   padding: 6px 8px 14px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.sidebar-brand:hover .brand-text strong,
+.sidebar-brand:focus-visible .brand-text strong {
+  color: var(--accent);
 }
 .brand-mark {
   width: 38px;
@@ -2806,11 +2937,21 @@ button:hover,
 }
 .mini-progress {
   display: grid;
+  width: 100%;
   gap: 6px;
   padding: 11px;
   border: 1px solid var(--line);
   border-radius: 13px;
   background: var(--panel);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.mini-progress:hover,
+.mini-progress:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 .mini-progress-head {
   display: flex;
@@ -4760,7 +4901,31 @@ h1,
 }
 .work-card-controls,
 .work-card.compact .work-card-controls {
-  grid-template-columns: auto minmax(120px, 1fr) 86px auto auto auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-end;
+}
+.work-card-controls > select {
+  min-width: 0;
+  flex: 1 1 82px;
+}
+.work-card-controls > .hours-field {
+  min-width: 0;
+  flex: 0 1 76px;
+}
+.work-card-controls > .hours-field input {
+  min-width: 0;
+}
+.work-card-controls > .done-toggle,
+.work-card-controls > .secondary-button {
+  flex: 0 0 auto;
+}
+.work-card-controls > .reschedule-inline {
+  min-width: 0;
+  flex: 1 1 140px;
+  justify-content: flex-end;
 }
 .resource-chip-list {
   display: flex;
@@ -5526,6 +5691,42 @@ h1,
   justify-items: end;
   gap: 0;
   text-align: right;
+}
+
+.today-stat-link,
+.execution-nav,
+.split-row {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.today-stat-link {
+  padding: 0;
+  border-radius: 16px;
+}
+.today-stat-link:hover,
+.today-stat-link:focus-visible,
+.execution-nav:hover,
+.execution-nav:focus-visible,
+.split-row:hover,
+.split-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.today-date-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.today-date-link:hover,
+.today-date-link:focus-visible {
+  text-decoration: underline;
 }
 .today-exam strong {
   font-family: var(--font-num);
@@ -7360,6 +7561,23 @@ body.modal-open {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.review-title-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.review-title-button:hover:not(:disabled),
+.review-title-button:focus-visible:not(:disabled) {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.review-title-button:disabled {
+  cursor: default;
+}
 .review-toggle {
   display: inline-flex;
   gap: 4px;
@@ -7730,4 +7948,225 @@ button.countdown-chip:hover {
 }
 .today-tools[open] > :not(summary) + * {
   margin-top: 14px;
+}
+/* Campaign-safe shell consolidation (Today / Areas / Review) */
+.review-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.review-mode-list,
+.review-advanced > div,
+.today-destination-actions,
+.collection-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-mode-list button,
+.review-advanced button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--panel-2);
+  color: var(--ink);
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-mode-list button.active,
+.review-advanced button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.review-advanced {
+  position: relative;
+}
+
+.review-advanced summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.review-advanced > div {
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.bounded-area-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.bounded-area-grid article,
+.today-destinations {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.bounded-area-grid h2,
+.today-destinations h3 {
+  margin: 4px 0 8px;
+}
+
+.today-destinations {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.today-destinations p {
+  margin-bottom: 0;
+}
+
+.collection-pagination {
+  justify-content: flex-end;
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.collection-pagination .secondary-button {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.data-conflict {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--warning-line);
+  border-radius: var(--radius);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+
+.data-conflict p {
+  margin: 6px 0 12px;
+}
+
+.data-health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.data-health-grid div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.data-health-grid dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.data-health-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.data-health-error {
+  color: var(--red);
+}
+
+.advanced-data-action {
+  margin-top: 12px;
+}
+
+.advanced-data-action summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.topbar-title h1:focus {
+  outline: none;
+}
+
+.planner-card-inventory {
+  display: grid;
+  gap: 14px;
+}
+
+.planner-card-inventory .section-heading > div:first-child {
+  max-width: 760px;
+}
+
+.planner-card-inventory .section-heading p:last-child {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.planner-inventory-counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.planner-inventory-counts span {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .review-navigation,
+  .today-destinations {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .review-mode-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-mode-list button {
+    width: 100%;
+  }
+
+  .bounded-area-grid,
+  .data-health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-destination-actions > * {
+    flex: 1 1 100%;
+  }
+
+  .planner-inventory-counts {
+    justify-content: flex-start;
+  }
+
+  .collection-pagination {
+    justify-content: center;
+  }
 }

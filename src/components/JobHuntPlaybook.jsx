@@ -4,7 +4,7 @@ const cadence = [
   {
     minutes: 25,
     label: 'Weekday scans',
-    detail: 'Five 5-minute Student Futures checks. Save or ignore only.',
+    detail: 'Two focused 15-minute Student Futures checks. Save or ignore only.',
   },
   {
     minutes: 20,
@@ -69,7 +69,7 @@ export function JobHuntPlaybook() {
     <section className="job-playbook" aria-labelledby="job-playbook-title">
       <header className="job-playbook-header">
         <div>
-          <p className="job-playbook-eyebrow">Maintenance mode · 13 July–28 August</p>
+          <p className="job-playbook-eyebrow">Maintenance mode · 16 July–16 August</p>
           <h2 id="job-playbook-title">Job hunt playbook</h2>
           <p>
             Preserve the opportunity pipeline without letting it displace the rescue plan. The weekly

@@ -79,7 +79,7 @@ function CompactQueue({ title, eyebrow, cards, empty, actions }) {
   )
 }
 
-export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, setActiveView, openModuleView }) {
+export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, setActiveView, openModuleView, onGenerateWeeklyLifeCards }) {
   const activeCards = mat700Active ? cards : cards.filter((card) => card.moduleGroup !== 'MAT700')
   const openCards = activeCards.filter((card) => !card.done)
   const overdueCards = openCards.filter((card) => isOverdue(card, referenceDate))
@@ -92,10 +92,10 @@ export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, s
       <section className="super-hero">
         <div className="super-hero-copy">
           <p className="eyebrow">Summer Rescue Campaign 2026</p>
-          <h1>Unified study cockpit</h1>
+          <h2>Unified study cockpit</h2>
           <p>
-            One place for the rescue tracker, module workspaces, local resources, evidence logging, and the weekly
-            execution queue.
+            One place for the rescue tracker, specialist module workspaces, local resources, evidence logging,
+            bounded life lanes, and the weekly execution queue.
           </p>
           <div className="hub-command-strip" aria-label="Primary study commands">
             <button type="button" className="primary-button" onClick={() => setActiveView('dashboard')}>
@@ -163,6 +163,22 @@ export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, s
             onOpenModuleView={openModuleView}
           />
         ))}
+      </section>
+
+      <section className="bounded-area-grid" aria-label="Bounded life areas">
+        <article>
+          <p className="eyebrow">Bounded area</p>
+          <h2>Job Hunt</h2>
+          <p>Weekly maintenance with a hard time ceiling so it cannot consume exam preparation.</p>
+          <button type="button" className="secondary-button" onClick={() => setActiveView('jobs')}>Open Job Hunt</button>
+        </article>
+        <article>
+          <p className="eyebrow">Bounded area</p>
+          <h2>Life Admin & Dates</h2>
+          <p>Exam logistics, university date checks, health, and recurring life-admin boundaries.</p>
+          <button type="button" className="secondary-button" onClick={() => setActiveView('admin')}>Open Life Admin</button>
+          <button type="button" className="text-button" onClick={onGenerateWeeklyLifeCards}>Generate this week’s routine cards</button>
+        </article>
       </section>
 
       <section className="hub-split">

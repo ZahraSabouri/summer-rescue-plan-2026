@@ -93,6 +93,7 @@ export function CardDetailDrawer({
   onRemoveResource,
   moduleOptions = MODULE_OPTIONS,
   phaseOptions = PHASE_OPTIONS,
+  onNavigateMeta,
 }) {
   const dialogRef = useRef(null)
   const [noteDraft, setNoteDraft] = useState('')
@@ -386,12 +387,19 @@ export function CardDetailDrawer({
             <p className="eyebrow">Card {card.number}</p>
             <h2 id="detail-title">{card.title}</h2>
             <div className="meta-strip">
-              <span className={`kind-chip kind-${kind}`}>{kindFeatures(card).label}</span>
-              <span>{card.phase}</span>
-              <span>{card.module}</span>
-              <span>{card.priority}</span>
-              <span>{formatDate(card.dueDate || card.startDate)}</span>
+              <button type="button" className={`meta-chip-button kind-chip kind-${kind}`} onClick={() => onNavigateMeta?.('kind', kind)}>{kindFeatures(card).label}</button>
+              <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('phase', card.phase)}>{card.phase}</button>
+              <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('module', card.moduleGroup)}>{card.module}</button>
+              <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('priority', card.priority)}>{card.priority}</button>
+              <button type="button" className="meta-chip-button" onClick={() => onNavigateMeta?.('date', card.dueDate || card.startDate)}>{formatDate(card.dueDate || card.startDate)}</button>
             </div>
+            {(card.tags ?? []).length > 0 && (
+              <div className="meta-strip card-tag-links" aria-label="Card tags">
+                {(card.tags ?? []).map((tag) => (
+                  <button type="button" className="meta-chip-button" key={tag} onClick={() => onNavigateMeta?.('tag', tag)}>#{tag}</button>
+                ))}
+              </div>
+            )}
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close card details">
             <span aria-hidden="true">&times;</span>
@@ -790,7 +798,7 @@ export function CardDetailDrawer({
                     <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
                   </label>
                   <label>
-                    <span>Module</span>
+                    <span>Academic module or life area</span>
                     <select value={form.module} onChange={(event) => updateForm('module', event.target.value)}>
                       {moduleOptions.map((module) => (
                         <option key={module} value={module}>

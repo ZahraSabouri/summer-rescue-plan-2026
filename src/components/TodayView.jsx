@@ -18,7 +18,6 @@ import { YesterdayStrip } from './DayReview'
 import { DailyAgenda } from './ScheduleView'
 import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
 
-// A <details> whose open/closed state survives reloads (per-panel storage key).
 function PersistedDetails({ storageKey, className, children }) {
   const [open, setOpen] = useState(() => {
     try {
@@ -33,12 +32,12 @@ function PersistedDetails({ storageKey, className, children }) {
       className={className}
       open={open}
       onToggle={(event) => {
-        const next = event.target.open
+        const next = event.currentTarget.open
         setOpen(next)
         try {
           window.localStorage.setItem(storageKey, next ? '1' : '0')
         } catch {
-          // Storage can be unavailable (private mode); the panel still toggles.
+          // The diagnostic remains usable when browser storage is unavailable.
         }
       }}
     >
@@ -55,24 +54,24 @@ function greeting() {
   return 'Good evening'
 }
 
-function SplitGuardrail({ guardrail }) {
+function SplitGuardrail({ guardrail, onNavigateMeta }) {
   return (
-    <section className="panel split-panel" aria-label="Priority split guardrail">
+    <section className="panel split-panel" aria-label="Priority allocation diagnostic">
       <header className="panel-head">
         <div>
-          <p className="eyebrow">Guardrail</p>
+          <p className="eyebrow">Allocation diagnostic</p>
           <h3>Priority split</h3>
         </div>
         <span className="muted small">
           {guardrail.meaningful
             ? `${guardrail.totalHours}h logged across modules`
-            : 'Warms up after ~4 logged hours'}
+            : 'Activates after approximately four logged hours'}
         </span>
       </header>
 
       <div className="split-rows">
         {guardrail.rows.map((row) => (
-          <div className={`split-row ${row.status}`} key={row.group}>
+          <button type="button" className={`split-row ${row.status}`} key={row.group} onClick={() => onNavigateMeta?.('module', row.group)}>
             <div className="split-row-head">
               <span className="split-name">{row.label}</span>
               <span className="split-figures">
@@ -85,7 +84,7 @@ function SplitGuardrail({ guardrail }) {
               <span className="split-fill" style={{ width: `${Math.min(100, row.actualPct)}%` }} />
               <span className="split-target" style={{ left: `${Math.min(100, row.targetPct)}%` }} />
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -103,29 +102,22 @@ function StreakBadge({ streak }) {
       ? 'One focused session lights it up.'
       : state === 'done'
         ? current === 1
-          ? 'Day one — nice start.'
-          : 'Studied today. Keep it gentle.'
+          ? 'Day one — strong start.'
+          : 'Studied today — streak protected.'
         : graceAvailable
-          ? 'A little today keeps it alive · 1 grace day in hand.'
-          : 'Study today to keep it alive.'
+          ? 'Focus today to extend it · one grace day available.'
+          : 'Focus today to extend the streak.'
 
   return (
     <div
       className={`streak-badge streak-${state}`}
-      aria-label={`Study streak: ${current} day${current === 1 ? '' : 's'}${
-        studiedToday ? ', studied today' : ''
-      }`}
+      aria-label={`Study streak: ${current} day${current === 1 ? '' : 's'}${studiedToday ? ', studied today' : ''}`}
     >
       <div className="streak-row">
-        <span className="streak-flame" aria-hidden="true">
-          {lit ? '🔥' : '✷'}
-        </span>
-        <strong className="streak-count">
-          <AnimatedNumber value={current} />
-        </strong>
+        <span className="streak-flame" aria-hidden="true">{lit ? '🔥' : '✷'}</span>
+        <strong className="streak-count"><AnimatedNumber value={current} /></strong>
         <span className="streak-unit">
-          day{current === 1 ? '' : 's'}
-          {graceUsed ? ' · grace used' : ''}
+          day{current === 1 ? '' : 's'}{graceUsed ? ' · grace used' : ''}
         </span>
       </div>
       <p className="streak-caption">{caption}</p>
@@ -147,12 +139,12 @@ function executionLabel(mode, preCampaign) {
   return 'Day complete'
 }
 
-function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSession, activeSessionCardId }) {
+function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSession, activeSessionCardId, onOpenSchedule }) {
   const { block, nextBlock, card, cardBlock, lockedToTimer } = context
 
   return (
     <section className="execution-strip" aria-label="Now and next execution guide">
-      <div className="execution-boundary">
+      <button type="button" className="execution-boundary execution-nav" onClick={onOpenSchedule}>
         <span>{executionLabel(context.mode, preCampaign)}</span>
         {block ? (
           <>
@@ -171,7 +163,7 @@ function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSes
             <p>Close the day instead of manufacturing extra work.</p>
           </>
         )}
-      </div>
+      </button>
 
       <div className="execution-output">
         <span>{lockedToTimer ? 'Focus locked to timer' : cardBlock === block ? 'Work output' : 'Next work output'}</span>
@@ -211,7 +203,7 @@ function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSes
         )}
       </div>
 
-      <div className="execution-next">
+      <button type="button" className="execution-next execution-nav" onClick={onOpenSchedule}>
         <span>Then stop and switch</span>
         {nextBlock ? (
           <>
@@ -224,7 +216,7 @@ function ExecutionStrip({ context, preCampaign, capacity, onOpenCard, onStartSes
             <p>Protect sleep and restart from tomorrow's plan.</p>
           </>
         )}
-      </div>
+      </button>
     </section>
   )
 }
@@ -241,6 +233,7 @@ export function TodayView({
   scheduleDate,
   campaignStart,
   onOpenCard,
+  onOpenView,
   activeTimerCard,
 }) {
   const preCampaign = Boolean(campaignStart && referenceDate < campaignStart)
@@ -286,25 +279,25 @@ export function TodayView({
     <div className="today-view">
       <section className="today-hero panel" aria-label="Today at a glance">
         <div className="today-hero-main">
-          <p className="eyebrow">{formatDate(referenceDate)}</p>
-          <h2 className="today-greeting">{preCampaign ? 'The campaign starts tomorrow, Zahra.' : `${greeting()}, Zahra.`}</h2>
+          <button type="button" className="eyebrow today-date-link" onClick={() => onOpenView('schedule')}>{formatDate(referenceDate)}</button>
+          <h2 className="today-greeting">{preCampaign ? 'The campaign starts soon, Zahra.' : `${greeting()}, Zahra.`}</h2>
           <p className="today-line">
             {preCampaign
-              ? 'Nothing in the rescue plan is due tonight. Preview Monday’s protected launch schedule and start rested.'
+              ? `Nothing in the rescue plan is due yet. Preview the protected launch on ${formatDate(campaignStart)} and start rested.`
               : picks.length === 0
               ? 'Nothing urgent in the queue — pick something from the board or take the win.'
               : `Your best next ${picks.length === 1 ? 'move is' : `${picks.length} moves are`} lined up below. Start the top one.`}
           </p>
         </div>
         <div className="today-hero-side">
-          {!preCampaign && <StreakBadge streak={streak} />}
+          {!preCampaign && <button type="button" className="today-stat-link" onClick={() => onOpenView('progress')}><StreakBadge streak={streak} /></button>}
           {examCountdown != null && examCountdown >= 0 && (
-            <div className="today-exam">
+            <button type="button" className="today-exam today-stat-link" onClick={() => onOpenView('admin')}>
               <strong>
                 <AnimatedNumber value={examCountdown} />
               </strong>
               <span>days to {examLabel}</span>
-            </div>
+            </button>
           )}
         </div>
         <ExecutionStrip
@@ -314,6 +307,7 @@ export function TodayView({
           onOpenCard={onOpenCard}
           onStartSession={actions.onStartSession}
           activeSessionCardId={actions.activeSessionCardId}
+          onOpenSchedule={() => onOpenView('schedule')}
         />
       </section>
 
@@ -370,16 +364,16 @@ export function TodayView({
         )}
       </section>
 
-      <section className="today-agenda panel" aria-label={preCampaign ? 'Tomorrow preview hour-by-hour' : 'Today hour-by-hour'}>
+      <section className="today-agenda panel" aria-label={preCampaign ? 'Campaign launch preview hour-by-hour' : 'Today hour-by-hour'}>
         <header className="panel-head">
           <div>
             <p className="eyebrow">Protected timetable</p>
-            <h3>{preCampaign ? 'Tomorrow preview, hour by hour' : 'Today, hour by hour'}</h3>
+            <h3>{preCampaign ? 'Launch preview, hour by hour' : 'Today, hour by hour'}</h3>
           </div>
           <span className="muted small">
             {preCampaign
-              ? 'Routines are blocks; outputs stay checkable cards.'
-              : 'Log each block as it actually went — Done or Skipped, right here.'}
+              ? 'Routines are protected blocks; outputs remain traceable cards.'
+              : 'Log each block as it actually went — Done or Skipped, directly from the agenda.'}
           </span>
         </header>
         <DailyAgenda
@@ -387,6 +381,7 @@ export function TodayView({
           blocks={dayBlocks}
           cards={cards}
           onOpenCard={onOpenCard}
+          onOpenBlock={() => onOpenView('review')}
           logDate={preCampaign ? '' : scheduleDate || referenceDate}
           compact
         />
@@ -396,8 +391,8 @@ export function TodayView({
 
       <PersistedDetails storageKey="srp-today-tools-replan" className="today-tools panel">
         <summary>
-          <strong>Re-plan overdue cards</strong>
-          <span className="muted small">Sweep slipped dates forward when the backlog piles up.</span>
+          <strong>Re-plan remaining exam cards</strong>
+          <span className="muted small">Reflow the full academic dependency chain after slippage; life routines never enter this model.</span>
         </summary>
         <ReplanPanel
           cards={cards}
@@ -410,11 +405,11 @@ export function TodayView({
 
       <PersistedDetails storageKey="srp-today-tools-forest" className="today-tools panel">
         <summary>
-          <strong>Focus forest & priority split</strong>
-          <span className="muted small">Rewards and the module-mix guardrail.</span>
+          <strong>Focus forest, achievements & priority allocation</strong>
+          <span className="muted small">Plant completed blocks, track goals and levels, and compare effort with the module allocation policy.</span>
         </summary>
         <FocusForestPanel />
-        <SplitGuardrail guardrail={guardrail} />
+        <SplitGuardrail guardrail={guardrail} onNavigateMeta={actions.onNavigateMeta} />
       </PersistedDetails>
 
       <div className="today-lower">
@@ -424,20 +419,12 @@ export function TodayView({
               <p className="eyebrow">Wrap-up</p>
               <h3>Shipped today</h3>
             </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                window.location.hash = '#/review'
-              }}
-            >
+            <button type="button" className="secondary-button" onClick={() => onOpenView('review')}>
               Review the day
             </button>
           </header>
           {daySummary.doneToday.length === 0 ? (
-            <p className="empty-note">
-              Nothing marked done yet today. One finished card is enough to leave real evidence.
-            </p>
+            <p className="empty-note">Nothing marked done yet today. Completed cards and their evidence will appear here.</p>
           ) : (
             <ul className="wrapup-list">
               {daySummary.doneToday.map((card) => (
@@ -458,6 +445,19 @@ export function TodayView({
           )}
         </section>
       </div>
+
+      <section className="today-destinations panel" aria-label="Plan and review shortcuts">
+        <div>
+          <p className="eyebrow">Connected workspaces</p>
+          <h3>Move from execution into deeper control views</h3>
+          <p className="muted">The same cards, dates, status, evidence, and progress data continue across every view.</p>
+        </div>
+        <div className="today-destination-actions">
+          <button type="button" className="secondary-button" onClick={() => onOpenView('schedule')}>View day</button>
+          <button type="button" className="secondary-button" onClick={() => onOpenView('rescue')}>Handle exceptions</button>
+          <button type="button" className="primary-button" onClick={() => onOpenView('review')}>Close or review day</button>
+        </div>
+      </section>
     </div>
   )
 }

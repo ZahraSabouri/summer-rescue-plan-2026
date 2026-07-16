@@ -45,7 +45,7 @@ function sessionKey(card) {
 }
 
 function phasePlan(card) {
-  if (card.phase === 'Phase 3') {
+  if (card.phase === 'Phase 1') {
     return {
       ids: ALL_AML_VIDEO_IDS,
       focus: 'weak topics from timed mocks and notebook reconstructions',
@@ -53,11 +53,11 @@ function phasePlan(card) {
     }
   }
 
-  if (card.phase === 'Phase 4') {
+  if (card.phase === 'Phase 2') {
     return {
       ids: [AML_VIDEO_IDS.appliedMlPlaylist, AML_VIDEO_IDS.caltechCs156],
       focus: 'last-mile weak topics and open-book navigation speed',
-      checklist: 'Use the linked YouTube resources only for final weak-topic repair; no broad playlist watching in Phase 4.',
+      checklist: 'Use the linked YouTube resources only for final weak-topic repair; no broad playlist watching in Phase 2.',
     }
   }
 
@@ -95,7 +95,7 @@ export function applyAmlVideoStudyPlan(cards) {
     const sessionPlan = SESSION_VIDEO_PLAN[sessionKey(card)]
     const plan = sessionPlan ?? phasePlan(card)
     const phaseCue =
-      card.phase === 'Phase 2'
+      card.phase === 'Phase 0'
         ? `Use videos after the relevant lab/notebook pass, focused on ${plan.focus}.`
         : `Use videos as targeted reinforcement for ${plan.focus}.`
 

@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       # Bind-mount the project so edits on the Windows host reflect live inside
       # the container...

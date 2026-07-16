@@ -26,7 +26,7 @@ function mondayOf(dateString) {
 
 test('summer rescue schedule protects capacity and contains no collisions', () => {
   const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, CAMPAIGN_END)
-  assert.equal(days.length, 44)
+  assert.equal(days.length, 32)
 
   for (const day of days) {
     const summary = summariseDay(day.blocks)
@@ -114,12 +114,16 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
   const examCards = rescueCards.filter((card) => examModules.has(card.moduleGroup))
   assert.ok(examCards.length >= 90)
   assert.ok(examCards.every((card) => card.startDate >= CAMPAIGN_START && card.dueDate <= READINESS_DEADLINE))
+  assert.ok(rescueCards.every((card) => ['Phase 0', 'Phase 1', 'Phase 2'].includes(card.phase)))
+  assert.ok(rescueCards.every((card) => card.startDate >= CAMPAIGN_START && card.dueDate <= READINESS_DEADLINE))
 
   const mat700Cards = rescueCards.filter((card) => card.moduleGroup === 'MAT700')
   assert.ok(mat700Cards.length >= 20)
   assert.ok(mat700Cards.every((card) => !/insurance/i.test(`${card.title} ${card.description} ${(card.tags ?? []).join(' ')}`)))
   assert.ok(mat700Cards.some((card) => /foundation reset/i.test(card.title)))
   assert.ok(mat700Cards.every((card) => !/39|resit|reassess/i.test(`${card.title} ${card.description} ${card.trackerNotes} ${(card.tags ?? []).join(' ')}`)))
+  assert.ok(mat700Cards.every((card) => !/Tutorial [4-7]|past paper/i.test(`${card.title} ${card.description}`)))
+  assert.ok(mat700Cards.some((card) => /mixed question-bank set/i.test(card.title)))
 
   const hoursByModule = Object.fromEntries(
     ['Applied ML', 'Time Series', 'MAT700'].map((moduleGroup) => [
@@ -129,7 +133,7 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
         .reduce((sum, card) => sum + Number(card.estimatedHours || 0), 0),
     ]),
   )
-  assert.deepEqual(hoursByModule, { 'Applied ML': 80, 'Time Series': 95, MAT700: 52 })
+  assert.deepEqual(hoursByModule, { 'Applied ML': 70, 'Time Series': 88, MAT700: 52 })
 
   const projectCards = rescueCards.filter((card) => card.moduleGroup === 'Group Project')
   assert.equal(projectCards.length, 5)
@@ -140,11 +144,11 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
   const jobHours = rescueCards
     .filter((card) => card.moduleGroup === 'Job Hunt')
     .reduce((sum, card) => sum + card.estimatedHours, 0)
-  assert.equal(rescueCards.filter((card) => card.moduleGroup === 'Job Hunt').length, 7)
-  assert.equal(jobHours, 14)
+  assert.equal(rescueCards.filter((card) => card.moduleGroup === 'Job Hunt').length, 5)
+  assert.equal(jobHours, 10)
 })
 
-test('v3 tracker state migrates without discarding user work', () => {
+test('plan reset preserves completed history and drops unfinished pre-reset cards', () => {
   const old = {
     version: 3,
     cards: {
@@ -153,14 +157,26 @@ test('v3 tracker state migrates without discarding user work', () => {
         actualHours: 2.5,
         notes: [{ id: 'n1', text: 'Keep this', at: '2026-07-07T10:00:00.000Z' }],
       },
+      'custom-1': { done: true, status: 'Done' },
+      'custom-2': { done: false, status: 'This Week' },
     },
-    addedCards: [{ id: 'custom-1', title: 'Keep custom card' }],
+    addedCards: [
+      { id: 'custom-1', title: 'Keep completed custom card', phase: 'Phase 2', startDate: '2026-07-13' },
+      { id: 'custom-2', title: 'Drop unfinished pre-reset card', phase: 'Phase 2', startDate: '2026-07-13' },
+    ],
     moduleNotes: { aml: 'Keep module note' },
     notifications: { x: { id: 'x', read: false } },
     resourceProgress: { r1: { reviewed: true } },
     uploadedResources: [],
     recentResourceIds: ['r1'],
     snapshots: { '2026-07-07': { done: 1, total: 1, loggedHours: 2.5 } },
+    focusRewards: {
+      points: 140,
+      streak: 3,
+      strict: false,
+      totalTrees: 4,
+      today: { date: '2026-07-07', trees: 2, minutes: 50, wilted: 0, treeList: ['🌱', '🌳'] },
+    },
     settings: {
       referenceDate: '2026-07-07',
       campaignStart: '2026-07-04',
@@ -183,14 +199,43 @@ test('v3 tracker state migrates without discarding user work', () => {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   assert.equal(migrated.settings.referenceDate, today)
   assert.equal(migrated.settings.campaignStart, '2026-07-16')
-  assert.equal(migrated.settings.campaignEnd, '2026-08-28')
-  assert.equal(migrated.settings.mat700Active, true)
+  assert.equal(migrated.settings.campaignEnd, '2026-08-16')
+  assert.equal(migrated.settings.mat700Active, false)
   assert.equal(migrated.settings.theme, 'dark')
   assert.deepEqual(migrated.settings.moduleExamDates, { aml: '2026-08-20' })
   assert.equal(migrated.cards['card-001'].actualHours, 2.5)
   assert.equal(migrated.cards['card-001'].notes[0].text, 'Keep this')
-  assert.equal(migrated.addedCards[0].title, 'Keep custom card')
+  assert.equal(migrated.addedCards.length, 1)
+  assert.equal(migrated.addedCards[0].title, 'HISTORY — life admin completed before reset')
+  assert.equal(migrated.addedCards[0].phase, 'Phase 0')
+  assert.equal(migrated.addedCards[0].dueDateTime, '2026-07-16 00:00')
+  assert.equal(migrated.cards['custom-2'], undefined)
   assert.equal(migrated.moduleNotes.aml, 'Keep module note')
+  assert.equal(migrated.focusRewards.points, 140)
+  assert.equal(migrated.focusRewards.strict, false)
+  assert.deepEqual(migrated.focusRewards.today.treeList, ['🌱', '🌳'])
   assert.deepEqual(migrated.notifications, {})
   assert.deepEqual(migrateTrackerState(migrated), migrated)
+})
+
+test('a later schema revision preserves live post-reset progress', () => {
+  const live = {
+    version: 4,
+    cards: {
+      'card-live': { status: 'Deep Work', actualHours: 1.5 },
+      'custom-live': { status: 'This Week', done: false },
+    },
+    addedCards: [{ id: 'custom-live', title: 'Current routine', startDate: '2026-07-16', dueDate: '2026-07-19' }],
+    settings: {
+      planRevision: '2026-07-16-zero-based-32-day-plan-v7',
+      referenceDate: '2026-07-16',
+      campaignStart: '2026-07-16',
+      campaignEnd: '2026-08-16',
+      examWindowStart: '2026-08-17',
+    },
+  }
+  const migrated = migrateTrackerState(live)
+  assert.equal(migrated.cards['card-live'].actualHours, 1.5)
+  assert.equal(migrated.cards['custom-live'].status, 'This Week')
+  assert.equal(migrated.addedCards.length, 1)
 })

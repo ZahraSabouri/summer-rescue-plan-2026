@@ -135,7 +135,7 @@ function DailyTotals({ summary }) {
 
 // logDate: when set, each block gets an inline Done/Skipped retro-log toggle
 // writing to the shared day log (same store the Review view reads).
-export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = false, date: agendaDate = '', logDate = '' }) {
+export function DailyAgenda({ blocks = [], cards = [], onOpenCard, onOpenBlock, compact = false, date: agendaDate = '', logDate = '' }) {
   const sortedBlocks = useMemo(
     () => [...blocks].sort(
       (a, b) => clockSortValue(a.start) - clockSortValue(b.start) || clockSortValue(a.end) - clockSortValue(b.end),
@@ -199,9 +199,9 @@ export function DailyAgenda({ blocks = [], cards = [], onOpenCard, compact = fal
                       <button type="button" className="schedule-card-link" onClick={() => onOpenCard(card.id)}>
                         {block.title}
                       </button>
-                    ) : (
-                      <strong>{block.title}</strong>
-                    )}
+                    ) : onOpenBlock ? (
+                      <button type="button" className="schedule-card-link" onClick={() => onOpenBlock(block)}>{block.title}</button>
+                    ) : <strong>{block.title}</strong>}
                     {block.protected && <span className="schedule-protected">Protected</span>}
                   </div>
                   <div className="daily-agenda-meta">
@@ -363,7 +363,14 @@ export function ScheduleView({
                   <span className="schedule-exam-badge" key={exam.moduleId}>{exam.label} exam</span>
                 ))}
               </header>
-              <DailyAgenda date={day.date} blocks={day.blocks} cards={cards} onOpenCard={onOpenCard} compact />
+              <DailyAgenda
+                date={day.date}
+                blocks={day.blocks}
+                cards={cards}
+                onOpenCard={onOpenCard}
+                logDate={day.date <= referenceDate ? day.date : ''}
+                compact
+              />
             </article>
           )
         })}

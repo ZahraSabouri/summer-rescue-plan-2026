@@ -6,6 +6,7 @@
 import { addDays, isTrackableCard } from './progress.js'
 
 const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 }
+const PHASE_RANK = { 'Phase 0': 0, 'Phase 1': 1, 'Phase 2': 2 }
 
 export const READINESS_DATE = '2026-08-16'
 export const PROJECT_DEADLINE = '2026-08-06'
@@ -28,7 +29,7 @@ export function buildReplan(cards, options = {}) {
     examGroups = EXAM_GROUPS,
   } = options
 
-  const daysLeft = Math.max(1, daysBetween(referenceDate, readiness))
+  const daysLeft = Math.max(1, daysBetween(referenceDate, readiness) + 1)
   const capacity = Math.round(daysLeft * dailyHours * 10) / 10
 
   const outstanding = cards.filter((card) => isTrackableCard(card) && !card.done)
@@ -121,6 +122,8 @@ export function computeReplanSchedule(cards, options = {}) {
     (card) => isTrackableCard(card) && !card.done && examGroups.includes(card.moduleGroup),
   )
   const byUrgency = (a, b) => {
+    const phase = (PHASE_RANK[a.phase] ?? 99) - (PHASE_RANK[b.phase] ?? 99)
+    if (phase !== 0) return phase
     const rank = (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4)
     if (rank !== 0) return rank
     const da = a.dueDate || a.startDate || '9999-12-31'
@@ -136,14 +139,11 @@ export function computeReplanSchedule(cards, options = {}) {
   // Day-walking packer. Days report their own free study hours (capped by the
   // user's sustainable dailyHours); zero-capacity days (travel, full class days)
   // are skipped. The horizon is bounded so a broken schedule can never spin.
-  const HORIZON_DAYS = 240
+  const LAST_PLAN_DAY = Math.max(0, daysBetween(referenceDate, readiness))
   const capFor = (dayIndex) => {
     const date = addDays(referenceDate, dayIndex)
     const scheduled = capacityForDate ? capacityForDate(date) : dailyHours
-    // Past readiness the timetable may be empty; fall back to flat hours so the
-    // stretch zone still gets dates instead of piling onto one day.
-    const base = capacityForDate && date > readiness && scheduled <= 0 ? dailyHours : scheduled
-    return Math.max(0, Math.min(dailyHours, base))
+    return Math.max(0, Math.min(dailyHours, scheduled))
   }
 
   let dayIndex = 0
@@ -154,7 +154,7 @@ export function computeReplanSchedule(cards, options = {}) {
   const assignments = sorted.map((card) => {
     const cardHours = Math.max(0.5, Number(card.estimatedHours ?? card.hours ?? 0))
     let remaining = cardHours
-    while (remaining > 0 && dayIndex < HORIZON_DAYS) {
+    while (remaining > 0 && dayIndex <= LAST_PLAN_DAY) {
       const free = capFor(dayIndex) - usedToday
       if (free <= 0) {
         dayIndex += 1
@@ -169,8 +169,8 @@ export function computeReplanSchedule(cards, options = {}) {
         usedToday = 0
       }
     }
-    const dueDate = addDays(referenceDate, Math.min(dayIndex, HORIZON_DAYS))
-    const stretch = dueDate > readiness
+    const stretch = remaining > 0
+    const dueDate = stretch ? '' : addDays(referenceDate, dayIndex)
     if (stretch) {
       overflow += 1
       stretchHours += cardHours
@@ -183,6 +183,7 @@ export function computeReplanSchedule(cards, options = {}) {
       stretch,
       lowYield: isLowYield(card),
       status: stretch ? 'Backlog' : 'This Week',
+      ...(stretch ? { startDate: '' } : {}),
     }
   })
 
@@ -195,6 +196,6 @@ export function computeReplanSchedule(cards, options = {}) {
     // timetable-true version of buildReplan's flat "fits / over by" verdict.
     packedHours: Math.round(packedHours * 10) / 10,
     stretchHours: Math.round(stretchHours * 10) / 10,
-    lastDay: assignments.length ? assignments[assignments.length - 1].dueDate : referenceDate,
+    lastDay: [...assignments].reverse().find((assignment) => assignment.dueDate)?.dueDate ?? referenceDate,
   }
 }

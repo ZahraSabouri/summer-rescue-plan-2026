@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { MODULE_OPTIONS, PHASE_OPTIONS, PRIORITY_OPTIONS, SLOT_OPTIONS, STATUS_OPTIONS } from '../data/constants'
+import { AccessibleDialog } from './AccessibleDialog'
 
 const emptyCard = {
   title: '',
   module: 'Admin',
-  phase: 'Phase 2',
+  phase: 'Phase 0',
   status: 'Today',
   priority: 'Medium',
   slotType: 'Flex',
@@ -28,17 +29,6 @@ export function AddCardDialog({
 }) {
   const [form, setForm] = useState(emptyCard)
 
-  useEffect(() => {
-    if (!open) return undefined
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
-
-  if (!open) return null
-
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const submit = (event) => {
     event.preventDefault()
@@ -49,8 +39,7 @@ export function AddCardDialog({
   }
 
   return (
-    <div className="drawer-shell" role="presentation">
-      <aside className="add-dialog" role="dialog" aria-modal="true" aria-labelledby="add-card-title">
+    <AccessibleDialog open={open} onClose={() => onClose()} className="add-dialog" labelledBy="add-card-title">
         <header className="drawer-header">
           <div>
             <p className="eyebrow">Ad-hoc task</p>
@@ -67,7 +56,7 @@ export function AddCardDialog({
             <input required value={form.title} onChange={(event) => update('title', event.target.value)} />
           </label>
           <label>
-            <span>Module</span>
+            <span>Academic module or life area</span>
             <select value={form.module} onChange={(event) => update('module', event.target.value)}>
               {moduleOptions.map((module) => (
                 <option key={module} value={module}>
@@ -176,7 +165,6 @@ export function AddCardDialog({
             </button>
           </div>
         </form>
-      </aside>
-    </div>
+    </AccessibleDialog>
   )
 }

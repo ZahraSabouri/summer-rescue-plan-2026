@@ -105,10 +105,11 @@ export function AppIntro({
           <button type="button" className="secondary-button" onClick={() => onJump('dashboard')}>
             Open planner
           </button>
+          <button type="button" className="secondary-button" onClick={() => onJump('hub')}>Open Areas</button>
         </div>
 
         <label className="intro-skip">
-          <input type="checkbox" checked={skipIntro} onChange={(event) => onToggleSkip(event.target.checked)} />
+          <input type="checkbox" checked={skipIntro} onChange={(event) => onToggleSkip?.(event.target.checked)} />
           <span>Skip this screen next time</span>
         </label>
       </div>

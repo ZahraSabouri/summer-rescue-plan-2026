@@ -575,6 +575,9 @@ export function openTrackerDb(dbPath) {
         for (const [key, value] of Object.entries(plainObject(state.settings))) {
           settingStmt.run(key, JSON.stringify(value ?? null))
         }
+        if (state.focusRewards && typeof state.focusRewards === 'object') {
+          settingStmt.run('focusRewards', JSON.stringify(state.focusRewards))
+        }
 
         db.exec('DELETE FROM notifications')
         const notificationStmt = db.prepare(
@@ -683,4 +686,26 @@ export function openTrackerDb(dbPath) {
   }
 
   return api
+}
+
+export function inspectTrackerDb(dbPath) {
+  if (!fs.existsSync(dbPath)) return { available: false, integrity: 'missing' }
+  const db = new DatabaseSync(dbPath, { readOnly: true })
+  try {
+    const integrityRow = db.prepare('PRAGMA quick_check').get()
+    const schemaRow = db.prepare('SELECT value FROM meta WHERE key = ?').get('schema_version')
+    const counts = {}
+    for (const table of COUNT_TABLES) {
+      const row = db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()
+      counts[table] = Number(row?.n ?? 0)
+    }
+    return {
+      available: true,
+      schemaVersion: Number(schemaRow?.value ?? 0),
+      counts,
+      integrity: String(integrityRow?.quick_check ?? 'unknown'),
+    }
+  } finally {
+    db.close()
+  }
 }

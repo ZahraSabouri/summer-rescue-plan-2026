@@ -34,6 +34,9 @@ test('production local server serves the shell, assets, SPA fallback, and tracke
     const shell = await fetch(`${baseUrl}/`)
     assert.equal(shell.status, 200)
     assert.match(shell.headers.get('content-type'), /^text\/html/)
+    assert.match(shell.headers.get('content-security-policy'), /frame-ancestors 'none'/)
+    assert.equal(shell.headers.get('x-content-type-options'), 'nosniff')
+    assert.equal(shell.headers.get('referrer-policy'), 'no-referrer')
     assert.match(await shell.text(), /Summer Rescue/)
 
     const asset = await fetch(`${baseUrl}/assets/app.js`)

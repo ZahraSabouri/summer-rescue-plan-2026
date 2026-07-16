@@ -18,7 +18,7 @@ export const STATUS_COLUMNS = [
   { id: 'Done', label: 'Done' },
 ]
 
-export const PHASE_OPTIONS = ['Phase 2', 'Phase 3', 'Phase 4']
+export const PHASE_OPTIONS = ['Phase 0', 'Phase 1', 'Phase 2']
 
 export const MODULE_OPTIONS = [
   'Applied ML',
@@ -68,6 +68,7 @@ export const VIEW_OPTIONS = [
   { id: 'analytics', label: 'Analytics' },
   { id: 'evidence', label: 'Evidence' },
   { id: 'rescue', label: 'Rescue Lane' },
+  { id: 'areas', label: 'Life & Admin' },
   { id: 'project', label: 'Project Capacity' },
   { id: 'admin', label: 'Admin & Dates' },
   { id: 'jobs', label: 'Job Hunt' },
@@ -83,6 +84,7 @@ export const FILTER_DEFAULTS = {
   slotType: 'all',
   tag: 'all',
   dateMode: 'all',
+  exactDate: '',
 }
 
 // v2: 'progress' view added to VIEW_OPTIONS above.

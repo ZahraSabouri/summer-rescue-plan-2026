@@ -62,14 +62,18 @@ test('local tracker API reads and writes state and typed events', async () => {
     }
     const stateWriteResponse = await fetch(`${baseUrl}/api/state`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"0"' },
       body: JSON.stringify(statePayload),
     })
     assert.equal(stateWriteResponse.status, 200)
 
     const stateReadResponse = await fetch(`${baseUrl}/api/state`)
     assert.equal(stateReadResponse.status, 200)
-    assert.deepEqual(await stateReadResponse.json(), statePayload)
+    const storedState = await stateReadResponse.json()
+    assert.equal(storedState.revision, 1)
+    assert.equal(storedState.writerId, 'unknown')
+    assert.deepEqual(storedState.state, statePayload.state)
+    assert.equal(stateReadResponse.headers.get('etag'), '"1"')
 
     const eventPayload = {
       entityType: 'card',
@@ -93,6 +97,125 @@ test('local tracker API reads and writes state and typed events', async () => {
     assert.equal(events.events.length, 1)
     assert.equal(events.events[0].eventType, 'checklist_item.toggled')
     assert.equal(events.events[0].entityType, 'card')
+  })
+})
+
+test('state writes require a revision, reject stale tabs, and skip semantic no-op writes', async () => {
+  await withApi(async ({ baseUrl, projectRoot }) => {
+    const payload = { app: 'summer-rescue-plan-app', state: { version: 4, cards: {}, updatedAt: '2026-07-15T10:00:00.000Z' } }
+
+    const unguarded = await fetch(`${baseUrl}/api/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    assert.equal(unguarded.status, 428)
+
+    const first = await fetch(`${baseUrl}/api/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"0"', 'X-Writer-Id': 'tab-a' },
+      body: JSON.stringify(payload),
+    })
+    assert.equal(first.status, 200)
+    assert.equal((await first.json()).revision, 1)
+
+    const statePath = path.join(projectRoot, 'local-data', 'summer-rescue-tracker-state.json')
+    const before = await fs.stat(statePath)
+    const noChange = await fetch(`${baseUrl}/api/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Writer-Id': 'tab-a' },
+      body: JSON.stringify({ ...payload, exportedAt: '2026-07-15T11:00:00.000Z' }),
+    })
+    const noChangeResult = await noChange.json()
+    const after = await fs.stat(statePath)
+    assert.equal(noChange.status, 200)
+    assert.equal(noChangeResult.noChange, true)
+    assert.equal(after.mtimeMs, before.mtimeMs)
+
+    const stale = await fetch(`${baseUrl}/api/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"0"', 'X-Writer-Id': 'tab-b' },
+      body: JSON.stringify({ ...payload, state: { ...payload.state, cards: { lost: { done: true } } } }),
+    })
+    assert.equal(stale.status, 409)
+    const conflict = await stale.json()
+    assert.equal(conflict.current.revision, 1)
+    assert.equal(conflict.current.writerId, 'tab-a')
+
+    const stored = await (await fetch(`${baseUrl}/api/state`)).json()
+    assert.deepEqual(stored.state.cards, {})
+  })
+})
+
+test('event history quarantines malformed lines and de-duplicates event ids', async () => {
+  await withApi(async ({ baseUrl, projectRoot }) => {
+    const localData = path.join(projectRoot, 'local-data')
+    const progressPath = path.join(localData, 'progress-log.ndjson')
+    await fs.mkdir(localData, { recursive: true })
+    const valid = {
+      id: 'event-existing',
+      occurredAt: '2026-07-15T10:00:00.000Z',
+      entityType: 'card',
+      entityId: 'card-a',
+      eventType: 'card.done_changed',
+      payload: { done: true },
+    }
+    await fs.writeFile(progressPath, `${JSON.stringify(valid)}\n-18"}}\n`, 'utf8')
+
+    const history = await (await fetch(`${baseUrl}/api/events`)).json()
+    assert.equal(history.ok, true)
+    assert.equal(history.events.length, 1)
+    assert.equal(history.malformedCount, 1)
+    await fs.access(`${progressPath}.quarantine.ndjson`)
+    const repaired = await fs.readFile(progressPath, 'utf8')
+    assert.doesNotMatch(repaired, /-18/)
+
+    const event = {
+      id: 'event-idempotent',
+      occurredAt: '2026-07-15T11:00:00.000Z',
+      entityType: 'card',
+      entityId: 'card-a',
+      eventType: 'evidence.added',
+      payload: { text: 'proof' },
+    }
+    const post = () => fetch(`${baseUrl}/api/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    })
+    assert.equal((await post()).status, 201)
+    const duplicate = await post()
+    assert.equal(duplicate.status, 200)
+    assert.equal((await duplicate.json()).duplicate, true)
+
+    const collision = await fetch(`${baseUrl}/api/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...event, payload: { text: 'different' } }),
+    })
+    assert.equal(collision.status, 409)
+  })
+})
+
+test('local API rejects cross-site origins and rebuild requires a one-use token', async () => {
+  await withApi(async ({ baseUrl }) => {
+    const crossSite = await fetch(`${baseUrl}/api/health`, { headers: { Origin: 'https://example.com' } })
+    assert.equal(crossSite.status, 403)
+
+    assert.equal((await fetch(`${baseUrl}/api/db/rebuild`)).status, 405)
+    assert.equal((await fetch(`${baseUrl}/api/db/rebuild`, { method: 'POST' })).status, 403)
+
+    const token = await (await fetch(`${baseUrl}/api/db/rebuild-token`, { method: 'POST' })).json()
+    const first = await fetch(`${baseUrl}/api/db/rebuild`, {
+      method: 'POST',
+      headers: { 'X-Rebuild-Token': token.token },
+    })
+    assert.equal(first.status, 200)
+    const reused = await fetch(`${baseUrl}/api/db/rebuild`, {
+      method: 'POST',
+      headers: { 'X-Rebuild-Token': token.token },
+    })
+    assert.equal(reused.status, 403)
   })
 })
 
@@ -192,7 +315,7 @@ test('saving state mirrors it into the SQLite store and reports it in db health'
 
     const writeResponse = await fetch(`${baseUrl}/api/state`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"0"' },
       body: JSON.stringify({
         app: 'summer-rescue-plan-app',
         state: {
@@ -220,7 +343,7 @@ test('db rebuild reconstructs progress from the event log', async () => {
     // Seed one card into the catalog by saving it as a custom card.
     await fetch(`${baseUrl}/api/state`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"0"' },
       body: JSON.stringify({
         state: { version: 3, addedCards: [{ id: 'card-x', title: 'Custom card', status: 'Backlog' }], cards: {} },
       }),
@@ -238,7 +361,12 @@ test('db rebuild reconstructs progress from the event log', async () => {
       }),
     })
 
-    const rebuild = await (await fetch(`${baseUrl}/api/db/rebuild`)).json()
+    const tokenResponse = await fetch(`${baseUrl}/api/db/rebuild-token`, { method: 'POST' })
+    assert.equal(tokenResponse.status, 201)
+    const { token } = await tokenResponse.json()
+    const rebuild = await (
+      await fetch(`${baseUrl}/api/db/rebuild`, { method: 'POST', headers: { 'X-Rebuild-Token': token } })
+    ).json()
     assert.equal(rebuild.ok, true)
     assert.equal(rebuild.eventCount, 1)
     const card = rebuild.cards.find((item) => item.cardId === 'card-x')

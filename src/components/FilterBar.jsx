@@ -32,6 +32,7 @@ export function FilterBar({
   resultCount,
   moduleOptions = MODULE_OPTIONS,
   phaseOptions = PHASE_OPTIONS,
+  tagOptions = TAG_OPTIONS,
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
@@ -72,7 +73,7 @@ export function FilterBar({
         options={phaseOptions}
       />
       <SelectFilter
-        label="Module"
+        label="Module / area"
         value={filters.module}
         onChange={(value) => update('module', value)}
         options={moduleOptions}
@@ -110,12 +111,12 @@ export function FilterBar({
         label="Tag"
         value={filters.tag}
         onChange={(value) => update('tag', value)}
-        options={TAG_OPTIONS}
+        options={tagOptions}
       />
 
       <label className="filter-field">
         <span>Date</span>
-        <select value={filters.dateMode} onChange={(event) => update('dateMode', event.target.value)}>
+        <select value={filters.dateMode} onChange={(event) => setFilters((current) => ({ ...current, dateMode: event.target.value, exactDate: '' }))}>
           <option value="all">All dates</option>
           <option value="today">Today</option>
           <option value="week">This week</option>
@@ -123,6 +124,14 @@ export function FilterBar({
           <option value="overdue">Overdue</option>
           <option value="no-date">No fixed date</option>
         </select>
+      </label>
+      <label className="filter-field">
+        <span>Exact date</span>
+        <input
+          type="date"
+          value={filters.exactDate ?? ''}
+          onChange={(event) => setFilters((current) => ({ ...current, exactDate: event.target.value, dateMode: 'all' }))}
+        />
       </label>
 
       <div className="filter-actions">

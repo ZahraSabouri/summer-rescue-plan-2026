@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer'
+import { createHash, randomUUID } from 'node:crypto'
 import fsSync from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -8,6 +9,25 @@ const MAX_STATE_BYTES = 15 * 1024 * 1024
 const MAX_EVENT_BYTES = 512 * 1024
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 const MAX_UPLOAD_BODY_BYTES = Math.ceil(MAX_UPLOAD_BYTES * 1.4) + 1024 * 1024
+const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '::1'])
+const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+export const APP_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' ws: wss:",
+  "media-src 'self' blob: https://open.spotify.com",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ')
+
+const DEV_SCRIPT_NONCE = 'summer-rescue-local-dev'
+const DEV_APP_CSP = APP_CSP.replace("script-src 'self'", `script-src 'self' 'nonce-${DEV_SCRIPT_NONCE}'`)
 
 const CODE_TYPES = new Set([
   'py',
@@ -65,10 +85,28 @@ function routePath(url = '') {
   return url.split('?')[0]
 }
 
-function sendJson(res, status, payload) {
+function setSecurityHeaders(res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'no-referrer')
+  res.setHeader('Content-Security-Policy', API_CSP)
+  res.setHeader('Cache-Control', 'no-store')
+}
+
+function setAppSecurityHeaders(res, { development = false } = {}) {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'no-referrer')
+  res.setHeader('Content-Security-Policy', development ? DEV_APP_CSP : APP_CSP)
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+}
+
+function sendJson(res, status, payload, headers = {}) {
+  const body = JSON.stringify(payload)
   res.statusCode = status
+  setSecurityHeaders(res)
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
-  res.end(JSON.stringify(payload))
+  res.setHeader('Content-Length', String(Buffer.byteLength(body)))
+  for (const [name, value] of Object.entries(headers)) res.setHeader(name, value)
+  res.end(body)
 }
 
 function sendError(res, error, fallbackStatus = 400) {
@@ -76,7 +114,62 @@ function sendError(res, error, fallbackStatus = 400) {
 }
 
 function makeEventId() {
-  return `event-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return `event-${randomUUID()}`
+}
+
+function eventChecksum(event) {
+  const canonical = JSON.stringify({
+    id: event.id,
+    occurredAt: event.occurredAt,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    eventType: event.eventType,
+    payload: event.payload,
+  })
+  return createHash('sha256').update(canonical).digest('hex')
+}
+
+function revisionEtag(revision) {
+  return `"${Math.max(0, Number(revision) || 0)}"`
+}
+
+function payloadRevision(payload) {
+  return Math.max(0, Number(payload?.revision) || 0)
+}
+
+function parseExpectedRevision(value) {
+  const match = /^(?:W\/)?"?(\d+)"?$/.exec(String(value ?? '').trim())
+  return match ? Number(match[1]) : null
+}
+
+function stateContent(payload) {
+  return payload?.state ?? payload ?? null
+}
+
+function semanticallyEqualState(left, right) {
+  return JSON.stringify(stateContent(left)) === JSON.stringify(stateContent(right))
+}
+
+function requestHostname(req) {
+  const host = String(req.headers.host ?? '').trim()
+  if (!host) return ''
+  try {
+    return new URL(`http://${host}`).hostname
+  } catch {
+    return ''
+  }
+}
+
+function localRequestAllowed(req) {
+  if (!LOCAL_HOSTNAMES.has(requestHostname(req))) return false
+  if (String(req.headers['sec-fetch-site'] ?? '').toLowerCase() === 'cross-site') return false
+  const origin = String(req.headers.origin ?? '').trim()
+  if (!origin || origin === 'null') return true
+  try {
+    return LOCAL_HOSTNAMES.has(new URL(origin).hostname)
+  } catch {
+    return false
+  }
 }
 
 function slug(value, fallback = 'resource') {
@@ -163,7 +256,7 @@ function normaliseEvent(payload) {
   const eventType = payload.eventType || payload.event_type
   if (!eventType) throw new Error('Event payload must include eventType.')
   const now = new Date().toISOString()
-  return {
+  const event = {
     id: payload?.id || makeEventId(),
     occurredAt: payload?.occurredAt || payload?.occurred_at || now,
     entityType: payload?.entityType || payload?.entity_type || 'tracker',
@@ -171,6 +264,13 @@ function normaliseEvent(payload) {
     eventType,
     payload: payload?.payload ?? {},
   }
+  const checksum = eventChecksum(event)
+  if (payload?.checksum && payload.checksum !== checksum) {
+    const error = new Error('Event checksum does not match its content.')
+    error.statusCode = 409
+    throw error
+  }
+  return { ...event, checksum }
 }
 
 function resolveLocalPaths(options = {}) {
@@ -191,24 +291,50 @@ function resolveLocalPaths(options = {}) {
   }
 }
 
-async function readAllProgressEvents(progressLogPath) {
+async function readProgressLog(progressLogPath, { quarantine = false } = {}) {
   try {
     const raw = await fs.readFile(progressLogPath, 'utf8')
-    return raw
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line)
-        } catch {
-          return null
-        }
-      })
-      .filter(Boolean)
+    const events = []
+    const malformed = []
+    raw.split(/\r?\n/).forEach((line, index) => {
+      if (!line.trim()) return
+      try {
+        events.push(JSON.parse(line))
+      } catch (error) {
+        malformed.push({
+          lineNumber: index + 1,
+          raw: line,
+          error: error.message,
+        })
+      }
+    })
+
+    if (quarantine && malformed.length > 0) {
+      const quarantinedAt = new Date().toISOString()
+      const quarantinePath = `${progressLogPath}.quarantine.ndjson`
+      await fs.mkdir(path.dirname(progressLogPath), { recursive: true })
+      await fs.appendFile(
+        quarantinePath,
+        malformed.map((item) => JSON.stringify({ ...item, quarantinedAt })).join('\n') + '\n',
+        'utf8',
+      )
+      const tmpPath = `${progressLogPath}.repair.tmp`
+      const repaired = events.map((event) => JSON.stringify(event)).join('\n')
+      await fs.writeFile(tmpPath, repaired ? `${repaired}\n` : '', 'utf8')
+      await fs.rename(tmpPath, progressLogPath)
+    }
+
+    return { events, malformed, quarantinePath: `${progressLogPath}.quarantine.ndjson` }
   } catch (error) {
-    if (error.code === 'ENOENT') return []
+    if (error.code === 'ENOENT') {
+      return { events: [], malformed: [], quarantinePath: `${progressLogPath}.quarantine.ndjson` }
+    }
     throw error
   }
+}
+
+async function readAllProgressEvents(progressLogPath) {
+  return (await readProgressLog(progressLogPath, { quarantine: true })).events
 }
 
 // Open the SQLite mirror for a single operation and always close it afterwards.
@@ -226,16 +352,11 @@ async function withTrackerDb(dbPath, run) {
 }
 
 async function readRecentEvents(progressLogPath, limit = 200) {
-  try {
-    const raw = await fs.readFile(progressLogPath, 'utf8')
-    return raw
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .slice(-limit)
-      .map((line) => JSON.parse(line))
-  } catch (error) {
-    if (error.code === 'ENOENT') return []
-    throw error
+  const result = await readProgressLog(progressLogPath, { quarantine: true })
+  return {
+    events: result.events.slice(-limit),
+    malformedCount: result.malformed.length,
+    quarantinePath: result.malformed.length > 0 ? result.quarantinePath : '',
   }
 }
 
@@ -339,6 +460,13 @@ async function sendResourceFile(res, paths, resourceRoute) {
       sendJson(res, 404, { ok: false, error: 'Resource file was not found.' })
       return
     }
+    setSecurityHeaders(res)
+    if (fileType(resourcePath) === 'HTML') {
+      res.setHeader(
+        'Content-Security-Policy',
+        "sandbox; default-src 'self' data: blob:; script-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'",
+      )
+    }
     res.statusCode = 200
     res.setHeader('Content-Type', contentTypeFor(resourcePath))
     res.setHeader('Content-Length', String(stat.size))
@@ -431,9 +559,66 @@ async function handleResourceUpload(req, res, paths) {
 
 export function createLocalTrackerApi(options = {}) {
   const paths = resolveLocalPaths(options)
+  let stateWriteQueue = Promise.resolve()
+  let eventAppendQueue = Promise.resolve()
+  let eventIndex = null
+  const rebuildTokens = new Map()
+
+  function serializeStateWrite(task) {
+    const operation = stateWriteQueue.then(task, task)
+    stateWriteQueue = operation.catch(() => {})
+    return operation
+  }
+
+  function serializeEventAppend(task) {
+    const operation = eventAppendQueue.then(task, task)
+    eventAppendQueue = operation.catch(() => {})
+    return operation
+  }
+
+  async function readStatePayload() {
+    try {
+      return JSON.parse(await fs.readFile(paths.trackerStatePath, 'utf8'))
+    } catch (error) {
+      if (error.code === 'ENOENT') return null
+      throw error
+    }
+  }
+
+  async function appendEvent(event) {
+    return serializeEventAppend(async () => {
+      if (!eventIndex) {
+        const existing = await readProgressLog(paths.progressLogPath, { quarantine: true })
+        eventIndex = new Map(existing.events.map((item) => [item.id, item.checksum || eventChecksum(item)]))
+      }
+      const existingChecksum = eventIndex.get(event.id)
+      if (existingChecksum) {
+        if (existingChecksum !== event.checksum) {
+          const error = new Error(`Event id ${event.id} already exists with different content.`)
+          error.statusCode = 409
+          throw error
+        }
+        return { duplicate: true }
+      }
+      await fs.mkdir(paths.localDataDir, { recursive: true })
+      await fs.appendFile(paths.progressLogPath, `${JSON.stringify(event)}\n`, 'utf8')
+      eventIndex.set(event.id, event.checksum)
+      return { duplicate: false }
+    })
+  }
 
   return async function localTrackerApi(req, res, next) {
     const pathname = routePath(req.url)
+
+    if (pathname.startsWith('/api/')) {
+      if (!localRequestAllowed(req)) {
+        sendJson(res, 403, { ok: false, error: 'The local API only accepts same-device requests.' })
+        return
+      }
+      setSecurityHeaders(res)
+    } else {
+      setAppSecurityHeaders(res, { development: Boolean(options.development) })
+    }
 
     if (pathname === '/api/health') {
       sendJson(res, 200, {
@@ -456,6 +641,8 @@ export function createLocalTrackerApi(options = {}) {
           '/api/resources/file/:moduleId/:fileName',
           '/api/db/health',
           '/api/db/summary',
+          '/api/data-health',
+          '/api/db/rebuild-token',
           '/api/db/rebuild',
         ],
       })
@@ -498,11 +685,106 @@ export function createLocalTrackerApi(options = {}) {
       return
     }
 
-    if (pathname === '/api/db/rebuild') {
-      if (req.method !== 'GET' && req.method !== 'POST') {
+    if (pathname === '/api/data-health') {
+      if (req.method !== 'GET') {
         res.statusCode = 405
-        res.setHeader('Allow', 'GET, POST')
+        res.setHeader('Allow', 'GET')
         res.end()
+        return
+      }
+      try {
+        const [stored, progress, database, assets] = await Promise.all([
+          readStatePayload(),
+          readProgressLog(paths.progressLogPath),
+          (async () => {
+            if (!paths.dbEnabled) return { available: false, integrity: 'unavailable' }
+            try {
+              const stat = await fs.stat(paths.dbPath)
+              return {
+                available: stat.isFile(),
+                path: paths.dbPath,
+                sizeBytes: stat.size,
+                integrity: 'not checked during normal use',
+              }
+            } catch (error) {
+              return {
+                available: false,
+                path: paths.dbPath,
+                integrity: error.code === 'ENOENT' ? 'missing' : 'error',
+                error: error.code === 'ENOENT' ? undefined : error.message,
+              }
+            }
+          })(),
+          (async () => {
+            try {
+              const manifest = JSON.parse(
+                await fs.readFile(path.join(paths.projectRoot, 'public', 'study-assets-manifest.json'), 'utf8'),
+              )
+              return {
+                available: true,
+                syncedAt: manifest.syncedAt ?? '',
+                count: Array.isArray(manifest.assets)
+                  ? manifest.assets.length
+                  : Number(manifest.assetCount ?? manifest.available ?? manifest.checked ?? 0),
+              }
+            } catch {
+              // The app still works without study assets; the health readout reports that honestly.
+              return { available: false }
+            }
+          })(),
+        ])
+        sendJson(res, 200, {
+          ok: true,
+          authoritativeStore: 'JSON state file',
+          state: {
+            path: paths.trackerStatePath,
+            exists: Boolean(stored),
+            schemaVersion: Number(stored?.schemaVersion ?? stateContent(stored)?.version ?? 0),
+            revision: payloadRevision(stored),
+            writtenAt: stored?.writtenAt ?? stored?.exportedAt ?? stateContent(stored)?.updatedAt ?? '',
+            writerId: stored?.writerId ?? 'legacy',
+          },
+          eventLog: {
+            path: paths.progressLogPath,
+            validCount: progress.events.length,
+            malformedCount: progress.malformed.length,
+            quarantinePath: progress.quarantinePath,
+            recoveryCoverage: 'partial audit history; not a complete recovery source',
+          },
+          database,
+          assets,
+        })
+      } catch (error) {
+        sendJson(res, 500, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (pathname === '/api/db/rebuild-token') {
+      if (req.method !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('Allow', 'POST')
+        res.end()
+        return
+      }
+      const token = randomUUID()
+      rebuildTokens.set(token, Date.now() + 60_000)
+      sendJson(res, 201, { ok: true, token, expiresInSeconds: 60 })
+      return
+    }
+
+    if (pathname === '/api/db/rebuild') {
+      if (req.method !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('Allow', 'POST')
+        res.end()
+        return
+      }
+      const token = String(req.headers['x-rebuild-token'] ?? '')
+      const expiresAt = rebuildTokens.get(token) ?? 0
+      rebuildTokens.delete(token)
+      if (!token || expiresAt < Date.now()) {
+        sendJson(res, 403, { ok: false, error: 'A fresh one-use rebuild token is required.' })
         return
       }
       if (!paths.dbEnabled) {
@@ -570,16 +852,21 @@ export function createLocalTrackerApi(options = {}) {
     if (STATE_ENDPOINTS.has(pathname)) {
       if (req.method === 'GET') {
         try {
-          const raw = await fs.readFile(paths.trackerStatePath, 'utf8')
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json; charset=utf-8')
-          res.end(raw)
-        } catch (error) {
-          if (error.code === 'ENOENT') {
+          const payload = await readStatePayload()
+          const revision = payloadRevision(payload)
+          if (!payload) {
             res.statusCode = 204
+            setSecurityHeaders(res)
+            res.setHeader('ETag', revisionEtag(0))
+            res.setHeader('X-State-Revision', '0')
             res.end()
             return
           }
+          sendJson(res, 200, payload, {
+            ETag: revisionEtag(revision),
+            'X-State-Revision': String(revision),
+          })
+        } catch (error) {
           sendJson(res, 500, { ok: false, error: error.message })
         }
         return
@@ -589,25 +876,74 @@ export function createLocalTrackerApi(options = {}) {
         try {
           const raw = await readRequestBody(req, MAX_STATE_BYTES)
           const payload = JSON.parse(raw)
-          await fs.mkdir(paths.localDataDir, { recursive: true })
-          const tmpPath = `${paths.trackerStatePath}.tmp`
-          await fs.writeFile(tmpPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
-          await fs.rename(tmpPath, paths.trackerStatePath)
-
-          // Best-effort: mirror the saved state into the SQLite store. A failure
-          // here (e.g. no node:sqlite) must never fail the JSON save, which is
-          // the app's primary persistence path.
-          let dbMirrored = false
-          if (paths.dbEnabled) {
-            try {
-              await withTrackerDb(paths.dbPath, (db) => db.projectState(payload))
-              dbMirrored = true
-            } catch (error) {
-              console.warn('SQLite projection skipped:', error.message)
-            }
+          const expectedRevision = parseExpectedRevision(req.headers['if-match'])
+          if (expectedRevision == null) {
+            sendJson(res, 428, { ok: false, error: 'If-Match with the last observed state revision is required.' })
+            return
           }
+          const result = await serializeStateWrite(async () => {
+            const current = await readStatePayload()
+            const currentRevision = payloadRevision(current)
+            if (expectedRevision !== currentRevision) {
+              return {
+                conflict: true,
+                revision: currentRevision,
+                writtenAt: current?.writtenAt ?? current?.exportedAt ?? stateContent(current)?.updatedAt ?? '',
+                writerId: current?.writerId ?? 'legacy',
+              }
+            }
+            if (current && semanticallyEqualState(current, payload)) {
+              return {
+                noChange: true,
+                revision: currentRevision,
+                savedAt: current?.writtenAt ?? current?.exportedAt ?? stateContent(current)?.updatedAt ?? '',
+                writerId: current?.writerId ?? 'legacy',
+              }
+            }
 
-          sendJson(res, 200, { ok: true, savedAt: new Date().toISOString(), path: paths.trackerStatePath, dbMirrored })
+            const writtenAt = new Date().toISOString()
+            const revision = currentRevision + 1
+            const stored = {
+              schemaVersion: Number(payload.schemaVersion ?? stateContent(payload)?.version ?? 4),
+              revision,
+              writtenAt,
+              writerId: String(req.headers['x-writer-id'] ?? payload.writerId ?? 'unknown'),
+              exportedAt: payload.exportedAt ?? writtenAt,
+              app: payload.app ?? 'summer-rescue-plan-app',
+              state: stateContent(payload),
+            }
+            await fs.mkdir(paths.localDataDir, { recursive: true })
+            const tmpPath = `${paths.trackerStatePath}.tmp`
+            await fs.writeFile(tmpPath, `${JSON.stringify(stored, null, 2)}\n`, 'utf8')
+            await fs.rename(tmpPath, paths.trackerStatePath)
+
+            let dbMirrored = false
+            if (paths.dbEnabled) {
+              try {
+                await withTrackerDb(paths.dbPath, (db) => db.projectState(stored))
+                dbMirrored = true
+              } catch (error) {
+                console.warn('SQLite projection skipped:', error.message)
+              }
+            }
+            return { revision, savedAt: writtenAt, writerId: stored.writerId, dbMirrored }
+          })
+
+          if (result.conflict) {
+            sendJson(
+              res,
+              409,
+              { ok: false, error: 'State revision conflict.', current: result },
+              { ETag: revisionEtag(result.revision), 'X-State-Revision': String(result.revision) },
+            )
+            return
+          }
+          sendJson(
+            res,
+            200,
+            { ok: true, path: paths.trackerStatePath, ...result },
+            { ETag: revisionEtag(result.revision), 'X-State-Revision': String(result.revision) },
+          )
         } catch (error) {
           sendError(res, error, 400)
         }
@@ -623,7 +959,8 @@ export function createLocalTrackerApi(options = {}) {
     if (pathname === '/api/events') {
       if (req.method === 'GET') {
         try {
-          sendJson(res, 200, { ok: true, events: await readRecentEvents(paths.progressLogPath) })
+          const result = await readRecentEvents(paths.progressLogPath)
+          sendJson(res, 200, { ok: true, ...result })
         } catch (error) {
           sendJson(res, 500, { ok: false, error: error.message })
         }
@@ -634,9 +971,8 @@ export function createLocalTrackerApi(options = {}) {
         try {
           const raw = await readRequestBody(req, MAX_EVENT_BYTES)
           const event = normaliseEvent(JSON.parse(raw))
-          await fs.mkdir(paths.localDataDir, { recursive: true })
-          await fs.appendFile(paths.progressLogPath, `${JSON.stringify(event)}\n`, 'utf8')
-          sendJson(res, 201, { ok: true, event })
+          const result = await appendEvent(event)
+          sendJson(res, result.duplicate ? 200 : 201, { ok: true, event, duplicate: result.duplicate })
         } catch (error) {
           sendError(res, error, 400)
         }
@@ -654,15 +990,25 @@ export function createLocalTrackerApi(options = {}) {
 }
 
 export function localTrackerStatePlugin(options = {}) {
-  const handler = createLocalTrackerApi(options)
+  const handler = createLocalTrackerApi({ ...options, development: true })
 
   return {
     name: 'summer-rescue-local-tracker-state',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        return html.replace(/<script(?=\s|>)(?![^>]*\bnonce=)/g, `<script nonce="${DEV_SCRIPT_NONCE}"`)
+      },
+    },
     configureServer(server) {
-      server.middlewares.use(handler)
+      server.middlewares.use((req, res, next) => {
+        handler(req, res, next).catch(next)
+      })
     },
     configurePreviewServer(server) {
-      server.middlewares.use(handler)
+      server.middlewares.use((req, res, next) => {
+        handler(req, res, next).catch(next)
+      })
     },
   }
 }
