@@ -627,6 +627,16 @@ button:disabled {
   padding-bottom: 4px;
 }
 
+.collection-truth-note {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .board-column {
   min-width: 260px;
   display: grid;
@@ -659,7 +669,7 @@ button:disabled {
 }
 
 .table-scroll-note {
-  display: none;
+  display: block;
   position: sticky;
   left: 0;
   width: min(100%, 520px);
@@ -4878,7 +4888,7 @@ h1,
 }
 
 .drawer-controls {
-  grid-template-columns: auto minmax(160px, 1fr) minmax(110px, 140px) auto auto;
+  grid-template-columns: auto minmax(150px, 1fr) minmax(100px, 130px) minmax(100px, 130px) auto auto;
 }
 .reschedule-inline {
   display: inline-flex;
@@ -4971,10 +4981,72 @@ h1,
   display: grid;
   gap: 8px;
 }
+.card-resource-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.card-resource-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.card-resource-panel > summary > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.card-resource-panel > summary strong {
+  font-size: 14px;
+}
+.card-resource-panel > summary small,
+.card-resource-panel > summary > span:last-child {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.card-resource-panel > summary::after {
+  content: '+';
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+.card-resource-panel[open] > summary::after {
+  content: '−';
+}
+.card-resource-panel-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.card-resource-panel-body h4 {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.resource-linker {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.resource-linker h4 {
+  color: var(--ink);
+}
 .resource-picker > div {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 7px;
+}
+.resource-picker-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 7px 2px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .resource-picker button {
   min-width: 0;
@@ -5738,6 +5810,91 @@ h1,
   color: var(--muted);
   font-size: 11.5px;
   font-weight: 750;
+}
+/* Fallback while a lazily-loaded route chunk arrives. The chunks are local
+   files, so this is usually a single frame — it must never look like an error. */
+.view-loading {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 240px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.view-loading p {
+  margin: 0;
+}
+.view-loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: view-loading-spin 0.7s linear infinite;
+}
+@keyframes view-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-loading-spinner {
+    animation-duration: 2s;
+  }
+}
+
+/* Data Health names each recovery gap rather than hedging in one sentence. */
+.event-coverage-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.event-coverage-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.event-coverage-list strong {
+  color: var(--ink);
+}
+.event-coverage-status {
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.event-coverage-partial,
+/* Written to the log, but replay has nowhere to put it: audit, not recovery. */
+.event-coverage-history-only {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+.event-coverage-missing {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+}
+
+/* The countdown runs against the exam-window start until a real module date is
+   confirmed, so the number must carry its own uncertainty. */
+.today-exam .today-exam-unconfirmed {
+  margin-top: 3px;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* Gentle study streak — a warm, forgiving nudge, never a guilt counter. */
@@ -7411,7 +7568,38 @@ body.modal-open {
 .review-jumps {
   margin-left: auto;
   display: flex;
+  align-items: end;
   gap: 12px;
+  flex-wrap: wrap;
+}
+.review-date-picker {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.review-date-picker input {
+  min-height: 36px;
+  padding: 5px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+.review-quick-jumps {
+  display: flex;
+  gap: 12px;
+  min-height: 36px;
+  align-items: center;
+}
+.review-date-help {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 .review-summary {
   display: grid;
@@ -7500,6 +7688,7 @@ body.modal-open {
 .review-section-head h3 {
   margin: 2px 0 0;
 }
+
 .review-blocks {
   list-style: none;
   margin: 0;
@@ -7527,6 +7716,73 @@ body.modal-open {
 .review-block.is-skipped .review-title {
   text-decoration: line-through;
   color: var(--muted);
+}
+
+.review-block.has-cards {
+  grid-template-columns: 96px 74px minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.review-block-unscheduled {
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 45%, var(--line));
+}
+
+.review-timeline-content {
+  min-width: 0;
+}
+
+.review-timeline-cards {
+  display: grid;
+  gap: 6px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-timeline-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+
+.review-timeline-card.is-done {
+  opacity: 0.68;
+}
+
+.review-timeline-card.is-skipped {
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 42%, var(--line));
+}
+
+.review-timeline-card > button,
+.review-undone li > button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-timeline-card > button:hover,
+.review-timeline-card > button:focus-visible,
+.review-undone li > button:hover,
+.review-undone li > button:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.review-timeline-card > span,
+.review-undone li > span,
+.review-undone > header > span {
+  color: var(--muted);
+  font-size: 11px;
 }
 .review-time {
   font-family: var(--font-num, inherit);
@@ -7609,6 +7865,39 @@ body.modal-open {
   font-size: 12px;
   color: var(--muted);
 }
+
+.review-undone {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.review-undone > header,
+.review-undone li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-undone h4 {
+  margin: 2px 0 0;
+}
+
+.review-undone ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-undone li {
+  padding: 7px 8px;
+  border-top: 1px solid var(--line);
+}
 .review-columns {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
@@ -7668,6 +7957,17 @@ body.modal-open {
   color: var(--warning, #d98600);
 }
 @media (max-width: 760px) {
+  .review-jumps {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+  .review-date-picker {
+    flex: 1;
+  }
+  .review-date-picker input {
+    width: 100%;
+  }
   .review-columns {
     grid-template-columns: 1fr;
   }
@@ -7675,10 +7975,26 @@ body.modal-open {
     grid-template-columns: 78px minmax(0, 1fr);
     grid-template-areas: 'time title' 'cat toggle';
   }
+  .review-block.has-cards {
+    grid-template-columns: 78px minmax(0, 1fr);
+    grid-template-areas: 'time title' 'cat title';
+  }
   .review-time { grid-area: time; }
   .review-title { grid-area: title; }
+  .review-timeline-content { grid-area: title; }
   .review-cat { grid-area: cat; }
   .review-toggle { grid-area: toggle; justify-self: end; }
+  .review-timeline-card {
+    grid-template-columns: 1fr;
+  }
+  .review-timeline-card .review-toggle {
+    justify-self: start;
+  }
+  .review-undone > header,
+  .review-undone li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 /* Clickable navigation chrome ============================================== */
@@ -7871,6 +8187,20 @@ button.countdown-chip:hover {
   display: grid;
   gap: 14px;
 }
+.review-sleep-boundary-help {
+  max-width: 850px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-soft);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.review-sleep-boundary-help strong {
+  color: var(--ink);
+}
 .review-facts-grid {
   display: flex;
   flex-wrap: wrap;
@@ -7883,6 +8213,14 @@ button.countdown-chip:hover {
   font-size: 12px;
   font-weight: 800;
   color: var(--muted);
+}
+.review-facts-grid > label small {
+  max-width: 250px;
+  min-height: 30px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
 }
 .review-facts-grid input[type='time'] {
   min-height: 34px;
@@ -8166,7 +8504,223 @@ button.countdown-chip:hover {
     justify-content: flex-start;
   }
 
-  .collection-pagination {
+.collection-pagination {
     justify-content: center;
+  }
+}
+
+/* Flexible progress logging: cards, daily blocks and module resources. */
+.progress-percent-field {
+  flex: 0 1 112px;
+}
+
+.progress-percent-field input {
+  width: 64px;
+}
+
+.review-block-actions {
+  display: grid;
+  gap: 7px;
+  min-width: 190px;
+  justify-items: end;
+}
+
+.block-progress-editor {
+  width: min(360px, 42vw);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+
+.block-progress-editor > summary {
+  padding: 7px 9px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 750;
+}
+
+.block-progress-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 9px 9px;
+}
+
+.block-progress-fields label,
+.resource-progress-fields label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.block-progress-fields input,
+.block-progress-fields textarea,
+.resource-progress-fields textarea {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+}
+
+.block-progress-fields input {
+  min-height: 34px;
+  padding: 5px 7px;
+}
+
+.block-progress-fields textarea,
+.resource-progress-fields textarea {
+  padding: 7px 8px;
+  resize: vertical;
+}
+
+.block-progress-note {
+  grid-column: 1 / -1;
+}
+
+.block-schedule-fields {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.block-schedule-heading {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.block-schedule-heading span:last-child {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.block-time-reset {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.block-time-reset:hover,
+.block-time-reset:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.resource-progress-summary {
+  display: grid;
+  gap: 5px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.resource-progress-summary > div {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.resource-progress-summary > div > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--module-accent, var(--accent));
+}
+
+.resource-progress-summary small {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.resource-progress-editor {
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.resource-progress-editor > summary {
+  padding: 8px 10px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.resource-progress-fields {
+  display: grid;
+  gap: 9px;
+  padding: 0 10px 10px;
+}
+
+.resource-progress-fields label:not(.resource-progress-note) {
+  grid-template-columns: 92px minmax(0, 1fr) 38px;
+  align-items: center;
+}
+
+.resource-progress-fields output {
+  color: var(--ink);
+  font-family: var(--font-num);
+  text-align: right;
+}
+
+.resource-progress-note {
+  display: grid;
+}
+
+@media (max-width: 760px) {
+  .review-block-actions {
+    grid-area: toggle;
+    min-width: 0;
+    justify-items: stretch;
+  }
+
+  .block-progress-editor {
+    width: 100%;
+  }
+
+  .block-progress-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .block-progress-note {
+    grid-column: auto;
+  }
+
+  .block-schedule-fields {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .block-schedule-heading,
+  .block-time-reset {
+    grid-column: auto;
   }
 }

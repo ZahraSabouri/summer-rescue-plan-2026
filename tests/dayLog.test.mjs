@@ -42,6 +42,49 @@ test('mergeDayLogDays tolerates non-object inputs', () => {
   assert.equal(mergeDayLogDays(store, undefined), store)
 })
 
+test('mergeDayLogDays carries actual times, partial progress, and per-block notes', () => {
+  const merged = mergeDayLogDays({}, {
+    '2026-07-17': {
+      blocks: { 'daily-admin@20:15': 'done' },
+      blockDetails: {
+        'daily-admin@20:15': {
+          scheduledStart: '19:40',
+          scheduledEnd: '19:50',
+          actualStart: '20:23',
+          actualEnd: '20:28',
+          progressPercent: 60,
+          note: 'Replied to the School Office and logged the answer.',
+        },
+      },
+    },
+  })
+  assert.deepEqual(merged['2026-07-17'].blockDetails['daily-admin@20:15'], {
+    scheduledStart: '19:40',
+    scheduledEnd: '19:50',
+    actualStart: '20:23',
+    actualEnd: '20:28',
+    progressPercent: 60,
+    note: 'Replied to the School Office and logged the answer.',
+  })
+})
+
+test('mergeDayLogDays rejects malformed clock values', () => {
+  const merged = mergeDayLogDays({}, {
+    '2026-07-17': {
+      blockDetails: {
+        'daily-admin@20:15': {
+          scheduledStart: '26:99',
+          scheduledEnd: '20:25',
+          actualStart: 'not-a-time',
+        },
+      },
+    },
+  })
+  assert.deepEqual(merged['2026-07-17'].blockDetails['daily-admin@20:15'], {
+    scheduledEnd: '20:25',
+  })
+})
+
 test('tracker state migration carries dayLogs and defaults them to empty', () => {
   assert.deepEqual(createInitialTrackerState('2026-07-14').dayLogs, {})
 

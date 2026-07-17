@@ -287,17 +287,28 @@ export function resolveScheduledCard(block, cards = []) {
   }
 
   if (!block.moduleGroup) return null
-  const candidates = cards.filter(
-    (card) => card.moduleGroup === block.moduleGroup && !card.done && card.status !== 'Done',
-  )
+  const candidates = cards.filter((card) => card.moduleGroup === block.moduleGroup)
   if (candidates.length === 0) return null
 
   const blockDate = normaliseDay(block.date)
   return [...candidates].sort((a, b) => {
+    const startA = normaliseDay(a.startDate || a.dueDate)
+    const startB = normaliseDay(b.startDate || b.dueDate)
     const dateA = normaliseDay(a.dueDate || a.startDate) || '9999-12-31'
     const dateB = normaliseDay(b.dueDate || b.startDate) || '9999-12-31'
-    const bandA = blockDate ? (dateA <= blockDate ? 0 : 1) : 0
-    const bandB = blockDate ? (dateB <= blockDate ? 0 : 1) : 0
+    const openA = !a.done && a.status !== 'Done'
+    const openB = !b.done && b.status !== 'Done'
+    const activeA = Boolean(blockDate && startA && startA <= blockDate && blockDate <= dateA)
+    const activeB = Boolean(blockDate && startB && startB <= blockDate && blockDate <= dateB)
+    const bandFor = (open, active, dueDate) => {
+      if (open && active) return 0
+      if (open && blockDate && dueDate < blockDate) return 1
+      if (!open && active) return 2
+      if (open) return 3
+      return 4
+    }
+    const bandA = bandFor(openA, activeA, dateA)
+    const bandB = bandFor(openB, activeB, dateB)
     if (bandA !== bandB) return bandA - bandB
     if (dateA !== dateB) return dateA.localeCompare(dateB)
     const priorityA = PRIORITY_ORDER[a.priority] ?? 9
@@ -305,6 +316,59 @@ export function resolveScheduledCard(block, cards = []) {
     if (priorityA !== priorityB) return priorityA - priorityB
     return Number(a.sortOrder ?? 9999) - Number(b.sortOrder ?? 9999)
   })[0]
+}
+
+/**
+ * Join timetable capacity and dated card outcomes into one chronological plan.
+ * Only cards belonging to this date enter the timeline. Explicit links decide
+ * placement, but never smuggle in a different day's card. Every remaining due
+ * card is placed inside a matching work block; anything with no possible block
+ * is returned as an in-timeline unscheduled row.
+ */
+export function buildDayTimeline(blocks = [], cards = [], date = '') {
+  const day = normaliseDay(date)
+  const safeCards = Array.isArray(cards) ? cards : []
+  const entries = (Array.isArray(blocks) ? blocks : [])
+    .slice()
+    .sort(compareBlocks)
+    .map((block) => ({ block, cards: [] }))
+  const cardsById = new Map(safeCards.map((card) => [card.id, card]))
+  const assigned = new Set()
+  const dueCards = safeCards
+    .filter((card) => normaliseDay(card.dueDate || card.startDate) === day)
+    .sort((a, b) => {
+      const priority = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)
+      return priority || Number(a.sortOrder ?? 9999) - Number(b.sortOrder ?? 9999)
+    })
+  const dueCardIds = new Set(dueCards.map((card) => card.id))
+
+  for (const entry of entries) {
+    const explicitIds = [
+      ...(entry.block.cardId ? [entry.block.cardId] : []),
+      ...(Array.isArray(entry.block.cardIds) ? entry.block.cardIds : []),
+    ]
+    for (const id of explicitIds) {
+      const card = cardsById.get(id)
+      if (!card || !dueCardIds.has(card.id) || assigned.has(card.id)) continue
+      entry.cards.push(card)
+      assigned.add(card.id)
+    }
+  }
+  const unassignedCards = []
+
+  for (const card of dueCards) {
+    if (assigned.has(card.id)) continue
+    const candidates = entries.filter((entry) => entry.block.moduleGroup === card.moduleGroup)
+    if (candidates.length === 0) {
+      unassignedCards.push(card)
+      continue
+    }
+    candidates.sort((a, b) => a.cards.length - b.cards.length || compareBlocks(a.block, b.block))
+    candidates[0].cards.push(card)
+    assigned.add(card.id)
+  }
+
+  return { date: day, entries, unassignedCards }
 }
 
 function blockContainsMinute(block, minute) {

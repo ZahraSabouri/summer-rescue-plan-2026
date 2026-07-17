@@ -5,15 +5,20 @@
 // localStorage (notices excluded); components subscribe via useSyncExternalStore.
 
 import { ACHIEVEMENTS, evaluateUnlocks, levelForPoints, treeForMinutes } from './focusProgress.js'
+import { localDateString } from './progress.js'
 
 const STORAGE_KEY = 'summer-rescue-focus-rewards'
 
+// Day keys are LOCAL days, matching the rest of the app. toISOString() would
+// return the UTC day, which is the previous date between midnight and 01:00
+// local under BST — a late-night session would land on the wrong day and roll
+// the forest, the daily goal, and the streak an hour early.
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return localDateString(new Date())
 }
 
 function yesterdayStr() {
-  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  return localDateString(new Date(Date.now() - 24 * 60 * 60 * 1000))
 }
 
 const defaultState = {

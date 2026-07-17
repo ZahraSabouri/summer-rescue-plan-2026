@@ -8,6 +8,7 @@ import {
 } from '../utils/studyTimer'
 import { FocusRoom } from './FocusRoom'
 import { studyTimerStore } from '../utils/studyTimerStore'
+import { todayString } from '../utils/progress'
 
 const MODE_META = {
   focus: { label: 'Focus', accent: 'var(--accent)' },
@@ -396,7 +397,7 @@ export function StudyTimer({
 
   const accent = MODE_META[mode].accent
   const sessionsToday = (activeCard?.focusSessions ?? []).filter(
-    (session) => session.at?.slice(0, 10) === new Date().toISOString().slice(0, 10),
+    (session) => session.at?.slice(0, 10) === todayString(),
   ).length
 
   function handleToggleRunning() {

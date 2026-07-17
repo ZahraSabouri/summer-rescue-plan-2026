@@ -165,25 +165,33 @@ export function bucketSeries(series, grain) {
 }
 
 // Logged-hours series derived from daily snapshots: cumulative + per-period.
-export function buildHoursSeries(snapshots, grain = 'day') {
+export function buildHoursSeries(snapshots, grain = 'day', { schedule } = {}) {
+  const plan = resolveSchedule(schedule)
   const days = Object.keys(snapshots ?? {}).sort()
   if (days.length === 0) return { series: [], totalLogged: 0 }
 
-  const raw = days.map((day) => ({
+  const all = days.map((day) => ({
     day,
     cumulative: Number(snapshots[day]?.loggedHours ?? 0),
     done: Number(snapshots[day]?.done ?? 0),
   }))
 
-  // per-day increment (logged that day) from cumulative diffs
+  // Per-day increment (logged that day) from cumulative diffs. The diff runs
+  // over the whole series so the first campaign day measures against its true
+  // baseline instead of absorbing every pre-reset hour; the series is only
+  // trimmed to the campaign afterwards, which keeps this chart on the same
+  // window as the burn-up and heatmap beside it.
   let prev = 0
-  for (const point of raw) {
+  for (const point of all) {
     point.logged = Math.max(0, Math.round((point.cumulative - prev) * 10) / 10)
     prev = point.cumulative
   }
 
+  const raw = all.filter((point) => point.day >= plan.campaignStart)
+  const totalLogged = Math.round(raw.reduce((sum, point) => sum + point.logged, 0) * 10) / 10
+
   if (grain === 'day') {
-    return { series: raw, totalLogged: prev }
+    return { series: raw, totalLogged }
   }
 
   const buckets = new Map()
@@ -206,7 +214,7 @@ export function buildHoursSeries(snapshots, grain = 'day') {
     buckets.set(key, existing)
   }
   const bucketed = [...buckets.values()]
-  return { series: bucketed, totalLogged: prev }
+  return { series: bucketed, totalLogged }
 }
 
 // Contribution-style heatmap: a value per day (cards completed that day).

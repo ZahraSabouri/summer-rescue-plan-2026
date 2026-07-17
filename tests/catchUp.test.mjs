@@ -25,18 +25,18 @@ test('daysLate measures whole days past the due date', () => {
   assert.equal(daysLate(card({ dueDate: '2026-07-20' }), REF), 0) // future clamps to 0
 })
 
-test('buildCatchUp collects only overdue, unfinished, actionable cards', () => {
+test('buildCatchUp uses the same open past-due set as the tracker views', () => {
   const cards = [
     card({ id: 'a', dueDate: '2026-07-13' }), // yesterday
     card({ id: 'b', dueDate: '2026-07-14' }), // due today — not behind
     card({ id: 'c', dueDate: '2026-07-10', done: true }), // done — excluded
-    card({ id: 'd', dueDate: '2026-07-01', status: 'Waiting / Blocked' }), // blocked — excluded
+    card({ id: 'd', dueDate: '2026-07-01', status: 'Waiting / Blocked' }), // still past due
     card({ id: 'e', dueDate: '2026-07-05', moduleGroup: 'Time Series', module: 'Time Series' }),
   ]
   const result = buildCatchUp(cards, REF)
   const ids = result.groups.flatMap((group) => group.items.map((item) => item.card.id))
-  assert.deepEqual(ids.sort(), ['a', 'e'])
-  assert.equal(result.total, 2)
+  assert.deepEqual(ids.sort(), ['a', 'd', 'e'])
+  assert.equal(result.total, 3)
   assert.equal(result.moduleCount, 2)
 })
 
@@ -87,7 +87,7 @@ test('isActionableOverdue is the single behind-ness rule shared with module view
   assert.equal(isActionableOverdue(card({ dueDate: '2026-07-13' }), REF), true)
   assert.equal(isActionableOverdue(card({ dueDate: '2026-07-14' }), REF), false) // due today
   assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', done: true }), REF), false)
-  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', status: 'Waiting / Blocked' }), REF), false)
+  assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', status: 'Waiting / Blocked' }), REF), true)
   assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', number: undefined }), REF), false) // not trackable
   assert.equal(isActionableOverdue(card({ dueDate: '2026-07-10', number: undefined, custom: true }), REF), true)
 })

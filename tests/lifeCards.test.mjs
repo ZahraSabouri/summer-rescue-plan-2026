@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildWeeklyLifeCardInputs, weekLabel } from '../src/utils/lifeCards.js'
+import {
+  buildWeeklyLifeCardInputs,
+  cleanWeeklyLifeCardTitle,
+  recurringLifeCardIdentity,
+  weekLabel,
+} from '../src/utils/lifeCards.js'
 import { MODULE_OPTIONS, PHASE_OPTIONS, PRIORITY_OPTIONS, SLOT_OPTIONS, STATUS_OPTIONS } from '../src/data/constants.js'
 
 const WEEK_START = '2026-07-13' // a Monday
@@ -10,19 +15,29 @@ test('weekLabel is deterministic for a given week start', () => {
   assert.notEqual(weekLabel(WEEK_START), weekLabel('2026-07-20'))
 })
 
-test('builds four weekly life cards with idempotency-ready titles', () => {
+test('builds four weekly life cards with clean titles and separate recurrence identities', () => {
   const inputs = buildWeeklyLifeCardInputs(WEEK_START)
   assert.equal(inputs.length, 4)
-  const label = weekLabel(WEEK_START)
   for (const input of inputs) {
-    assert.ok(input.title.includes(label), `${input.title} embeds the week label`)
+    assert.doesNotMatch(input.title, /\((?:w\/c|from) /i)
+    assert.equal(recurringLifeCardIdentity(input), input.recurrenceKey)
   }
-  // Titles are unique within the week and change across weeks.
+  // Human titles stay stable; recurrence keys make each weekly occurrence unique.
   assert.equal(new Set(inputs.map((input) => input.title)).size, 4)
   const nextWeek = buildWeeklyLifeCardInputs('2026-07-20')
   for (let i = 0; i < inputs.length; i += 1) {
-    assert.notEqual(inputs[i].title, nextWeek[i].title)
+    assert.equal(inputs[i].title, nextWeek[i].title)
+    assert.notEqual(inputs[i].recurrenceKey, nextWeek[i].recurrenceKey)
   }
+})
+
+test('legacy weekly titles are cleaned without losing their inferred identity', () => {
+  const legacy = {
+    title: 'LIFE — Groceries + supermarket run (from Thu 16 Jul)',
+    startDate: '2026-07-16',
+  }
+  assert.equal(cleanWeeklyLifeCardTitle(legacy.title), 'LIFE — Groceries + supermarket run')
+  assert.equal(recurringLifeCardIdentity(legacy), 'weekly-life:groceries:2026-07-16')
 })
 
 test('every card input uses valid option values and dates inside the week', () => {

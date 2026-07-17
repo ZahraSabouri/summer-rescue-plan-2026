@@ -8,9 +8,12 @@ import {
   readLocalTrackerStateFile,
   writeLocalTrackerStateFile,
 } from '../utils/localStateFile'
+import { detailChanges } from '../utils/cardDiff'
 import { dayLog } from '../utils/dayLog'
 import { focusRewards } from '../utils/focusRewards'
+import { cleanWeeklyLifeCardTitle, recurringLifeCardIdentity } from '../utils/lifeCards'
 import { isTrackableCard, todayString } from '../utils/progress'
+import { clampPercent, normaliseResourceProgressEntry } from '../utils/resourceProgress'
 import {
   createInitialTrackerState,
   migrateTrackerState,
@@ -259,6 +262,10 @@ function mergeCard(baseCard, cardState = {}) {
   const status = cardState.status ?? edits.status ?? baseCard.status
   const done = Boolean(cardState.done || status === 'Done')
   const moduleGroup = edits.moduleGroup ?? edits.module ?? baseCard.moduleGroup
+  const recurrenceKey = recurringLifeCardIdentity({ ...baseCard, ...edits })
+  const title = recurrenceKey
+    ? cleanWeeklyLifeCardTitle(edits.title ?? baseCard.title)
+    : edits.title ?? baseCard.title
   const evidenceEntries = normaliseEvidenceEntries(baseCard.id, cardState)
   const resourceIds = filterResourceIdsForModule(
     moduleGroup,
@@ -274,8 +281,11 @@ function mergeCard(baseCard, cardState = {}) {
   return {
     ...baseCard,
     ...edits,
+    title,
+    recurrenceKey,
     status: done ? 'Done' : status,
     done,
+    progressPercent: done ? 100 : clampPercent(cardState.progressPercent ?? 0),
     actualHours: Number(cardState.actualHours ?? 0),
     evidence: evidenceText(evidenceEntries),
     evidenceEntries,
@@ -328,6 +338,9 @@ function buildCustomCard(input, index) {
     trackerNotes: 'Added in tracker app',
     tags,
     custom: true,
+    recurrenceKey: input.recurrenceKey || '',
+    planningWindowStart: input.planningWindowStart || input.startDate,
+    planningWindowEnd: input.planningWindowEnd || input.dueDate,
     createdAt: now,
   }
 }
@@ -860,6 +873,15 @@ export function useTrackerState(baseCards) {
   }
 
   function updateCardDetails(cardId, patch) {
+    const fields = patch && typeof patch === 'object' ? patch : {}
+    const card = cards.find((item) => item.id === cardId)
+    const changes = detailChanges(card, fields)
+    if (Object.keys(changes).length > 0) {
+      queueCardEvent('card.details_edited', cardId, {
+        changes,
+        fields: Object.keys(changes).sort(),
+      })
+    }
     setState((current) => {
       const currentCard = getCardState(current, cardId)
       const nextCard = {
@@ -1076,6 +1098,18 @@ export function useTrackerState(baseCards) {
     updateCard(cardId, { actualHours: hours }, 'Logged hours', `${hours}h`)
   }
 
+  function setCardProgress(cardId, progressPercent) {
+    const percent = clampPercent(progressPercent)
+    const card = cards.find((item) => item.id === cardId)
+    const previousPercent = clampPercent(card?.progressPercent ?? 0)
+    if (!card || previousPercent === percent) return
+    queueCardEvent('card.progress_logged', cardId, {
+      previousPercent,
+      progressPercent: percent,
+    })
+    updateCard(cardId, { progressPercent: percent }, 'Logged progress', `${percent}%`)
+  }
+
   function addFocusSession(cardId, minutes) {
     const elapsedMinutes = Math.max(0, Math.round(Number(minutes || 0)))
     if (elapsedMinutes < 1) return
@@ -1134,6 +1168,18 @@ export function useTrackerState(baseCards) {
 
   function rescheduleCards(cardIds, dueDate) {
     if (!Array.isArray(cardIds) || !dueDate) return
+    // Mirrors the skip filter in the updater below so the log never claims to
+    // have moved a card the updater left alone.
+    for (const cardId of cardIds) {
+      const card = cards.find((item) => item.id === cardId)
+      if (!card || card.done) continue
+      queueCardEvent('card.rescheduled', cardId, {
+        previousDueDate: card.dueDate ?? '',
+        dueDate,
+        status: card.status === 'Done' ? 'Done' : 'This Week',
+        bulk: true,
+      })
+    }
     setState((current) => {
       let changed = false
       const nextCards = { ...current.cards }
@@ -1172,6 +1218,18 @@ export function useTrackerState(baseCards) {
   // Snapshotted, so it is undoable.
   function applyReplanSchedule(assignments) {
     if (!Array.isArray(assignments) || assignments.length === 0) return
+    // Mirrors the skip filter in the updater below.
+    for (const assignment of assignments) {
+      const { cardId, dueDate, status } = assignment
+      const card = cards.find((item) => item.id === cardId)
+      if (!card || card.done || dueDate === undefined || dueDate === null) continue
+      queueCardEvent('card.rescheduled', cardId, {
+        previousDueDate: card.dueDate ?? '',
+        dueDate,
+        status: card.status === 'Done' ? 'Done' : status ?? 'This Week',
+        replan: true,
+      })
+    }
     setState((current) => {
       const nextCards = { ...current.cards }
       let changed = false
@@ -1496,6 +1554,11 @@ export function useTrackerState(baseCards) {
   }
 
   function resetCardState(cardId) {
+    // Only a card that actually carries progress can be reset; the updater
+    // no-ops otherwise, so emitting unconditionally would log a phantom reset.
+    if (state.cards?.[cardId]) {
+      queueCardEvent('card.progress_reset', cardId, {})
+    }
     setState((current) => {
       if (!current.cards?.[cardId]) return current
 
@@ -1594,14 +1657,39 @@ export function useTrackerState(baseCards) {
 
   function toggleResourceProgress(resourceId) {
     if (!resourceId) return
-    setState((current) => ({
-      ...current,
-      resourceProgress: {
-        ...(current.resourceProgress ?? {}),
-        [resourceId]: !current.resourceProgress?.[resourceId],
-      },
-      updatedAt: nowIso(),
-    }))
+    setState((current) => {
+      const previous = normaliseResourceProgressEntry(current.resourceProgress?.[resourceId])
+      const updatedAt = nowIso()
+      return {
+        ...current,
+        resourceProgress: {
+          ...(current.resourceProgress ?? {}),
+          [resourceId]: {
+            ...previous,
+            progressPercent: previous.progressPercent >= 100 ? 0 : 100,
+            updatedAt,
+          },
+        },
+        updatedAt,
+      }
+    })
+  }
+
+  function updateResourceProgress(resourceId, patch) {
+    if (!resourceId || !patch || typeof patch !== 'object') return
+    setState((current) => {
+      const previous = normaliseResourceProgressEntry(current.resourceProgress?.[resourceId])
+      const updatedAt = nowIso()
+      const next = normaliseResourceProgressEntry({ ...previous, ...patch, updatedAt })
+      return {
+        ...current,
+        resourceProgress: {
+          ...(current.resourceProgress ?? {}),
+          [resourceId]: next,
+        },
+        updatedAt,
+      }
+    })
   }
 
   function importTrackerState(payload) {
@@ -1649,6 +1737,7 @@ export function useTrackerState(baseCards) {
     updateChecklistItem,
     deleteChecklistItem,
     setActualHours,
+    setCardProgress,
     addFocusSession,
     rescheduleCard,
     rescheduleCards,
@@ -1668,6 +1757,7 @@ export function useTrackerState(baseCards) {
     addUploadedResource,
     markResourceOpened,
     toggleResourceProgress,
+    updateResourceProgress,
     importTrackerState,
     resetTrackerState,
     localFile,

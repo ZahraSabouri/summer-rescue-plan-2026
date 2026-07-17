@@ -105,6 +105,16 @@ Complexity must be explainable and connected. Reward surfaces pass this contract
 - A missing file plus valid browser state preserves and can promote the browser copy.
 - SQLite is re-projected only after an accepted JSON commit.
 - NDJSON is serialized, checksummed, idempotent audit history; it is not advertised as complete recovery.
+- `state/eventCoverage.js` holds the per-family coverage matrix and is the single source Data Health
+  reads for "is full replay safe?". It is currently `false`. The matrix separates two questions that
+  must never be conflated: `status` (is the change written down?) and `replayed` (can
+  `rebuildProgressFromEvents` rebuild it?). Measured today: **18 of 26 families emit, 9 of 26
+  replay.** A drift test verifies the matrix against the real emission sites, so the answer is
+  measured rather than asserted.
+- Emission gaps are now largely closed; the remaining recovery work is on the replay side. Card
+  details, dates, phase, priority, slot and estimated hours are recorded but have no column to
+  replay into — closing that is a projection change and is sequenced with the SQLite phase below,
+  not bolted onto the log.
 
 ### Shared domain propagation
 
@@ -118,6 +128,7 @@ Complexity must be explainable and connected. Reward surfaces pass this contract
 | Day logs | Today agenda, Review, snapshots, day summaries |
 | Resources/review state | Module materials, card links, recent resources, resource reader |
 | Campaign/exam dates | countdowns, Schedule, readiness windows, re-plan horizon, notifications |
+| Module exam confidence | Today badge, Admin & Dates watch, Schedule strip, notification wording; `confirmed`/`unconfirmed`/`window` states are resolved centrally in `utils/examDates.js` and never inferred from the window start |
 | Focus rewards/guard | header stats, Today forest, Focus Room, JSON backup/import, cross-tab refresh, SQLite settings projection |
 | Card facets and dates | shared click-through contract to specialist workspaces or filtered Table inventories |
 
@@ -173,7 +184,52 @@ The following are implemented:
 - zero-based Phase 0-2 windows covering the closed 16 July-16 August campaign;
 - deterministic academic-only re-planning that preserves phase order and leaves overflow unscheduled;
 - shared click-through navigation across Today, cards, Progress, Planner, Analytics, Schedule, and Review;
-- durable Done/Skipped block logging in Today, Schedule, and Review.
+- durable Done/Skipped block logging in Today, Schedule, and Review;
+- a validated exam-date confidence model that keeps module dates empty and explicitly unconfirmed
+  until Cardiff confirms them, with a drift-guarded coverage matrix behind Data Health's replay
+  verdict;
+- route-level code splitting that preserves all 20 destinations. Today is the landing route and
+  stays eager; heavy surfaces load on first navigation. The chunks are same-origin static files
+  emitted beside the app, so a lazy route still works with no network — this must never become a
+  runtime dependency on anything remote. The shell's `<h1>` renders outside `renderView()`, so
+  suspending a view body does not disturb route focus management.
+
+## Not yet implemented
+
+These remain open and are deliberately not claimed above:
+
+- the remainder of the interaction matrix. Browser testing is **no longer blocked**:
+  `tests/browserRoutes.test.mjs` drives the real production build in Edge via `playwright-core`
+  (a devDependency; no new runtime dependency). It proves all 20 routes render without a crash
+  panel, no document-level horizontal overflow exists across 80 route × viewport combinations, the
+  route heading still receives focus after a suspended lazy view, lazy chunks resolve with no failed
+  requests, the Settings dialog traps focus and closes on Escape, and the exam-date fields render
+  unconfirmed.
+
+  **Critical constraint for anyone extending these:** they run an isolated server on port 5199 with a
+  disposable `local-data` directory. They must never be pointed at the live instance on 5173 — the
+  app seeds weekly routine cards on mount and writes state, so a test browser on the real port would
+  mutate live campaign work. The suite asserts this itself.
+
+  Still unwritten: the deeper click permutations — card facet → filtered Table, Progress ring →
+  workspace, module planner counts (36/35/24), Schedule Done/Skipped persistence through reload,
+  Focus Room strict/gentle policy, and planting/reward persistence;
+- the SQLite authority migration beyond Stage A/B measurement. The parity harness now exists and
+  reports gate 3 failing on 10 domains, so JSON remains authoritative and no dual-write, authority
+  switch or rollback work has begun;
+- the life/health routine occurrence model — recurring definitions and daily occurrences are still
+  represented as generated weekly cards rather than separate entities. The **boundary** the model
+  exists to protect is now pinned by `tests/lifeRoutineBoundary.test.mjs`: a missed routine is never
+  overdue, never demands evidence, and can never be re-planned — not even when it carries an
+  exam-shaped phase and priority. `life` is asserted to be the only kind exempt from overdue
+  pressure. The occurrence model remains a genuine improvement (it would give routines real history,
+  measured values such as wake time, and analytics separate from academic metrics) but the current
+  card-based model is not damaging academic pace, so this was left whole rather than half-migrated;
+- getting the initial chunk under Vite's 500 kB threshold. Route splitting is done (708.40 →
+  621.67 kB); the remainder is the eagerly-needed card catalogue, which needs restructuring rather
+  than chunking;
+- closing the 17 replay gaps the matrix now names — the emission side is largely done, but replay
+  needs columns before those events can restore anything.
 
 ## Post-campaign authoritative SQLite phase
 
@@ -214,6 +270,46 @@ Each command includes the last entity version. Conflicts return `409`; successfu
 - `GET /api/data-health`
 
 SQLite becomes authoritative only after transactional import, domain-count and checksum parity, feature-by-feature read/write switching, a real-use observation period, and a tested rollback. JSON then becomes a portable transactional export.
+
+### Parity harness result — measured 16 July
+
+Stage A/B are now testable: `db.exportState()` exports the projection back into the
+application-state shape, and `tests/sqliteParity.test.mjs` runs the migration gates against a
+representative state containing both completed historical records.
+
+| Gate | Result |
+| --- | --- |
+| 1. Import authoritative JSON into a fresh database | Pass |
+| 2. Export SQLite back to the application-state shape | Pass |
+| 3. Semantic parity | **Fail** — 10 domains lost |
+| 4. Deterministic repeated import/export | Pass |
+| 5. Corrupt/missing database recovery | Not attempted — blocked by gate 3 |
+| 6. Rollback to JSON authority | Not attempted — blocked by gate 3 |
+
+What survives a round trip: card count, both completed records, status/done, actual hours, checklist
+state, notes, evidence text, resource links, resource review state, module notes, notifications,
+settings, module exam dates, and focus rewards.
+
+What is lost, recorded in `SQLITE_PARITY_EXCLUSIONS` and asserted by the harness:
+
+- **day logs** — no table; Schedule/Review Done/Skipped outcomes would not survive;
+- **focus sessions** — no table; only aggregate hours survive;
+- **snapshots** — no table; the progress curves lose their history;
+- **activity** — no table; `completionDay()` reads this trail to date completions;
+- **card edits** — `card_progress` holds status/done/actual_hours only, so edited title, dates,
+  phase, priority, slot and estimated hours on catalogue cards are not projected;
+- uploaded resource metadata, recent-resource ordering, user tags, hidden resource ids, and
+  evidence attachment url/fileName.
+
+The brief's acceptance criteria require that focus rewards **and day logs** survive an authority
+switch. Day logs and focus sessions have no table at all, so the switch cannot be attempted, and
+**JSON remains authoritative**. The harness asserts the losses as "this is still lost" rather than
+"this works", so closing a gap fails the suite and forces the exclusion list to be updated with it.
+
+This is also why the event-log replay gaps for card details cannot be closed independently: both the
+replay model and the SQLite projection need the same missing columns. Stage A proper is therefore
+"add the missing entities" (`day_log_entries`, `focus_sessions`, `snapshots`, card edit columns),
+re-run this harness, and only then consider Stage C.
 
 ## Frontend evolution
 

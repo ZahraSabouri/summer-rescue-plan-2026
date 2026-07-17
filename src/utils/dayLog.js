@@ -11,6 +11,25 @@ const VALID_STATUSES = new Set(['done', 'skipped'])
 const VALID_FACT_KEYS = new Set(['wokeAt', 'sleptAt', 'energy'])
 const VALID_ENERGY = new Set(['low', 'ok', 'high'])
 
+function cleanBlockDetail(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const clean = {}
+  const clocks = ['scheduledStart', 'scheduledEnd', 'actualStart', 'actualEnd']
+  for (const key of clocks) {
+    const text = String(value[key] ?? '')
+    const match = text.match(/^(\d{2}):(\d{2})$/)
+    if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) continue
+    clean[key] = text
+  }
+  if (value.progressPercent !== undefined && value.progressPercent !== null && value.progressPercent !== '') {
+    const percent = Number(value.progressPercent)
+    if (Number.isFinite(percent)) clean.progressPercent = Math.min(100, Math.max(0, Math.round(percent)))
+  }
+  const note = String(value.note ?? '')
+  if (note) clean.note = note
+  return Object.keys(clean).length > 0 ? clean : null
+}
+
 function cleanFactValue(key, value) {
   if (value == null || value === '') return null
   const text = String(value)
@@ -46,7 +65,7 @@ function commit(next) {
 }
 
 function dayEntry(date) {
-  return state.days[date] ?? { blocks: {}, note: '', facts: {} }
+  return state.days[date] ?? { blocks: {}, blockDetails: {}, note: '', facts: {} }
 }
 
 // Pure merge used to reconcile the store with dayLogs restored from a tracker
@@ -68,6 +87,16 @@ export function mergeDayLogDays(storeDays, incomingDays) {
       blocks[key] = status
       entryChanged = true
     }
+    const blockDetails = { ...(entry.blockDetails ?? {}) }
+    const rawBlockDetails = rawEntry.blockDetails && typeof rawEntry.blockDetails === 'object'
+      ? rawEntry.blockDetails
+      : {}
+    for (const [key, value] of Object.entries(rawBlockDetails)) {
+      const incomingDetail = cleanBlockDetail(value)
+      if (!incomingDetail || blockDetails[key] != null) continue
+      blockDetails[key] = incomingDetail
+      entryChanged = true
+    }
     let note = typeof entry.note === 'string' ? entry.note : ''
     const incomingNote = typeof rawEntry.note === 'string' ? rawEntry.note : ''
     if (!note && incomingNote) {
@@ -84,6 +113,7 @@ export function mergeDayLogDays(storeDays, incomingDays) {
     }
     if (!entryChanged) continue
     const mergedEntry = { ...entry, blocks, note }
+    if (Object.keys(blockDetails).length > 0) mergedEntry.blockDetails = blockDetails
     if (Object.keys(facts).length > 0) mergedEntry.facts = facts
     merged = { ...merged, [date]: mergedEntry }
   }
@@ -107,6 +137,19 @@ export const dayLog = {
     if (status == null) delete blocks[blockKey]
     else blocks[blockKey] = status
     commit({ days: { ...state.days, [date]: { ...entry, blocks } } })
+  },
+  // A flexible block may carry a per-day planned-time override. Actual timing,
+  // partial completion, and notes remain independent from Done/Skipped so a
+  // block can honestly record partial work.
+  setBlockDetail(date, blockKey, patch) {
+    if (!date || !blockKey || !patch || typeof patch !== 'object') return
+    const entry = dayEntry(date)
+    const current = entry.blockDetails?.[blockKey] ?? {}
+    const next = cleanBlockDetail({ ...current, ...patch })
+    const blockDetails = { ...(entry.blockDetails ?? {}) }
+    if (next) blockDetails[blockKey] = next
+    else delete blockDetails[blockKey]
+    commit({ days: { ...state.days, [date]: { ...entry, blockDetails } } })
   },
   // Bulk helper for fast retro-logging: mark every listed block that is still
   // unlogged as done, leaving explicit done/skipped entries untouched.

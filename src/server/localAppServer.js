@@ -44,7 +44,9 @@ function setStaticHeaders(res, filePath, stat, isIndex) {
   res.setHeader('Content-Length', String(stat.size))
   res.setHeader('Last-Modified', stat.mtime.toUTCString())
   res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('Referrer-Policy', 'no-referrer')
+  // YouTube embeds require the parent page's origin in the Referer header.
+  // This policy shares only the origin cross-site, never the route or query.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('Content-Security-Policy', APP_CSP)
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
   res.setHeader('Accept-Ranges', 'bytes')

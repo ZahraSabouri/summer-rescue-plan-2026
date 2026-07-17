@@ -125,7 +125,7 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
     return { series: bucketSeries(trimmed, grain), total, today }
   }, [scopedCards, referenceDate, grain, schedule])
 
-  const hours = useMemo(() => buildHoursSeries(snapshots, grain), [snapshots, grain])
+  const hours = useMemo(() => buildHoursSeries(snapshots, grain, { schedule }), [snapshots, grain, schedule])
 
   const heatmap = useMemo(
     () => buildActivityHeatmap(scopedCards, referenceDate, { schedule }),
@@ -215,7 +215,7 @@ export function ProgressView({ cards, snapshots, referenceDate, mat700Active, sc
           {hours.series.length > 0 ? (
             <>
               <BarSeries data={hours.series} valueKey="logged" xKey={grain === 'day' ? 'day' : 'label'} color="--chart-2" />
-              <p className="chart-caption">{loggedTotal}h recorded in total since tracking began.</p>
+              <p className="chart-caption">{loggedTotal}h recorded since the campaign started.</p>
             </>
           ) : (
             <ChartEmpty message="Log hours on cards and a daily bar appears here automatically." />

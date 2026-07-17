@@ -229,6 +229,7 @@ export function TodayView({
   actions,
   examCountdown,
   examLabel,
+  examConfirmed = false,
   dayBlocks,
   scheduleDate,
   campaignStart,
@@ -254,8 +255,8 @@ export function TodayView({
     [cards, referenceDate, mat700Active],
   )
   const streak = useMemo(
-    () => buildStudyStreak(cards, snapshots, referenceDate),
-    [cards, snapshots, referenceDate],
+    () => buildStudyStreak(cards, snapshots, referenceDate, { schedule: { campaignStart } }),
+    [cards, snapshots, referenceDate, campaignStart],
   )
   const [clock, setClock] = useState(() => new Date())
   useEffect(() => {
@@ -292,11 +293,21 @@ export function TodayView({
         <div className="today-hero-side">
           {!preCampaign && <button type="button" className="today-stat-link" onClick={() => onOpenView('progress')}><StreakBadge streak={streak} /></button>}
           {examCountdown != null && examCountdown >= 0 && (
-            <button type="button" className="today-exam today-stat-link" onClick={() => onOpenView('admin')}>
+            <button
+              type="button"
+              className="today-exam today-stat-link"
+              onClick={() => onOpenView('admin')}
+              title={
+                examConfirmed
+                  ? `Confirmed ${examLabel} exam date`
+                  : 'No confirmed module exam date yet — counting to the start of the exam window'
+              }
+            >
               <strong>
                 <AnimatedNumber value={examCountdown} />
               </strong>
               <span>days to {examLabel}</span>
+              {!examConfirmed && <span className="today-exam-unconfirmed">Unconfirmed</span>}
             </button>
           )}
         </div>
@@ -382,7 +393,11 @@ export function TodayView({
           cards={cards}
           onOpenCard={onOpenCard}
           onOpenBlock={() => onOpenView('review')}
+          onCardStatusChange={actions.onStatusChange}
+          onToggleCardDone={actions.onToggleDone}
+          referenceDate={referenceDate}
           logDate={preCampaign ? '' : scheduleDate || referenceDate}
+          editDate={scheduleDate || referenceDate}
           compact
         />
       </section>

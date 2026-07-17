@@ -1,20 +1,24 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import {
+  buildDayTimeline,
   expandScheduleRange,
   findScheduleConflicts,
-  resolveScheduledCard,
   summariseDay,
 } from '../utils/schedule'
 import { dayLog } from '../utils/dayLog'
-import { blockLogKey } from '../utils/dayReview'
-import { StatusToggle } from './DayReview'
+import {
+  applyBlockTimeOverride,
+  blockLogKey,
+  cardReviewLogKey,
+  isFixedScheduleBlock,
+} from '../utils/dayReview'
+import { confirmedExamDates } from '../utils/examDates'
+import { cardPlanLane, formatDate } from '../utils/progress'
+import { BlockProgressEditor, StatusToggle } from './DayReview'
 import './ScheduleView.css'
 
-const EXAM_LABELS = {
-  aml: 'Applied ML',
-  'time-series': 'Time Series',
-  mat700: 'Data Mining',
-}
+// Exam identity and confidence live in utils/examDates so Today, Settings,
+// Admin & Dates and Schedule cannot drift apart.
 
 function parseDay(value) {
   const match = typeof value === 'string' ? value.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/) : null
@@ -88,12 +92,6 @@ function formatDay(value, includeYear = false) {
   }).format(date)
 }
 
-function examDate(value) {
-  if (typeof value === 'string') return value.slice(0, 10)
-  if (value && typeof value === 'object' && typeof value.date === 'string') return value.date.slice(0, 10)
-  return ''
-}
-
 function hoursAndMinutes(minutes) {
   const safeMinutes = Math.max(0, Math.round(Number(minutes) || 0))
   const hours = Math.floor(safeMinutes / 60)
@@ -135,18 +133,64 @@ function DailyTotals({ summary }) {
 
 // logDate: when set, each block gets an inline Done/Skipped retro-log toggle
 // writing to the shared day log (same store the Review view reads).
-export function DailyAgenda({ blocks = [], cards = [], onOpenCard, onOpenBlock, compact = false, date: agendaDate = '', logDate = '' }) {
+export function DailyAgenda({
+  blocks = [],
+  cards = [],
+  onOpenCard,
+  onOpenBlock,
+  onCardStatusChange,
+  onToggleCardDone,
+  referenceDate = '',
+  compact = false,
+  date: agendaDate = '',
+  logDate = '',
+  editDate = '',
+}) {
+  const log = useSyncExternalStore(dayLog.subscribe, dayLog.getState)
+  const detailDate = validDay(editDate) || validDay(logDate)
+  const blockDetails = useMemo(
+    () => detailDate ? log.days?.[detailDate]?.blockDetails ?? {} : {},
+    [detailDate, log],
+  )
+  const effectiveBlocks = useMemo(
+    () => blocks.map((block) => applyBlockTimeOverride(block, blockDetails[blockLogKey(block)])),
+    [blockDetails, blocks],
+  )
   const sortedBlocks = useMemo(
-    () => [...blocks].sort(
+    () => [...effectiveBlocks].sort(
       (a, b) => clockSortValue(a.start) - clockSortValue(b.start) || clockSortValue(a.end) - clockSortValue(b.end),
     ),
-    [blocks],
+    [effectiveBlocks],
   )
   const summary = useMemo(() => summariseDay(sortedBlocks), [sortedBlocks])
   const conflicts = useMemo(() => findScheduleConflicts(sortedBlocks), [sortedBlocks])
   const date = validDay(agendaDate) || sortedBlocks[0]?.date || ''
-  const log = useSyncExternalStore(dayLog.subscribe, dayLog.getState)
+  const timeline = useMemo(() => buildDayTimeline(sortedBlocks, cards, date), [cards, date, sortedBlocks])
   const loggedBlocks = logDate ? log.days?.[logDate]?.blocks ?? {} : null
+
+  function cardLogStatus(card) {
+    if (card.done) return 'done'
+    const saved = loggedBlocks?.[cardReviewLogKey(card)]
+    return saved === 'done' || saved === 'skipped' ? saved : 'unlogged'
+  }
+
+  function handleCardStatus(block, linkedCards, card, status) {
+    if (status === 'done' && !card.done) onToggleCardDone?.(card.id)
+    if (status === 'skipped' && !card.done) onCardStatusChange?.(card.id, 'Rescue Lane')
+    if (!logDate || !block) return
+
+    const statuses = linkedCards.map((linkedCard) => (
+      linkedCard.id === card.id
+        ? status || (linkedCard.done ? 'done' : 'unlogged')
+        : cardLogStatus(linkedCard)
+    ))
+    const allLogged = statuses.every((value) => value === 'done' || value === 'skipped')
+    dayLog.setBlockStatus(
+      logDate,
+      blockLogKey(block),
+      allLogged ? statuses.includes('skipped') ? 'skipped' : 'done' : null,
+    )
+  }
 
   return (
     <section className={`daily-agenda${compact ? ' daily-agenda-compact' : ''}`} aria-label={`Schedule for ${formatDay(date)}`}>
@@ -171,21 +215,21 @@ export function DailyAgenda({ blocks = [], cards = [], onOpenCard, onOpenBlock, 
         <p className="schedule-empty">No blocks planned.</p>
       ) : (
         <ol className="daily-agenda-list">
-          {sortedBlocks.map((block) => {
-            const card = resolveScheduledCard(block, cards)
-            const canOpen = Boolean(card && onOpenCard)
+          {timeline.entries.map(({ block, cards: linkedCards }) => {
             const startsAt = clockSortValue(block.start)
             const endsAt = clockSortValue(block.end)
             const endDate = block.date && endsAt < startsAt ? addDays(block.date, 1) : block.date
-            const logKey = loggedBlocks ? blockLogKey(block) : null
-            const logStatus = logKey
-              ? loggedBlocks[logKey] === 'done' || loggedBlocks[logKey] === 'skipped'
-                ? loggedBlocks[logKey]
+            const detailKey = detailDate ? blockLogKey(block) : null
+            const logStatus = logDate && detailKey
+              ? loggedBlocks[detailKey] === 'done' || loggedBlocks[detailKey] === 'skipped'
+                ? loggedBlocks[detailKey]
                 : 'unlogged'
               : null
+            const fixedSchedule = isFixedScheduleBlock(block)
+            const allowScheduleEdit = Boolean(editDate && !fixedSchedule)
             return (
               <li
-                className={`daily-agenda-item category-${block.category || 'routine'}${logStatus ? ` is-${logStatus}` : ''}`}
+                className={`daily-agenda-item category-${block.category || 'routine'}${logStatus ? ` is-${logStatus}` : ''}${linkedCards.length > 0 ? ' has-cards' : ''}`}
                 key={block.occurrenceId || `${block.id}-${block.date}-${block.start}`}
               >
                 <div className="daily-agenda-time">
@@ -195,23 +239,89 @@ export function DailyAgenda({ blocks = [], cards = [], onOpenCard, onOpenBlock, 
                 </div>
                 <div className="daily-agenda-content">
                   <div className="daily-agenda-title-row">
-                    {canOpen ? (
-                      <button type="button" className="schedule-card-link" onClick={() => onOpenCard(card.id)}>
-                        {block.title}
-                      </button>
-                    ) : onOpenBlock ? (
+                    {onOpenBlock && linkedCards.length === 0 ? (
                       <button type="button" className="schedule-card-link" onClick={() => onOpenBlock(block)}>{block.title}</button>
                     ) : <strong>{block.title}</strong>}
                     {block.protected && <span className="schedule-protected">Protected</span>}
+                    {fixedSchedule && <span className="schedule-fixed">Fixed time</span>}
                   </div>
                   <div className="daily-agenda-meta">
                     <CategoryChip category={block.category} />
                     {block.moduleGroup && <span>{block.moduleGroup}</span>}
                     {block.location && <span>{block.location}</span>}
-                    {card && <span className="schedule-linked-card">Next: {card.title}</span>}
                   </div>
+                  {linkedCards.length > 0 && (
+                    <ul className="schedule-timeline-cards">
+                      {linkedCards.map((card) => {
+                        const reviewStatus = cardLogStatus(card)
+                        return (
+                          <li key={card.id} className={`is-${reviewStatus}`}>
+                            <div>
+                              <button type="button" onClick={() => onOpenCard?.(card.id)}>
+                                <strong>{typeof card.number === 'number' ? `#${card.number}` : card.number}</strong>{' '}
+                                {card.title}
+                              </button>
+                              <span>
+                                {card.moduleGroup} · due {formatDate(card.dueDate || card.startDate)} ·{' '}
+                                {cardPlanLane(card, referenceDate || date)}
+                              </span>
+                            </div>
+                            {logDate && (
+                              <StatusToggle
+                                date={logDate}
+                                entry={{ key: cardReviewLogKey(card), status: reviewStatus }}
+                                onStatusChange={(status) => handleCardStatus(block, linkedCards, card, status)}
+                              />
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
                 </div>
-                {logKey && <StatusToggle date={logDate} entry={{ key: logKey, status: logStatus }} />}
+                {detailKey && (logDate || allowScheduleEdit) && (
+                  <div className="daily-agenda-log-actions">
+                    <BlockProgressEditor
+                      date={detailDate}
+                      entry={{ key: detailKey, status: logStatus, detail: blockDetails[detailKey] ?? {} }}
+                      plannedStart={block.originalStart ?? block.start}
+                      plannedEnd={block.originalEnd ?? block.end}
+                      compact={compact}
+                      allowScheduleEdit={allowScheduleEdit}
+                      allowProgressLog={Boolean(logDate)}
+                      fixedSchedule={fixedSchedule}
+                    />
+                    {logDate && linkedCards.length === 0 && <StatusToggle date={logDate} entry={{ key: detailKey, status: logStatus }} />}
+                  </div>
+                )}
+              </li>
+            )
+          })}
+          {timeline.unassignedCards.map((card) => {
+            const reviewStatus = cardLogStatus(card)
+            return (
+              <li className="daily-agenda-item schedule-unscheduled has-cards" key={`unscheduled-${card.id}`}>
+                <div className="daily-agenda-time">No slot</div>
+                <div className="daily-agenda-content">
+                  <div className="daily-agenda-title-row"><strong>Needs a time block</strong></div>
+                  <ul className="schedule-timeline-cards">
+                    <li className={`is-${reviewStatus}`}>
+                      <div>
+                        <button type="button" onClick={() => onOpenCard?.(card.id)}>
+                          <strong>{typeof card.number === 'number' ? `#${card.number}` : card.number}</strong> {card.title}
+                        </button>
+                        <span>{card.moduleGroup} · {cardPlanLane(card, referenceDate || date)}</span>
+                      </div>
+                      {logDate && (
+                        <StatusToggle
+                          date={logDate}
+                          entry={{ key: cardReviewLogKey(card), status: reviewStatus }}
+                          onStatusChange={(status) => handleCardStatus(null, [card], card, status)}
+                        />
+                      )}
+                    </li>
+                  </ul>
+                </div>
               </li>
             )
           })}
@@ -229,6 +339,8 @@ export function ScheduleView({
   cards = [],
   referenceDate,
   onOpenCard,
+  onCardStatusChange,
+  onToggleCardDone,
   moduleExamDates = {},
   campaignStart = '',
   campaignEnd = '',
@@ -265,8 +377,19 @@ export function ScheduleView({
     () => expandScheduleRange(rules, exceptions, start, end),
     [rules, exceptions, start, end],
   )
+  const scheduleLog = useSyncExternalStore(dayLog.subscribe, dayLog.getState)
+  const effectiveDays = useMemo(
+    () => days.map((day) => {
+      const details = scheduleLog.days?.[day.date]?.blockDetails ?? {}
+      return {
+        ...day,
+        blocks: day.blocks.map((block) => applyBlockTimeOverride(block, details[blockLogKey(block)])),
+      }
+    }),
+    [days, scheduleLog],
+  )
   const weekSummary = useMemo(
-    () => days.reduce(
+    () => effectiveDays.reduce(
       (total, day) => {
         const summary = summariseDay(day.blocks)
         total.academicMinutes += summary.academicMinutes
@@ -276,15 +399,9 @@ export function ScheduleView({
       },
       { academicMinutes: 0, projectMinutes: 0, jobMinutes: 0 },
     ),
-    [days],
+    [effectiveDays],
   )
-  const exams = Object.entries(moduleExamDates)
-    .map(([moduleId, value]) => ({
-      moduleId,
-      label: EXAM_LABELS[moduleId] || moduleId,
-      date: examDate(value),
-    }))
-    .filter((exam) => exam.date)
+  const exams = confirmedExamDates(moduleExamDates, { campaignStart, campaignEnd })
     .sort((a, b) => a.date.localeCompare(b.date))
 
   return (
@@ -368,7 +485,11 @@ export function ScheduleView({
                 blocks={day.blocks}
                 cards={cards}
                 onOpenCard={onOpenCard}
+                onCardStatusChange={onCardStatusChange}
+                onToggleCardDone={onToggleCardDone}
+                referenceDate={referenceDate}
                 logDate={day.date <= referenceDate ? day.date : ''}
+                editDate={day.date}
                 compact
               />
             </article>

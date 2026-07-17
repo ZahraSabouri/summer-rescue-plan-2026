@@ -1,4 +1,4 @@
-import { addDays, formatDate, getCardDate, kindFeatures, localDateString, toDate } from './progress'
+import { addDays, formatDate, getCardDate, isOverdue, localDateString, toDate } from './progress.js'
 
 const EXAM_THRESHOLDS = new Set([45, 30, 21, 14, 7, 3, 1])
 
@@ -36,6 +36,8 @@ export function generateNotifications({
   cards,
   referenceDate,
   examCountdown,
+  examConfirmed = false,
+  examLabel = 'exams',
   unsavedSinceBackup,
   lastBackupAt,
   mat700Active,
@@ -59,7 +61,7 @@ export function generateNotifications({
             cardId: card.id,
             rule: 'due-tomorrow',
             type: 'warning',
-            title: 'Due tomorrow',
+            title: `Due tomorrow · ${formatDate(cardDate)}`,
             detail: card.title,
             createdAt: referenceDate,
           }),
@@ -73,14 +75,14 @@ export function generateNotifications({
             cardId: card.id,
             rule: 'due-today',
             type: 'warning',
-            title: 'Due today',
+            title: `Due today · ${formatDate(cardDate)}`,
             detail: card.title,
             createdAt: referenceDate,
           }),
         )
       }
 
-      if (daysLate != null && daysLate >= 1 && daysLate % 2 === 1 && kindFeatures(card).overdue) {
+      if (daysLate != null && daysLate >= 1 && daysLate % 2 === 1 && isOverdue(card, referenceDate)) {
         records.push(
           notification({
             id: `${card.id}:overdue:${referenceDate}`,
@@ -121,8 +123,14 @@ export function generateNotifications({
         id: `exam:t-${examCountdown}`,
         rule: 'exam-countdown',
         type: examCountdown <= 14 ? 'danger' : 'info',
-        title: `${examCountdown} days to exams`,
-        detail: 'Keep the high-yield lanes moving.',
+        // Without a confirmed personal date the count is to the window opening,
+        // not to a sitting. Saying "exams" would imply a date nobody has given us.
+        title: examConfirmed
+          ? `${examCountdown} days to ${examLabel}`
+          : `${examCountdown} days to the exam window`,
+        detail: examConfirmed
+          ? 'Keep the high-yield lanes moving.'
+          : 'Module dates are still unconfirmed — add them in Settings once Cardiff publishes them.',
         createdAt: referenceDate,
       }),
     )
@@ -134,7 +142,7 @@ export function generateNotifications({
         id: 'exam:t-0',
         rule: 'exam-countdown',
         type: 'danger',
-        title: 'Exam window opens today',
+        title: examConfirmed ? `${examLabel} exam today` : 'Exam window opens today',
         detail: 'Use warm-up plans only; no new material.',
         createdAt: referenceDate,
       }),

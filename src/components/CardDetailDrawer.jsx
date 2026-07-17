@@ -8,7 +8,8 @@ import {
   STATUS_OPTIONS,
   TAG_OPTIONS,
 } from '../data/constants'
-import { addDays, cardKind, checklistDoneCount, formatDate, kindFeatures, requiresEvidence } from '../utils/progress'
+import { addDays, cardKind, cardPlanLane, checklistDoneCount, formatDate, isOverdue, kindFeatures, requiresEvidence } from '../utils/progress'
+import { resourcesForCard, searchResourcesForCard } from '../utils/cardResourceSearch'
 import { CardSessionTimer } from './CardSessionTimer'
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -74,6 +75,7 @@ export function CardDetailDrawer({
   onChecklistUpdate,
   onChecklistDelete,
   onHoursChange,
+  onProgressChange,
   onEvidenceAdd,
   onEvidenceUpdate,
   onEvidenceDelete,
@@ -207,31 +209,23 @@ export function CardDetailDrawer({
   }, [card])
 
   const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
-  const resourceModuleGroups = useMemo(() => new Set(resources.map((resource) => resource.moduleGroup)), [resources])
   const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
   const videoResources = linkedResources.filter((resource) => resource.viewer === 'youtube' || resource.type === 'YOUTUBE')
   const fileResources = linkedResources.filter((resource) => resource.viewer !== 'youtube' && resource.type !== 'YOUTUBE')
+  const resourceLibrary = useMemo(() => resourcesForCard(card, resources), [card, resources])
+  const hasResourceLibrary = resourceLibrary.length > 0
   const savedEvidenceItems = useMemo(
     () => (card?.evidenceEntries?.length ? card.evidenceEntries : card?.evidence ? [{ id: `${card.id}-legacy-evidence`, text: card.evidence }] : []),
     [card],
   )
   const availableResources = useMemo(() => {
-    if (!card) return []
-    const linked = new Set(card.resourceIds ?? [])
-    const query = resourceQuery.trim().toLowerCase()
-    const restrictToStudyModule = resourceModuleGroups.has(card.moduleGroup)
-    return resources
-      .filter((resource) => {
-        if (linked.has(resource.id)) return false
-        if (restrictToStudyModule && resource.moduleGroup !== card.moduleGroup) return false
-        if (!query) return true
-        return [resource.title, resource.group, resource.type, resource.description, ...(resource.tags ?? [])]
-          .join(' ')
-          .toLowerCase()
-          .includes(query)
-      })
-      .slice(0, 8)
-  }, [card, resourceModuleGroups, resourceQuery, resources])
+    return searchResourcesForCard({
+      card,
+      resources: resourceLibrary,
+      linkedIds: card?.resourceIds,
+      query: resourceQuery,
+    })
+  }, [card, resourceLibrary, resourceQuery])
 
   if (!card || !form || typeof document === 'undefined') return null
 
@@ -239,8 +233,7 @@ export function CardDetailDrawer({
   const doneItems = checklistDoneCount(card)
   const kind = cardKind(card)
   const evidenceExpected = requiresEvidence(card)
-  const overdue =
-    referenceDate && kindFeatures(card).overdue && card.dueDate && card.dueDate < referenceDate && !card.done
+  const overdue = Boolean(referenceDate && isOverdue(card, referenceDate))
 
   function saveDetails() {
     const tags = form.tags
@@ -413,8 +406,8 @@ export function CardDetailDrawer({
               <span>Done</span>
             </label>
             <label>
-              <span>Status</span>
-              <select value={card.status} onChange={(event) => onStatusChange(card.id, event.target.value)}>
+              <span>Plan lane</span>
+              <select value={cardPlanLane(card, referenceDate)} onChange={(event) => onStatusChange(card.id, event.target.value)}>
                 {STATUS_OPTIONS.map((status) => (
                   <option key={status} value={status}>
                     {status}
@@ -430,6 +423,17 @@ export function CardDetailDrawer({
                 step="0.25"
                 value={card.actualHours}
                 onChange={(event) => onHoursChange(card.id, event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Progress %</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="5"
+                value={card.progressPercent}
+                onChange={(event) => onProgressChange?.(card.id, event.target.value)}
               />
             </label>
             {activeSessionCardId !== card.id && (
@@ -476,64 +480,88 @@ export function CardDetailDrawer({
             </dl>
           </section>
 
-          {videoResources.length > 0 && (
-            <section className="drawer-section wide video-plan-section">
-              <h3>
-                YouTube study plan <span>{videoResources.length}</span>
-              </h3>
-              <p className="muted">Use these as targeted support for this card, then write the timestamp note into the card evidence.</p>
-              <div className="video-resource-list">
-                {videoResources.map((resource) => (
-                  <div key={resource.id} className="video-resource-card">
-                    <button type="button" onClick={() => onOpenResource?.(resource.id)}>
-                      <span className="type-badge">{resource.type}</span>
-                      <strong>{resource.title}</strong>
-                      {resource.description && <small>{resource.description}</small>}
-                    </button>
-                    <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
-                      &times;
-                    </button>
+          {(linkedResources.length > 0 || hasResourceLibrary) && (
+            <details className="drawer-section wide card-resource-panel">
+              <summary>
+                <span>
+                  <strong>Resources for this card</strong>
+                  <small>{card.moduleGroup} only</small>
+                </span>
+                <span>{linkedResources.length} linked</span>
+              </summary>
+              <div className="card-resource-panel-body">
+                {linkedResources.length === 0 && (
+                  <p className="muted">No module resources linked to this card.</p>
+                )}
+                {videoResources.length > 0 && (
+                  <div className="video-plan-section">
+                    <h4>YouTube support <span>{videoResources.length}</span></h4>
+                    <p className="muted">Open a video only when it supports the card’s current output.</p>
+                    <div className="video-resource-list">
+                      {videoResources.map((resource) => (
+                        <div key={resource.id} className="video-resource-card">
+                          <button type="button" onClick={() => onOpenResource?.(resource.id)}>
+                            <span className="type-badge">{resource.type}</span>
+                            <strong>{resource.title}</strong>
+                            {resource.description && <small>{resource.description}</small>}
+                          </button>
+                          <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
+                {fileResources.length > 0 && (
+                  <div className="file-resource-section">
+                    <h4>Files and references <span>{fileResources.length}</span></h4>
+                    <div className="resource-chip-list">
+                      {fileResources.map((resource) => (
+                        <div key={resource.id} className="resource-chip">
+                          <button type="button" onClick={() => onOpenResource?.(resource.id)}>
+                            <span className="type-badge">{resource.type}</span>
+                            <strong>{resource.title}</strong>
+                          </button>
+                          <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {hasResourceLibrary && <div className="resource-linker">
+                  <h4>Link a specific resource</h4>
+                  <div className="resource-picker">
+                    <input
+                    type="search"
+                    value={resourceQuery}
+                    onChange={(event) => setResourceQuery(event.target.value)}
+                    aria-label={`Search ${card.moduleGroup} resources`}
+                    placeholder="Search by file title or topic"
+                  />
+                  <div>
+                    {!resourceQuery.trim() && (
+                      <p className="resource-picker-message">
+                        Search only when this card needs a specific file. Nothing is suggested automatically.
+                      </p>
+                    )}
+                    {resourceQuery.trim() && availableResources.length === 0 && (
+                      <p className="resource-picker-message">No matching resources in {card.moduleGroup}.</p>
+                    )}
+                    {availableResources.map((resource) => (
+                      <button key={resource.id} type="button" onClick={() => onAddResource?.(card.id, resource.id)}>
+                        <span className="type-badge">{resource.type}</span>
+                        <span>{resource.title}</span>
+                      </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>}
               </div>
-            </section>
+            </details>
           )}
-
-          <section className="drawer-section wide">
-            <h3>
-              Files and references <span>{fileResources.length}</span>
-            </h3>
-            <div className="resource-chip-list">
-              {fileResources.length === 0 && <p className="muted">No linked files yet.</p>}
-              {fileResources.map((resource) => (
-                <div key={resource.id} className="resource-chip">
-                  <button type="button" onClick={() => onOpenResource?.(resource.id)}>
-                    <span className="type-badge">{resource.type}</span>
-                    <strong>{resource.title}</strong>
-                  </button>
-                  <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="resource-picker">
-              <input
-                type="search"
-                value={resourceQuery}
-                onChange={(event) => setResourceQuery(event.target.value)}
-                placeholder="Search this module's resources"
-              />
-              <div>
-                {availableResources.map((resource) => (
-                  <button key={resource.id} type="button" onClick={() => onAddResource?.(card.id, resource.id)}>
-                    <span className="type-badge">{resource.type}</span>
-                    <span>{resource.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
 
           <section className="drawer-section wide">
             <h3>

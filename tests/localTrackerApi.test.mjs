@@ -310,7 +310,7 @@ test('saving state mirrors it into the SQLite store and reports it in db health'
     const emptyHealth = await (await fetch(`${baseUrl}/api/db/health`)).json()
     assert.equal(emptyHealth.ok, true)
     assert.equal(emptyHealth.available, true)
-    assert.equal(emptyHealth.schemaVersion, 1)
+    assert.equal(emptyHealth.schemaVersion, 2)
     assert.equal(emptyHealth.counts.card_progress, 0)
 
     const writeResponse = await fetch(`${baseUrl}/api/state`, {

@@ -12,8 +12,9 @@
 import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
+import { normaliseResourceProgressEntry } from '../utils/resourceProgress.js'
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS card_progress (
   status TEXT,
   done INTEGER NOT NULL DEFAULT 0,
   actual_hours REAL NOT NULL DEFAULT 0,
+  progress_percent INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT
 );
 
@@ -116,6 +118,9 @@ CREATE TABLE IF NOT EXISTS resources (
 CREATE TABLE IF NOT EXISTS resource_reviewed (
   resource_id TEXT PRIMARY KEY,
   reviewed INTEGER NOT NULL DEFAULT 0,
+  progress_percent INTEGER NOT NULL DEFAULT 0,
+  understanding_percent INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
   updated_at TEXT
 );
 
@@ -179,6 +184,11 @@ function plainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 }
 
+function ensureColumn(db, table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all().map((entry) => entry.name)
+  if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+}
+
 // ---------------------------------------------------------------------------
 // Event-log recovery (pure — no database needed).
 //
@@ -186,25 +196,85 @@ function plainObject(value) {
 // progress projection. This is the "rebuild progress from the log" recovery path.
 // ---------------------------------------------------------------------------
 
+// Domains the current SQLite schema has no table or column for. Each one is a
+// hard blocker on making SQLite authoritative: exporting the projection back to
+// application state would silently drop them, so JSON stays the source of truth
+// until they are modelled. tests/sqliteParity.test.mjs asserts this list is
+// exactly what a round trip loses — it cannot be quietly shortened.
+export const SQLITE_PARITY_EXCLUSIONS = [
+  {
+    domain: 'dayLogs',
+    detail: 'Schedule and Review Done/Skipped block outcomes. No table exists.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'focusSessions',
+    detail: 'Per-card focus session history. No table exists; only aggregate hours survive.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'snapshots',
+    detail: 'Daily aggregate history behind the progress curves. No table exists.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'activity',
+    detail: 'Per-card activity trail, which completionDay() reads to date completions.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'uploadedResources',
+    detail: 'Uploaded resource metadata is not projected into the resources table.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'recentResourceIds',
+    detail: 'Recently opened resource ordering. No column exists.',
+    blocksAuthority: false,
+  },
+  {
+    domain: 'userTags',
+    detail: 'User-added card tags. No column exists.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'hiddenResourceIds',
+    detail: 'Read on projection to filter links, but never stored, so it cannot be exported back.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'evidence attachments',
+    detail: 'card_evidence stores id/text/created_at only; attachment url and fileName are dropped.',
+    blocksAuthority: true,
+  },
+  {
+    domain: 'card edits',
+    detail:
+      'card_progress holds status/done/actual_hours only. Edited title, dates, phase, priority, slot and estimated hours on catalogue cards are not projected.',
+    blocksAuthority: true,
+  },
+]
+
 export function rebuildProgressFromEvents(events = []) {
   const cards = new Map()
 
+  const blankProgress = (cardId) => ({
+    cardId,
+    title: '',
+    moduleGroup: '',
+    status: null,
+    done: false,
+    actualHours: 0,
+    progressPercent: 0,
+    checklist: new Map(),
+    notes: new Map(),
+    evidence: new Map(),
+    resourceIds: new Set(),
+    lastEventAt: null,
+  })
+
   const ensure = (cardId) => {
-    if (!cards.has(cardId)) {
-      cards.set(cardId, {
-        cardId,
-        title: '',
-        moduleGroup: '',
-        status: null,
-        done: false,
-        actualHours: 0,
-        checklist: new Map(),
-        notes: new Map(),
-        evidence: new Map(),
-        resourceIds: new Set(),
-        lastEventAt: null,
-      })
-    }
+    if (!cards.has(cardId)) cards.set(cardId, blankProgress(cardId))
     return cards.get(cardId)
   }
 
@@ -249,6 +319,9 @@ export function rebuildProgressFromEvents(events = []) {
       case 'hours.logged':
         card.actualHours = Number(payload.hours ?? card.actualHours) || 0
         break
+      case 'card.progress_logged':
+        card.progressPercent = Math.min(100, Math.max(0, Math.round(Number(payload.progressPercent) || 0)))
+        break
       case 'focus_session.completed':
         card.actualHours = Number(payload.hoursAfter ?? card.actualHours) || 0
         break
@@ -276,6 +349,17 @@ export function rebuildProgressFromEvents(events = []) {
       case 'resource.unlinked':
         if (payload.resourceId) card.resourceIds.delete(String(payload.resourceId))
         break
+      // Clearing a card's progress is a real, replayable fact: drop everything
+      // the log has accumulated for it while keeping its identity, so a later
+      // overlay falls back to the catalogue rather than resurrecting old work.
+      case 'card.progress_reset': {
+        const fresh = blankProgress(card.cardId)
+        fresh.title = card.title
+        fresh.moduleGroup = card.moduleGroup
+        fresh.lastEventAt = card.lastEventAt
+        cards.set(event.entityId, fresh)
+        break
+      }
       default:
         break
     }
@@ -288,6 +372,7 @@ export function rebuildProgressFromEvents(events = []) {
     status: card.status,
     done: card.done,
     actualHours: card.actualHours,
+    progressPercent: card.done ? 100 : card.progressPercent,
     lastEventAt: card.lastEventAt,
     checklist: [...card.checklist.values()],
     notes: [...card.notes.values()],
@@ -305,6 +390,10 @@ export function openTrackerDb(dbPath) {
   const db = new DatabaseSync(dbPath)
   db.exec('PRAGMA foreign_keys = ON;')
   db.exec(SCHEMA_SQL)
+  ensureColumn(db, 'card_progress', 'progress_percent', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'resource_reviewed', 'progress_percent', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'resource_reviewed', 'understanding_percent', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'resource_reviewed', 'note', "TEXT NOT NULL DEFAULT ''")
   db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(
     'schema_version',
     String(SCHEMA_VERSION),
@@ -452,6 +541,105 @@ export function openTrackerDb(dbPath) {
       })
     },
 
+    // Export the projection back into the canonical application-state shape.
+    //
+    // This is gate 2 of the SQLite authority migration: without a round trip
+    // there is no way to test parity, and without parity there is no honest way
+    // to move authority off JSON. It reads only what the schema actually holds.
+    // The domains the schema cannot represent are listed in
+    // SQLITE_PARITY_EXCLUSIONS and are the reason authority has not moved.
+    exportState() {
+      const rows = (sql) => db.prepare(sql).all()
+      const cards = {}
+
+      const ensureCard = (cardId) => {
+        if (!cards[cardId]) cards[cardId] = {}
+        return cards[cardId]
+      }
+
+      for (const row of rows('SELECT card_id, status, done, actual_hours, progress_percent, updated_at FROM card_progress')) {
+        const card = ensureCard(row.card_id)
+        card.status = row.status ?? undefined
+        card.done = Boolean(row.done)
+        card.actualHours = Number(row.actual_hours) || 0
+        card.progressPercent = card.done ? 100 : Math.min(100, Math.max(0, Number(row.progress_percent) || 0))
+        if (row.updated_at) card.updatedAt = row.updated_at
+      }
+
+      // Checklist state is keyed by item id in the JSON shape.
+      for (const row of rows('SELECT id, card_id, text, done, position FROM checklist_items ORDER BY card_id, position')) {
+        const card = ensureCard(row.card_id)
+        card.checklist = card.checklist ?? {}
+        card.checklist[row.id] = Boolean(row.done)
+      }
+
+      for (const row of rows('SELECT id, card_id, text, created_at FROM card_notes ORDER BY card_id, created_at')) {
+        const card = ensureCard(row.card_id)
+        card.notes = card.notes ?? []
+        card.notes.push({ id: row.id, text: row.text, at: row.created_at ?? '' })
+      }
+
+      for (const row of rows('SELECT id, card_id, text, created_at FROM card_evidence ORDER BY card_id, created_at')) {
+        const card = ensureCard(row.card_id)
+        card.evidenceEntries = card.evidenceEntries ?? []
+        card.evidenceEntries.push({ id: row.id, text: row.text, at: row.created_at ?? '' })
+      }
+
+      for (const row of rows('SELECT card_id, resource_id FROM card_resources ORDER BY card_id, resource_id')) {
+        const card = ensureCard(row.card_id)
+        card.resourceIds = card.resourceIds ?? []
+        card.resourceIds.push(row.resource_id)
+      }
+
+      const addedCards = rows(
+        `SELECT id, number, title, module_group AS moduleGroup, phase, priority, base_status AS status,
+                estimated_hours AS estimatedHours, due_date AS dueDate, start_date AS startDate, sort_order AS sortOrder
+         FROM cards WHERE custom = 1 ORDER BY sort_order`,
+      ).map((row) => ({ ...row, module: row.moduleGroup, custom: true }))
+
+      const moduleNotes = {}
+      for (const row of rows('SELECT module_id, note FROM module_notes')) moduleNotes[row.module_id] = row.note
+
+      const notifications = {}
+      for (const row of rows('SELECT id, card_id, kind, title, body, read, created_at FROM notifications')) {
+        notifications[row.id] = {
+          id: row.id,
+          cardId: row.card_id ?? undefined,
+          type: row.kind ?? undefined,
+          title: row.title ?? '',
+          detail: row.body ?? '',
+          read: Boolean(row.read),
+          createdAt: row.created_at ?? '',
+        }
+      }
+
+      const resourceProgress = {}
+      for (const row of rows('SELECT resource_id, reviewed, progress_percent, understanding_percent, note, updated_at FROM resource_reviewed')) {
+        resourceProgress[row.resource_id] = {
+          progressPercent: Math.min(100, Math.max(0, Number(row.progress_percent) || (row.reviewed ? 100 : 0))),
+          understandingPercent: Math.min(100, Math.max(0, Number(row.understanding_percent) || 0)),
+          note: row.note ?? '',
+          updatedAt: row.updated_at ?? '',
+        }
+      }
+
+      const settings = {}
+      let focusRewards = null
+      for (const row of rows('SELECT key, value FROM settings')) {
+        let parsed
+        try {
+          parsed = JSON.parse(row.value)
+        } catch {
+          // A legacy row written before values were JSON-encoded.
+          parsed = row.value
+        }
+        if (row.key === 'focusRewards') focusRewards = parsed
+        else settings[row.key] = parsed
+      }
+
+      return { cards, addedCards, moduleNotes, notifications, resourceProgress, settings, focusRewards }
+    },
+
     // Mirror the live JSON tracker state into the database.
     projectState(payload) {
       const state = unwrapState(payload)
@@ -491,12 +679,13 @@ export function openTrackerDb(dbPath) {
         })
 
         const progressStmt = db.prepare(
-          `INSERT INTO card_progress (card_id, status, done, actual_hours, updated_at)
-           VALUES (?, ?, ?, ?, ?)
+          `INSERT INTO card_progress (card_id, status, done, actual_hours, progress_percent, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT(card_id) DO UPDATE SET
              status = excluded.status,
              done = excluded.done,
              actual_hours = excluded.actual_hours,
+             progress_percent = excluded.progress_percent,
              updated_at = excluded.updated_at`,
         )
         const checklistUpsert = db.prepare(
@@ -528,6 +717,7 @@ export function openTrackerDb(dbPath) {
             orNull(status),
             toInt(done),
             Number(entry.actualHours ?? 0) || 0,
+            Math.min(100, Math.max(0, Number(entry.progressPercent) || (done ? 100 : 0))),
             orNull(entry.updatedAt),
           )
 
@@ -625,10 +815,18 @@ export function openTrackerDb(dbPath) {
 
         db.exec('DELETE FROM resource_reviewed')
         const reviewedStmt = db.prepare(
-          'INSERT INTO resource_reviewed (resource_id, reviewed, updated_at) VALUES (?, ?, ?)',
+          'INSERT INTO resource_reviewed (resource_id, reviewed, progress_percent, understanding_percent, note, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
-        for (const [resourceId, reviewed] of Object.entries(plainObject(state.resourceProgress))) {
-          if (reviewed) reviewedStmt.run(resourceId, 1, orNull(state.updatedAt))
+        for (const [resourceId, value] of Object.entries(plainObject(state.resourceProgress))) {
+          const progress = normaliseResourceProgressEntry(value)
+          reviewedStmt.run(
+            resourceId,
+            toInt(progress.progressPercent >= 100),
+            progress.progressPercent,
+            progress.understandingPercent,
+            progress.note,
+            orNull(progress.updatedAt || state.updatedAt),
+          )
         }
 
         return api.counts()
@@ -652,6 +850,7 @@ export function openTrackerDb(dbPath) {
           status: replay?.status ?? base.baseStatus ?? null,
           done: replay?.done ?? false,
           actualHours: replay?.actualHours ?? 0,
+          progressPercent: replay?.done ? 100 : replay?.progressPercent ?? 0,
           fromEventLog: Boolean(replay),
           checklist: replay?.checklist ?? [],
           notes: replay?.notes ?? [],
@@ -669,6 +868,7 @@ export function openTrackerDb(dbPath) {
           status: replay.status,
           done: replay.done,
           actualHours: replay.actualHours,
+          progressPercent: replay.done ? 100 : replay.progressPercent,
           fromEventLog: true,
           checklist: replay.checklist,
           notes: replay.notes,

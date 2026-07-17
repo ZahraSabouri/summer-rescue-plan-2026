@@ -126,7 +126,7 @@ export function FilterBar({
         </select>
       </label>
       <label className="filter-field">
-        <span>Exact date</span>
+        <span>Deadline date</span>
         <input
           type="date"
           value={filters.exactDate ?? ''}

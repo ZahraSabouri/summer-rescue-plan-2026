@@ -1,0 +1,121 @@
+.module-exam-dates {
+  display: grid;
+  gap: 10px;
+}
+
+.module-exam-window-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.module-exam-field {
+  align-content: start;
+}
+
+.module-exam-code {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.exam-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  justify-self: start;
+}
+
+.exam-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.exam-status-confirmed {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+
+.exam-status-unconfirmed {
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  color: var(--muted);
+}
+
+.exam-status-exception {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+
+.module-exam-error {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.45;
+}
+
+.module-exam-confirm {
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  padding: 4px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.module-exam-confirm:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.exam-date-watch {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exam-date-watch li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.exam-date-watch-name {
+  display: grid;
+  gap: 2px;
+}
+
+.exam-date-watch-name strong {
+  font-size: 13px;
+}
+
+.exam-date-watch-name span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .module-exam-dates .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}

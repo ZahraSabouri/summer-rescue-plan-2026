@@ -36,6 +36,15 @@ test('summer rescue schedule protects capacity and contains no collisions', () =
   }
 })
 
+test('every campaign day contains one brief admin check-in', () => {
+  const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, CAMPAIGN_END)
+  for (const day of days) {
+    const admin = day.blocks.filter((block) => block.id.startsWith('daily-admin-'))
+    assert.equal(admin.length, 1, `daily admin on ${day.date}`)
+    assert.ok(minutesBetween(admin[0].start, admin[0].end) <= 15, `brief admin on ${day.date}`)
+  }
+})
+
 test('confirmed CMT501 classes use the TimeEdit blocks', () => {
   const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, READINESS_DEADLINE)
   const classBlocks = days.flatMap((day) => day.blocks.filter((block) => block.category === 'class'))
@@ -194,7 +203,7 @@ test('plan reset preserves completed history and drops unfinished pre-reset card
   }
 
   const migrated = migrateTrackerState(old)
-  assert.equal(migrated.version, 4)
+  assert.equal(migrated.version, 5)
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   assert.equal(migrated.settings.referenceDate, today)

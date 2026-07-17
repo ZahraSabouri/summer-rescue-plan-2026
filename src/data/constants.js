@@ -1,5 +1,8 @@
 export const STATUS_OPTIONS = [
   'Today',
+  'Yesterday',
+  'Past Week',
+  'Past Month',
   'This Week',
   'Deep Work',
   'Backlog',
@@ -10,6 +13,9 @@ export const STATUS_OPTIONS = [
 
 export const STATUS_COLUMNS = [
   { id: 'Today', label: 'Today' },
+  { id: 'Yesterday', label: 'Yesterday' },
+  { id: 'Past Week', label: 'Past Week' },
+  { id: 'Past Month', label: 'Past Month' },
   { id: 'This Week', label: 'This Week' },
   { id: 'Deep Work', label: 'Deep Work' },
   { id: 'Backlog', label: 'Backlog' },

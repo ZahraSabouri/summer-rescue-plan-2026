@@ -515,8 +515,27 @@ function rule({
   countsToward = [],
   protected: isProtected = false,
   notes = '',
+  cardId = '',
+  cardIds = [],
 }) {
-  return { id, title, category, from, to, weekdays, start, end, location, moduleGroup, countsToward, protected: isProtected, checkable: false, notes }
+  return {
+    id,
+    title,
+    category,
+    from,
+    to,
+    weekdays,
+    start,
+    end,
+    location,
+    moduleGroup,
+    countsToward,
+    protected: isProtected,
+    checkable: false,
+    notes,
+    ...(cardId ? { cardId } : {}),
+    ...(cardIds.length > 0 ? { cardIds } : {}),
+  }
 }
 
 function oneOff(id, date, start, end, title, category, options = {}) {
@@ -528,6 +547,12 @@ const academic = (moduleGroup) => ({ moduleGroup, countsToward: ['academic'], pr
 const project = { moduleGroup: 'Group Project', countsToward: ['academic', 'project'], protected: true }
 
 const coreRoutineRules = [
+  // A very small daily control loop. Actual time, percentage and notes are
+  // logged in Today/Review, so a two-minute check-in still counts honestly.
+  rule({ id: 'daily-admin-mon-thu', title: 'Daily admin check-in - log what you did', category: 'admin', weekdays: [1, 4], start: '21:45', end: '22:00', moduleGroup: 'Admin', protected: true }),
+  rule({ id: 'daily-admin-tue-fri-sun', title: 'Daily admin check-in - log what you did', category: 'admin', weekdays: [2, 5, 7], start: '20:15', end: '20:25', moduleGroup: 'Admin', protected: true }),
+  rule({ id: 'daily-admin-wed', title: 'Daily admin check-in - log what you did', category: 'admin', weekdays: [3], start: '20:30', end: '20:40', moduleGroup: 'Admin', protected: true }),
+  rule({ id: 'daily-admin-sat', title: 'Daily admin check-in - log what you did', category: 'admin', weekdays: [6], start: '20:45', end: '20:55', moduleGroup: 'Admin', protected: true }),
   rule({ id: 'sleep', title: 'Sleep', category: 'sleep', start: '23:00', end: '07:00', countsToward: ['sleep'], protected: true }),
   rule({ id: 'morning-reset', title: 'Wash, dress, and room reset', category: 'routine', start: '07:00', end: '08:00', protected: true }),
   rule({ id: 'breakfast', title: 'Make and eat breakfast', category: 'meal', start: '08:00', end: '08:30', protected: true }),
@@ -679,12 +704,12 @@ const oneOffStudyRules = [
       oneOff(`sun-job-build-${index}`, date, reviewEnd, buildEnd, 'Complete this week’s single job-development task', 'job', { moduleGroup: 'Job Hunt', countsToward: ['job'], protected: true }),
     ]
   }),
-  oneOff('mat700-reset-block', '2026-07-16', '19:15', '20:15', 'MAT700 planning reset — build the pass specification', 'admin', { moduleGroup: 'MAT700', protected: true }),
-  oneOff('admin-summer-assessment-confirmation-block', '2026-07-16', '20:15', '20:45', 'Confirm summer assessment entry and publication channels', 'admin', { moduleGroup: 'Admin', protected: true }),
+  oneOff('mat700-reset-block', '2026-07-16', '19:15', '20:15', 'MAT700 planning reset — build the pass specification', 'admin', { moduleGroup: 'MAT700', cardId: 'mat700-foundation-reset', protected: true }),
+  oneOff('admin-summer-assessment-confirmation-block', '2026-07-16', '20:15', '20:45', 'Confirm summer assessment entry and publication channels', 'admin', { moduleGroup: 'Admin', cardId: 'admin-summer-assessment-confirmation', protected: true }),
   ...['2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10'].map((date, index) =>
-    oneOff(`admin-date-watch-block-${index}`, date, '20:00', index === 2 ? '20:30' : '20:15', 'Official summer assessment timetable watch', 'admin', { moduleGroup: 'Admin', protected: true }),
+    oneOff(`admin-date-watch-block-${index}`, date, '20:00', index === 2 ? '20:30' : '20:15', 'Official summer assessment timetable watch', 'admin', { moduleGroup: 'Admin', cardId: `admin-date-watch-${index + 1}`, protected: true }),
   ),
-  oneOff('admin-logistics-block', '2026-08-15', '21:00', '22:00', 'Final exam logistics and materials lock', 'admin', { moduleGroup: 'Admin', protected: true }),
+  oneOff('admin-logistics-block', '2026-08-15', '21:00', '22:00', 'Final exam logistics and materials lock', 'admin', { moduleGroup: 'Admin', cardId: 'admin-exam-logistics', protected: true }),
 ]
 
 export const scheduleRules = [...coreRoutineRules, ...weekdayStudyRules, ...oneOffStudyRules]

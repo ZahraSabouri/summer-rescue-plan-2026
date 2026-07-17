@@ -1,11 +1,13 @@
 import { STATUS_OPTIONS } from '../data/constants'
 import {
   addDays,
+  cardPlanLane,
   cardKind,
   checklistDoneCount,
   checklistPercent,
   formatDate,
   hasEvidence,
+  isOverdue,
   kindFeatures,
   requiresEvidence,
 } from '../utils/progress'
@@ -23,6 +25,7 @@ export function CardSummary({
   onStatusChange,
   onToggleDone,
   onHoursChange,
+  onProgressChange,
   onReschedule,
   onStartSession,
   activeSessionCardId,
@@ -37,8 +40,8 @@ export function CardSummary({
   const evidenceExpected = requiresEvidence(card)
   const evidenceReady = hasEvidence(card)
   const latestNote = card.notes[0]?.text ?? ''
-  const overdue =
-    referenceDate && kindFeatures(card).overdue && card.dueDate && card.dueDate < referenceDate && !card.done
+  const planLane = referenceDate ? cardPlanLane(card, referenceDate) : card.status
+  const overdue = Boolean(referenceDate && isOverdue(card, referenceDate))
 
   return (
     <article className={`work-card ${compact ? 'compact' : ''} ${board ? 'board-card' : ''} ${card.done ? 'is-done' : ''}`}>
@@ -67,11 +70,12 @@ export function CardSummary({
       </div>
 
       <div className="work-card-progress">
-        <div className="progress-line" aria-label={`Checklist ${checklist}% complete`}>
-          <span style={{ width: `${checklist}%` }} />
+        <div className="progress-line" aria-label={`Task ${card.progressPercent}% complete`}>
+          <span style={{ width: `${card.progressPercent}%` }} />
         </div>
+        <span>{card.progressPercent}% progress</span>
         <span>
-          {doneItems}/{totalItems} checklist
+          {doneItems}/{totalItems} checklist ({checklist}%)
         </span>
         {evidenceExpected && <span>{evidenceReady ? 'Evidence logged' : 'Evidence open'}</span>}
       </div>
@@ -86,7 +90,7 @@ export function CardSummary({
           <>
             <select
               aria-label={`Move card ${cardNumberLabel(card.number)}`}
-              value={card.status}
+              value={planLane}
               onChange={(event) => onStatusChange(card.id, event.target.value)}
             >
               {STATUS_OPTIONS.map((status) => (
@@ -106,6 +110,19 @@ export function CardSummary({
                 onChange={(event) => onHoursChange(card.id, event.target.value)}
                 aria-label={`Actual hours for card ${cardNumberLabel(card.number)}`}
               />
+            </label>
+            <label className="hours-field progress-percent-field">
+              <span>Progress</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="5"
+                value={card.progressPercent}
+                onChange={(event) => onProgressChange?.(card.id, event.target.value)}
+                aria-label={`Progress percentage for card ${cardNumberLabel(card.number)}`}
+              />
+              <span>%</span>
             </label>
           </>
         )}

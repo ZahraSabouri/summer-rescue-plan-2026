@@ -18,7 +18,7 @@ async function withDb(fn) {
 
 test('migrations create the schema and record the version', async () => {
   await withDb((db) => {
-    assert.equal(db.getSchemaVersion(), 1)
+    assert.equal(db.getSchemaVersion(), 2)
     const counts = db.counts()
     assert.equal(counts.cards, 0)
     assert.equal(counts.card_progress, 0)
@@ -93,6 +93,7 @@ test('projectState mirrors live progress, checklist done-state, notes, and setti
             status: 'Done',
             done: true,
             actualHours: 4,
+            progressPercent: 100,
             checklist: { 'card-001-check-0': true, 'card-001-check-1': false },
             notes: [{ id: 'note-1', text: 'Finished the lab', at: '2026-07-06T10:00:00.000Z' }],
             evidenceEntries: [{ id: 'ev-1', text: 'notebook.ipynb', at: '2026-07-06T10:00:00.000Z' }],
@@ -115,7 +116,13 @@ test('projectState mirrors live progress, checklist done-state, notes, and setti
             size: 128,
           },
         ],
-        resourceProgress: { 'aml-session-1-lab-1-sheet': true },
+        resourceProgress: {
+          'aml-session-1-lab-1-sheet': {
+            progressPercent: 70,
+            understandingPercent: 45,
+            note: 'Revisit the validation split example.',
+          },
+        },
         focusRewards: {
           points: 140,
           streak: 3,
@@ -125,10 +132,11 @@ test('projectState mirrors live progress, checklist done-state, notes, and setti
       },
     })
 
-    const progress = db.db.prepare('SELECT status, done, actual_hours FROM card_progress WHERE card_id = ?').get('card-001')
+    const progress = db.db.prepare('SELECT status, done, actual_hours, progress_percent FROM card_progress WHERE card_id = ?').get('card-001')
     assert.equal(progress.status, 'Done')
     assert.equal(progress.done, 1)
     assert.equal(progress.actual_hours, 4)
+    assert.equal(progress.progress_percent, 100)
 
     const checked = db.db.prepare('SELECT done, text FROM checklist_items WHERE id = ?').get('card-001-check-0')
     assert.equal(checked.done, 1)
@@ -158,8 +166,11 @@ test('projectState mirrors live progress, checklist done-state, notes, and setti
     assert.equal(resource.title, 'Lab note')
     assert.equal(resource.type, 'MD')
 
-    const reviewed = db.db.prepare('SELECT reviewed FROM resource_reviewed WHERE resource_id = ?').get('aml-session-1-lab-1-sheet')
-    assert.equal(reviewed.reviewed, 1)
+    const reviewed = db.db.prepare('SELECT reviewed, progress_percent, understanding_percent, note FROM resource_reviewed WHERE resource_id = ?').get('aml-session-1-lab-1-sheet')
+    assert.equal(reviewed.reviewed, 0)
+    assert.equal(reviewed.progress_percent, 70)
+    assert.equal(reviewed.understanding_percent, 45)
+    assert.equal(reviewed.note, 'Revisit the validation split example.')
 
     const notif = db.db.prepare('SELECT read FROM notifications WHERE id = ?').get('n-1')
     assert.equal(notif.read, 0)

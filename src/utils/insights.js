@@ -3,7 +3,7 @@
 // the activity log, snapshots, and card fields that already exist.
 
 import { addDays, getCardDate, isOverdue, isTrackableCard, localDateString, sumHours } from './progress.js'
-import { completionDay } from './history.js'
+import { completionDay, resolveSchedule } from './history.js'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -191,14 +191,12 @@ export function daysLate(card, referenceDate) {
 }
 
 // A card that counts as "behind": a planned card (not a resource row), not done,
-// actionable right now (not Waiting/Blocked), and past its due date. Shared by
-// the Catch-up panel and the module workspace so every overdue count (stat tile,
-// progress split, Behind banner) agrees on one definition.
+// and past its due date. Waiting/Blocked cards remain behind until their date is
+// deliberately changed; excluding them made Today disagree with Table.
 export function isActionableOverdue(card, referenceDate) {
   return (
     isTrackableCard(card) &&
     !card.done &&
-    card.status !== 'Waiting / Blocked' &&
     isOverdue(card, referenceDate)
   )
 }
@@ -288,9 +286,15 @@ export function buildDaySummary(cards, snapshots, referenceDate) {
 // the day before). One missed day is forgiven so a single slip doesn't erase
 // the run (a gentle "grace day", not a punishing chain). Purely derived — the
 // same honest sources the rest of this engine uses; nothing is fabricated.
+//
+// The streak is a *campaign* metric, so it starts at campaignStart. Activity
+// from an abandoned pre-reset plan is history, not part of this run: counting
+// it would report a multi-day streak (and a spent grace day) on day one, before
+// the user has had a chance to miss anything.
 // ---------------------------------------------------------------------------
 
-export function buildStudyStreak(cards, snapshots, referenceDate) {
+export function buildStudyStreak(cards, snapshots, referenceDate, { schedule } = {}) {
+  const plan = resolveSchedule(schedule)
   const today = isoDay(referenceDate)
   const empty = {
     current: 0,
@@ -302,20 +306,25 @@ export function buildStudyStreak(cards, snapshots, referenceDate) {
   }
   if (!today) return empty
 
+  const inCampaign = (day) => Boolean(day) && day >= plan.campaignStart
+
   // Collect every calendar day that shows genuine study activity.
   const studyDays = new Set()
   for (const card of cards ?? []) {
     for (const session of card.focusSessions ?? []) {
       const day = isoDay(session.at)
-      if (day) studyDays.add(day)
+      if (inCampaign(day)) studyDays.add(day)
     }
     if (card.done) {
       const day = completionDay(card)
-      if (day) studyDays.add(day)
+      if (inCampaign(day)) studyDays.add(day)
     }
   }
   // Snapshots are cumulative, so a day counts when its logged hours or done
-  // count rose above the previous recorded day.
+  // count rose above the previous recorded day. The rise is measured against
+  // the full series — including pre-campaign days — so the first campaign day
+  // is compared with its true baseline rather than absorbing every earlier
+  // hour; only the resulting day is then required to be in the campaign.
   const snapDays = Object.keys(snapshots ?? {}).sort()
   for (let index = 0; index < snapDays.length; index += 1) {
     const day = snapDays[index]
@@ -324,6 +333,7 @@ export function buildStudyStreak(cards, snapshots, referenceDate) {
     const prevHours = prevDay ? Number(snapshots[prevDay]?.loggedHours ?? 0) : 0
     const done = Number(snapshots[day]?.done ?? 0)
     const prevDone = prevDay ? Number(snapshots[prevDay]?.done ?? 0) : 0
+    if (!inCampaign(day)) continue
     if (hours - prevHours > 0.001 || done - prevDone > 0) studyDays.add(day)
   }
 
@@ -336,7 +346,9 @@ export function buildStudyStreak(cards, snapshots, referenceDate) {
   let current = 0
   let graceUsed = false
 
-  while (cursor) {
+  // The walk stops at campaignStart: there is no day before it to count, and
+  // grace must not bridge backwards across the reset either.
+  while (cursor && cursor >= plan.campaignStart) {
     if (studyDays.has(cursor)) {
       current += 1
       cursor = addDays(cursor, -1)
@@ -345,7 +357,7 @@ export function buildStudyStreak(cards, snapshots, referenceDate) {
     // Non-study day: spend the single grace day only to bridge to a real study
     // day behind it, so grace can never inflate a run out of thin air.
     const prior = addDays(cursor, -1)
-    if (!graceUsed && studyDays.has(prior)) {
+    if (!graceUsed && inCampaign(prior) && studyDays.has(prior)) {
       graceUsed = true
       cursor = prior
       continue

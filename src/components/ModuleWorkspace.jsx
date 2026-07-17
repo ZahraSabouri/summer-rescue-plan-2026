@@ -9,6 +9,7 @@ import {
 } from '../utils/progress'
 import { isActionableOverdue } from '../utils/insights'
 import { codeLanguage, isPlaceholderResourceUrl, isYouTube, youtubeEmbedUrl } from '../utils/resourceLinks.js'
+import { averageResourceProgress, normaliseResourceProgressEntry } from '../utils/resourceProgress.js'
 import { CardSummary } from './CardSummary'
 
 function percent(done, total) {
@@ -360,8 +361,10 @@ function collapseGroupByDefault(group, items) {
   return items.length >= 12 || /python|bootcamp|transcripts|images/i.test(group)
 }
 
-function ResourceCard({ resource, selected, reviewed, onSelect, onToggleReviewed = () => {} }) {
+function ResourceCard({ resource, selected, progress, onSelect, onToggleReviewed = () => {}, onProgressChange = () => {} }) {
   const placeholder = isPlaceholderResourceUrl(resource.url)
+  const saved = normaliseResourceProgressEntry(progress)
+  const reviewed = saved.progressPercent >= 100
   return (
     <article className={`study-resource-card ${selected ? 'selected' : ''} ${resource.priority === 'high' ? 'high' : ''} ${placeholder ? 'placeholder' : ''}`}>
       <button type="button" className="resource-card-open" onClick={() => onSelect(resource.id)}>
@@ -381,6 +384,50 @@ function ResourceCard({ resource, selected, reviewed, onSelect, onToggleReviewed
         />
         <span>Reviewed</span>
       </label>
+      <div className="resource-progress-summary" aria-label={`${saved.progressPercent}% studied and ${saved.understandingPercent}% understood`}>
+        <div>
+          <span style={{ width: `${saved.progressPercent}%` }} />
+        </div>
+        <small>{saved.progressPercent}% studied · {saved.understandingPercent}% understood</small>
+      </div>
+      <details className="resource-progress-editor">
+        <summary>Progress, notes & questions</summary>
+        <div className="resource-progress-fields">
+          <label>
+            <span>Read / studied</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={saved.progressPercent}
+              onChange={(event) => onProgressChange(resource.id, { progressPercent: event.target.value })}
+            />
+            <output>{saved.progressPercent}%</output>
+          </label>
+          <label>
+            <span>Understood</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={saved.understandingPercent}
+              onChange={(event) => onProgressChange(resource.id, { understandingPercent: event.target.value })}
+            />
+            <output>{saved.understandingPercent}%</output>
+          </label>
+          <label className="resource-progress-note">
+            <span>Notes / questions</span>
+            <textarea
+              rows="3"
+              value={saved.note}
+              placeholder="What made sense? What is unclear? What should you return to?"
+              onChange={(event) => onProgressChange(resource.id, { note: event.target.value })}
+            />
+          </label>
+        </div>
+      </details>
     </article>
   )
 }
@@ -822,6 +869,7 @@ export function ModuleWorkspace({
   recentResourceIds = [],
   onResourceOpen,
   onResourceReviewedToggle,
+  onResourceProgressChange,
   onResourceUpload,
 }) {
   const [tab, setTab] = useState('overview')
@@ -889,8 +937,8 @@ export function ModuleWorkspace({
     onResourceOpen?.(resourceId)
   }
 
-  function reviewedCount(items) {
-    return items.filter((resource) => resourceProgress[resource.id]).length
+  function studiedAverage(items) {
+    return averageResourceProgress(items, resourceProgress)
   }
 
   return (
@@ -1082,7 +1130,7 @@ export function ModuleWorkspace({
                 <section className="material-start-here">
                   <div className="material-group-head">
                     <h3>Start here</h3>
-                    <span className="material-group-count">{reviewedCount(startHereResources)}/{startHereResources.length}</span>
+                    <span className="material-group-count">{studiedAverage(startHereResources)}% studied</span>
                   </div>
                   <div className="study-resource-grid pinned">
                     {startHereResources.map((resource) => (
@@ -1090,9 +1138,10 @@ export function ModuleWorkspace({
                         key={resource.id}
                         resource={resource}
                         selected={openResourceId === resource.id}
-                        reviewed={Boolean(resourceProgress[resource.id])}
+                        progress={resourceProgress[resource.id]}
                         onSelect={selectResource}
                         onToggleReviewed={onResourceReviewedToggle}
+                        onProgressChange={onResourceProgressChange}
                       />
                     ))}
                   </div>
@@ -1111,9 +1160,10 @@ export function ModuleWorkspace({
                         key={resource.id}
                         resource={resource}
                         selected={openResourceId === resource.id}
-                        reviewed={Boolean(resourceProgress[resource.id])}
+                        progress={resourceProgress[resource.id]}
                         onSelect={selectResource}
                         onToggleReviewed={onResourceReviewedToggle}
+                        onProgressChange={onResourceProgressChange}
                       />
                     ))}
                   </div>
@@ -1124,7 +1174,7 @@ export function ModuleWorkspace({
                 <details key={group} className="material-group" open={!collapseGroupByDefault(group, items)}>
                   <summary className="material-group-head">
                     <h3>{group}</h3>
-                    <span className="material-group-count">{reviewedCount(items)}/{items.length}</span>
+                    <span className="material-group-count">{studiedAverage(items)}% studied</span>
                   </summary>
                   <div className="study-resource-grid">
                     {items.map((resource) => (
@@ -1132,9 +1182,10 @@ export function ModuleWorkspace({
                         key={resource.id}
                         resource={resource}
                         selected={openResourceId === resource.id}
-                        reviewed={Boolean(resourceProgress[resource.id])}
+                        progress={resourceProgress[resource.id]}
                         onSelect={selectResource}
                         onToggleReviewed={onResourceReviewedToggle}
+                        onProgressChange={onResourceProgressChange}
                       />
                     ))}
                   </div>

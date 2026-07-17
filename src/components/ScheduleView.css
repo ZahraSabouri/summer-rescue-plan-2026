@@ -231,6 +231,7 @@
 .daily-agenda-item.category-class { --schedule-block-accent: var(--chart-project); }
 .daily-agenda-item.category-project { --schedule-block-accent: var(--chart-project); }
 .daily-agenda-item.category-job { --schedule-block-accent: var(--amber); }
+.daily-agenda-item.category-admin { --schedule-block-accent: var(--purple, #7c5cff); }
 .daily-agenda-item.category-sleep { --schedule-block-accent: var(--blue); }
 .daily-agenda-item.category-recovery { --schedule-block-accent: var(--green); }
 .daily-agenda-item.category-commute { --schedule-block-accent: var(--accent-2); }
@@ -253,13 +254,15 @@
 
 .daily-agenda-title-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.65rem;
 }
 
 .daily-agenda-title-row strong,
 .schedule-card-link {
+  flex: 1 1 12rem;
   min-width: 0;
   color: var(--ink);
   font-weight: 750;
@@ -298,7 +301,8 @@
 }
 
 .schedule-category,
-.schedule-protected {
+.schedule-protected,
+.schedule-fixed {
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-pill);
@@ -327,12 +331,91 @@
   color: var(--accent);
 }
 
+.schedule-fixed {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+  background: color-mix(in srgb, var(--blue) 10%, var(--panel));
+  color: var(--blue);
+}
+
 .schedule-linked-card {
   overflow: hidden;
   max-width: 100%;
   color: var(--accent);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.schedule-timeline-cards {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-timeline-cards > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+
+.schedule-timeline-cards > li.is-done {
+  opacity: 0.65;
+}
+
+.schedule-timeline-cards > li.is-skipped {
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 42%, var(--line));
+}
+
+.schedule-timeline-cards > li > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.schedule-timeline-cards > li > div > button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.schedule-timeline-cards > li > div > button:hover,
+.schedule-timeline-cards > li > div > button:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.schedule-timeline-cards li > div > span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.schedule-timeline-cards .review-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: max-content;
+}
+
+.schedule-timeline-cards .review-toggle button {
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+
+.schedule-unscheduled {
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 45%, var(--line));
 }
 
 .daily-agenda-compact .daily-agenda-totals {
@@ -408,7 +491,8 @@
     flex-direction: column;
   }
 
-  .schedule-protected {
+  .schedule-protected,
+  .schedule-fixed {
     align-self: flex-start;
   }
 
@@ -465,7 +549,8 @@
     flex-direction: column;
   }
 
-  .schedule-protected {
+  .schedule-protected,
+  .schedule-fixed {
     align-self: flex-start;
   }
 
@@ -507,6 +592,11 @@
 }
 
 @media (max-width: 640px) {
+  .schedule-timeline-cards > li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .daily-agenda-item.is-done,
   .daily-agenda-item.is-skipped,
   .daily-agenda-item.is-unlogged {
@@ -516,5 +606,44 @@
   .daily-agenda-item .review-toggle {
     grid-column: 2;
     justify-self: start;
+  }
+}
+
+.daily-agenda-log-actions {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 190px;
+  justify-items: end;
+}
+
+.daily-agenda-log-actions .block-progress-editor {
+  width: min(340px, 36vw);
+}
+
+.daily-agenda-item.has-cards .daily-agenda-log-actions {
+  grid-column: 2 / -1;
+  width: 100%;
+  justify-items: stretch;
+}
+
+.daily-agenda-item.has-cards .daily-agenda-log-actions .block-progress-editor {
+  width: 100%;
+}
+
+.daily-agenda-compact .daily-agenda-log-actions .block-progress-editor {
+  width: min(320px, 32vw);
+}
+
+@media (max-width: 640px) {
+  .daily-agenda-log-actions {
+    grid-column: 2;
+    width: 100%;
+    min-width: 0;
+    justify-items: stretch;
+  }
+
+  .daily-agenda-log-actions .block-progress-editor,
+  .daily-agenda-compact .daily-agenda-log-actions .block-progress-editor {
+    width: 100%;
   }
 }

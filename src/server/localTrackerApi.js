@@ -94,7 +94,9 @@ function setSecurityHeaders(res) {
 
 function setAppSecurityHeaders(res, { development = false } = {}) {
   res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('Referrer-Policy', 'no-referrer')
+  // Embedded YouTube players return Error 153 when no parent origin is sent.
+  // Keep API responses at no-referrer; the app shell shares only its origin.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('Content-Security-Policy', development ? DEV_APP_CSP : APP_CSP)
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
 }
@@ -744,13 +746,25 @@ export function createLocalTrackerApi(options = {}) {
             writtenAt: stored?.writtenAt ?? stored?.exportedAt ?? stateContent(stored)?.updatedAt ?? '',
             writerId: stored?.writerId ?? 'legacy',
           },
-          eventLog: {
-            path: paths.progressLogPath,
-            validCount: progress.events.length,
-            malformedCount: progress.malformed.length,
-            quarantinePath: progress.quarantinePath,
-            recoveryCoverage: 'partial audit history; not a complete recovery source',
-          },
+          eventLog: (() => {
+            const lastValid = progress.events[progress.events.length - 1] ?? null
+            return {
+              path: paths.progressLogPath,
+              validCount: progress.events.length,
+              malformedCount: progress.malformed.length,
+              quarantinePath: progress.quarantinePath,
+              lastValidEvent: lastValid
+                ? {
+                    id: lastValid.id ?? '',
+                    eventType: lastValid.eventType ?? '',
+                    entityType: lastValid.entityType ?? '',
+                    entityId: lastValid.entityId ?? '',
+                    occurredAt: lastValid.occurredAt ?? '',
+                  }
+                : null,
+              recoveryCoverage: 'partial audit history; not a complete recovery source',
+            }
+          })(),
           database,
           assets,
         })

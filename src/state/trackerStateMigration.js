@@ -1,5 +1,7 @@
-export const TRACKER_STATE_VERSION = 4
-export const PLAN_REVISION = '2026-07-16-zero-based-32-day-plan-v8'
+import { normaliseResourceProgressMap } from '../utils/resourceProgress.js'
+
+export const TRACKER_STATE_VERSION = 5
+export const PLAN_REVISION = '2026-07-16-zero-based-32-day-plan-v9'
 export const DEFAULT_CAMPAIGN_START = '2026-07-16'
 export const DEFAULT_CAMPAIGN_END = '2026-08-16'
 export const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
@@ -188,7 +190,7 @@ export function migrateTrackerState(value) {
     // Generated alerts from the abandoned pre-reset plan are noise,
     // not user work. Rebuild them from the live cards after a plan revision.
     notifications: zeroResetRequired ? {} : plainObject(value.notifications),
-    resourceProgress: plainObject(value.resourceProgress),
+    resourceProgress: normaliseResourceProgressMap(value.resourceProgress),
     uploadedResources: normaliseUploadedResources(value.uploadedResources),
     recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],
     snapshots: plainObject(value.snapshots),

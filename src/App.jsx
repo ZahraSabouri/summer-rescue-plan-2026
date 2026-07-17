@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { AddCardDialog } from './components/AddCardDialog'
 import { AccessibleDialog } from './components/AccessibleDialog'
@@ -11,26 +11,47 @@ import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
 import { FocusStatsBadge } from './components/FocusStats'
 import { FocusToasts } from './components/FocusToasts'
-import { DayReview } from './components/DayReview'
-import { ModuleWorkspace, ResourceReader } from './components/ModuleWorkspace'
-import { ProgressView } from './components/ProgressView'
-import { ScheduleView } from './components/ScheduleView'
-import { StudyHub } from './components/StudyHub'
+import { ExamDateStatus, ModuleExamDateFields } from './components/ModuleExamDates'
 import { TodayView } from './components/TodayView'
 import { Celebration } from './components/Celebration'
 import { ImportPreviewDialog } from './components/ImportPreviewDialog'
 import { InstallDesktopApp } from './components/InstallDesktopApp'
-import { JobHuntPlaybook } from './components/JobHuntPlaybook'
-import { RescueTriage } from './components/RescueTriage'
-import {
-  AnalyticsView,
-  BoardView,
-  DashboardView,
-  EvidenceView,
-  FocusView,
-  TableView,
-  WeekView,
-} from './components/TrackerViews'
+
+// Route-level code splitting.
+//
+// Today is the landing route and stays eager; every other heavy destination is
+// fetched on first navigation. The chunks are same-origin static files emitted
+// next to the app, so a lazy route still works with no network — this must never
+// become a runtime dependency on anything remote.
+//
+// The shell's <h1> is rendered outside renderView(), so route focus management is
+// unaffected by suspending the view body.
+const lazyNamed = (loader, name) => lazy(() => loader().then((module) => ({ default: module[name] })))
+
+const ModuleWorkspace = lazyNamed(() => import('./components/ModuleWorkspace'), 'ModuleWorkspace')
+const ResourceReader = lazyNamed(() => import('./components/ModuleWorkspace'), 'ResourceReader')
+const ProgressView = lazyNamed(() => import('./components/ProgressView'), 'ProgressView')
+const ScheduleView = lazyNamed(() => import('./components/ScheduleView'), 'ScheduleView')
+const StudyHub = lazyNamed(() => import('./components/StudyHub'), 'StudyHub')
+const DayReview = lazyNamed(() => import('./components/DayReview'), 'DayReview')
+const JobHuntPlaybook = lazyNamed(() => import('./components/JobHuntPlaybook'), 'JobHuntPlaybook')
+const RescueTriage = lazyNamed(() => import('./components/RescueTriage'), 'RescueTriage')
+const AnalyticsView = lazyNamed(() => import('./components/TrackerViews'), 'AnalyticsView')
+const BoardView = lazyNamed(() => import('./components/TrackerViews'), 'BoardView')
+const DashboardView = lazyNamed(() => import('./components/TrackerViews'), 'DashboardView')
+const EvidenceView = lazyNamed(() => import('./components/TrackerViews'), 'EvidenceView')
+const FocusView = lazyNamed(() => import('./components/TrackerViews'), 'FocusView')
+const TableView = lazyNamed(() => import('./components/TrackerViews'), 'TableView')
+const WeekView = lazyNamed(() => import('./components/TrackerViews'), 'WeekView')
+
+function ViewLoading({ label = 'Loading view' }) {
+  return (
+    <div className="view-loading" role="status" aria-live="polite">
+      <span className="view-loading-spinner" aria-hidden="true" />
+      <p>{label}…</p>
+    </div>
+  )
+}
 import {
   campaignMeta,
   rescueCards,
@@ -41,7 +62,14 @@ import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
 import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, TAG_OPTIONS, VIEW_OPTIONS } from './data/constants'
 import { STUDY_MODULES } from './data/studyModules'
+import { EVENT_COVERAGE, coverageSummary } from './state/eventCoverage'
 import { useTrackerState } from './state/useTrackerState'
+import {
+  examCountdownDays,
+  examWindow,
+  resolveExamTarget,
+  resolveModuleExamDates,
+} from './utils/examDates'
 import {
   chooseBackupHandle,
   fileBackupSupported,
@@ -58,9 +86,10 @@ import {
   uploadCardAttachmentFile,
   uploadLocalResource,
 } from './utils/localStateFile'
-import { deriveStats, filterCards, sortCards, startOfWeek, sumHours, todayString } from './utils/progress'
-import { buildWeeklyLifeCardInputs } from './utils/lifeCards'
+import { cardPlanLane, deriveStats, filterCards, sortCards, startOfWeek, sumHours, todayString } from './utils/progress'
+import { buildWeeklyLifeCardInputs, recurringLifeCardIdentity } from './utils/lifeCards'
 import { buildExecutionContext, expandScheduleForDate } from './utils/schedule'
+import { applyBlockTimeOverride, blockLogKey } from './utils/dayReview'
 import { generateNotifications } from './utils/notifications'
 import { focusRewards } from './utils/focusRewards'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
@@ -400,9 +429,11 @@ function Icon({ name }) {
   )
 }
 
-function scopeCardsForView(view, cards) {
+function scopeCardsForView(view, cards, referenceDate) {
   if (view === 'rescue') {
-    return cards.filter((card) => card.status === 'Rescue Lane' || card.tags.includes('rescue'))
+    return cards.filter(
+      (card) => cardPlanLane(card, referenceDate) === 'Rescue Lane' || card.tags.includes('rescue'),
+    )
   }
   if (view === 'mat700') {
     return cards.filter((card) => card.moduleGroup === 'MAT700')
@@ -422,15 +453,6 @@ function scopeCardsForView(view, cards) {
 function buildBackupName() {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   return `summer-rescue-tracker-backup-${stamp}.json`
-}
-
-function canonicalCardTitle(value) {
-  return String(value ?? '')
-    .normalize('NFKC')
-    .replace(/(?:â€”|[‐‑‒–—―])/g, '-')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
 }
 
 function formatExportStamp(value) {
@@ -560,9 +582,17 @@ export default function App() {
     [tracker.state.settings.moduleExamDates],
   )
   const dayScheduleDate = referenceDate < schedule.campaignStart ? schedule.campaignStart : referenceDate
-  const dayBlocks = useMemo(
+  const baseDayBlocks = useMemo(
     () => expandScheduleForDate(scheduleRules, scheduleExceptions, dayScheduleDate),
     [dayScheduleDate],
+  )
+  const dayLogs = tracker.state.dayLogs
+  const dayBlocks = useMemo(
+    () => {
+      const details = dayLogs?.[dayScheduleDate]?.blockDetails ?? {}
+      return baseDayBlocks.map((block) => applyBlockTimeOverride(block, details[blockLogKey(block)]))
+    },
+    [baseDayBlocks, dayLogs, dayScheduleDate],
   )
   const customModules = useMemo(
     () => cleanCustomOptions(tracker.state.settings.customModules),
@@ -837,8 +867,8 @@ export default function App() {
     [tracker.cards, filters, referenceDate],
   )
   const visibleCards = useMemo(
-    () => scopeCardsForView(activeView, filteredCards),
-    [activeView, filteredCards],
+    () => scopeCardsForView(activeView, filteredCards, referenceDate),
+    [activeView, filteredCards, referenceDate],
   )
   const stats = useMemo(
     () => deriveStats(filteredCards, referenceDate, mat700Active),
@@ -959,28 +989,22 @@ export default function App() {
   }, [])
   const totalCount = tracker.cards.length || 1
   const donePct = Math.round((doneCount / totalCount) * 100)
-  const examTarget = useMemo(() => {
-    const moduleTargets = [
-      ['aml', 'Applied ML', moduleExamDates.aml],
-      ['time-series', 'Time Series', moduleExamDates['time-series']],
-      ['mat700', 'MAT700', moduleExamDates.mat700],
-    ]
-      .filter(([, , date]) => date)
-      .sort((a, b) => a[2].localeCompare(b[2]))
-    if (moduleTargets.length > 0) {
-      const [, label, date] = moduleTargets.find(([, , date]) => date >= referenceDate) ?? moduleTargets[0]
-      return { label, date }
-    }
-    return { label: 'exam window', date: schedule.examWindowStart }
-  }, [moduleExamDates, referenceDate, schedule.examWindowStart])
+  const examTarget = useMemo(
+    () => resolveExamTarget({ moduleExamDates, schedule, referenceDate }),
+    [moduleExamDates, referenceDate, schedule],
+  )
 
-  const examCountdown = useMemo(() => {
-    if (!examTarget.date || !referenceDate) return null
-    const from = new Date(referenceDate)
-    const to = new Date(examTarget.date)
-    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null
-    return Math.round((to - from) / 86400000)
-  }, [examTarget.date, referenceDate])
+  const examCountdown = useMemo(
+    () => examCountdownDays(examTarget.date, referenceDate),
+    [examTarget.date, referenceDate],
+  )
+  const resolvedExamDates = useMemo(
+    () => resolveModuleExamDates(moduleExamDates, schedule),
+    [moduleExamDates, schedule],
+  )
+  const examWindowRange = useMemo(() => examWindow(schedule), [schedule])
+  // Static: derived from the coverage matrix, not from live data.
+  const eventCoverage = useMemo(() => coverageSummary(), [])
 
   const generatedNotifications = useMemo(
     () =>
@@ -988,6 +1012,8 @@ export default function App() {
         cards: tracker.cards,
         referenceDate,
         examCountdown,
+        examConfirmed: examTarget.confirmed,
+        examLabel: examTarget.label,
         unsavedSinceBackup,
         lastBackupAt,
         mat700Active,
@@ -996,6 +1022,8 @@ export default function App() {
       }),
     [
       examCountdown,
+      examTarget.confirmed,
+      examTarget.label,
       lastBackupAt,
       mat700Active,
       referenceDate,
@@ -1005,13 +1033,18 @@ export default function App() {
       unsavedSinceBackup,
     ],
   )
-  const displayNotifications = useMemo(
-    () => ({
-      ...Object.fromEntries(generatedNotifications.map((notice) => [notice.id, notice])),
-      ...(tracker.state.notifications ?? {}),
-    }),
-    [generatedNotifications, tracker.state.notifications],
-  )
+  const displayNotifications = useMemo(() => {
+    const persisted = tracker.state.notifications ?? {}
+    const merged = { ...persisted }
+    for (const notice of generatedNotifications) {
+      merged[notice.id] = {
+        ...(persisted[notice.id] ?? {}),
+        ...notice,
+        read: persisted[notice.id]?.read ?? notice.read,
+      }
+    }
+    return merged
+  }, [generatedNotifications, tracker.state.notifications])
 
   function setDisplayNotificationRead(notificationId, read = true) {
     if (tracker.state.notifications?.[notificationId]) {
@@ -1034,8 +1067,8 @@ export default function App() {
     const calendarWeekStart = startOfWeek(referenceDate)
     const weekStart = calendarWeekStart < schedule.campaignStart ? schedule.campaignStart : calendarWeekStart
     const inputs = buildWeeklyLifeCardInputs(weekStart)
-    const existingTitles = new Set(tracker.cards.map((card) => canonicalCardTitle(card.title)))
-    const missing = inputs.filter((input) => !existingTitles.has(canonicalCardTitle(input.title)))
+    const existingKeys = new Set(tracker.cards.map(recurringLifeCardIdentity).filter(Boolean))
+    const missing = inputs.filter((input) => !existingKeys.has(input.recurrenceKey))
     missing.forEach((input) => tracker.addCard(input))
     setMessage(missing.length ? `Added ${missing.length} bounded routine cards for the week.` : 'This week’s routine cards already exist.')
   }
@@ -1047,9 +1080,9 @@ export default function App() {
     const weekStart = calendarWeekStart < schedule.campaignStart ? schedule.campaignStart : calendarWeekStart
     if (seededWeekRef.current === weekStart) return
     seededWeekRef.current = weekStart
-    const existingTitles = new Set(tracker.cards.map((card) => canonicalCardTitle(card.title)))
+    const existingKeys = new Set(tracker.cards.map(recurringLifeCardIdentity).filter(Boolean))
     for (const input of buildWeeklyLifeCardInputs(weekStart)) {
-      if (!existingTitles.has(canonicalCardTitle(input.title))) tracker.addCard(input)
+      if (!existingKeys.has(input.recurrenceKey)) tracker.addCard(input)
     }
   }, [referenceDate, schedule.campaignStart, tracker])
 
@@ -1094,6 +1127,7 @@ export default function App() {
     onStatusChange: tracker.setStatus,
     onToggleDone: tracker.toggleDone,
     onHoursChange: tracker.setActualHours,
+    onProgressChange: tracker.setCardProgress,
     onReschedule: tracker.rescheduleCard,
     onStartSession: startSession,
     activeSessionCardId: activeTimerCardId,
@@ -1521,6 +1555,7 @@ export default function App() {
           actions={actions}
           examCountdown={examCountdown}
           examLabel={examTarget.label}
+          examConfirmed={examTarget.confirmed}
           dayBlocks={dayBlocks}
           scheduleDate={dayScheduleDate}
           campaignStart={schedule.campaignStart}
@@ -1561,6 +1596,7 @@ export default function App() {
             recentResourceIds={tracker.state.recentResourceIds}
             onResourceOpen={tracker.markResourceOpened}
             onResourceReviewedToggle={tracker.toggleResourceProgress}
+            onResourceProgressChange={tracker.updateResourceProgress}
             onResourceUpload={uploadResourceForModule}
           />
         )
@@ -1588,6 +1624,8 @@ export default function App() {
           cards={tracker.cards}
           referenceDate={referenceDate}
           onOpenCard={setSelectedCardId}
+          onCardStatusChange={tracker.setStatus}
+          onToggleCardDone={tracker.toggleDone}
           moduleExamDates={moduleExamDates}
           campaignStart={schedule.campaignStart}
           campaignEnd={schedule.campaignEnd}
@@ -1606,9 +1644,19 @@ export default function App() {
         />
       )
     }
-    if (activeView === 'review') return <DayReview cards={tracker.cards} referenceDate={referenceDate} onOpenCard={setSelectedCardId} />
-    if (activeView === 'board') return <BoardView cards={visibleCards} actions={actions} />
-    if (activeView === 'table') return <TableView cards={visibleCards} actions={actions} />
+    if (activeView === 'review') {
+      return (
+        <DayReview
+          cards={tracker.cards}
+          referenceDate={referenceDate}
+          onOpenCard={setSelectedCardId}
+          onCardStatusChange={tracker.setStatus}
+          onToggleCardDone={tracker.toggleDone}
+        />
+      )
+    }
+    if (activeView === 'board') return <BoardView cards={visibleCards} actions={actions} referenceDate={referenceDate} />
+    if (activeView === 'table') return <TableView cards={visibleCards} actions={actions} referenceDate={referenceDate} />
     if (activeView === 'week') return <WeekView cards={visibleCards} referenceDate={dayScheduleDate} actions={actions} />
     if (activeView === 'analytics') {
       return (
@@ -1699,13 +1747,39 @@ export default function App() {
     }
     if (activeView === 'admin') {
       return (
-        <FocusView
-          eyebrow="Date Watch"
-          title="Admin and Date Watch"
-          description="Assessment dates, SIMS status, exam logistics, checkpoints, and weekly plan control."
-          cards={visibleCards}
-          actions={actions}
-        />
+        <div className="view-grid">
+          <section className="panel" aria-labelledby="exam-date-watch-title">
+            <p className="eyebrow">Exam date watch</p>
+            <h2 id="exam-date-watch-title">Module exam dates</h2>
+            <p>
+              The official resit window is {examWindowRange.start} to {examWindowRange.end}. Personal
+              module dates are only shown once Cardiff confirms them; the window start is never used
+              as a substitute.
+            </p>
+            <ul className="exam-date-watch">
+              {resolvedExamDates.map((resolved) => (
+                <li key={resolved.moduleId}>
+                  <span className="exam-date-watch-name">
+                    <strong>{resolved.label}</strong>
+                    <span>{resolved.code}</span>
+                  </span>
+                  {resolved.date ? <time dateTime={resolved.date}>{resolved.date}</time> : <span>—</span>}
+                  <ExamDateStatus resolved={resolved} />
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="ghost-button" onClick={() => setSettingsOpen(true)}>
+              {resolvedExamDates.some((entry) => entry.confirmed) ? 'Edit exam dates' : 'Add a confirmed exam date'}
+            </button>
+          </section>
+          <FocusView
+            eyebrow="Date Watch"
+            title="Admin and Date Watch"
+            description="Assessment dates, SIMS status, exam logistics, checkpoints, and weekly plan control."
+            cards={visibleCards}
+            actions={actions}
+          />
+        </div>
       )
     }
     if (activeView === 'jobs') {
@@ -1726,7 +1800,11 @@ export default function App() {
   }
 
   if (standaloneResource) {
-    return <ResourceReader resource={standaloneResource} onClose={closeResource} standalone />
+    return (
+      <Suspense fallback={<ViewLoading label="Loading resource" />}>
+        <ResourceReader resource={standaloneResource} onClose={closeResource} standalone />
+      </Suspense>
+    )
   }
 
   if (!entered) {
@@ -1949,7 +2027,9 @@ export default function App() {
 
         <section className="view-shell" aria-label="Active planner view">
           <div className="view-anim" key={activeView}>
-            {renderView()}
+            <Suspense fallback={<ViewLoading label={`Loading ${viewMeta.title}`} />}>
+              {renderView()}
+            </Suspense>
           </div>
         </section>
       </main>
@@ -1990,37 +2070,13 @@ export default function App() {
                   <span>Exam start</span>
                   <input type="date" value={schedule.examWindowStart} onChange={(event) => tracker.updateSettings({ examWindowStart: event.target.value })} />
                 </label>
-                <label>
-                  <span>Applied ML exam</span>
-                  <input
-                    type="date"
-                    value={moduleExamDates.aml ?? ''}
-                    onChange={(event) =>
-                      tracker.updateSettings({ moduleExamDates: { ...moduleExamDates, aml: event.target.value } })
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Time Series exam</span>
-                  <input
-                    type="date"
-                    value={moduleExamDates['time-series'] ?? ''}
-                    onChange={(event) =>
-                      tracker.updateSettings({ moduleExamDates: { ...moduleExamDates, 'time-series': event.target.value } })
-                    }
-                  />
-                </label>
-                <label>
-                  <span>MAT700 exam</span>
-                  <input
-                    type="date"
-                    value={moduleExamDates.mat700 ?? ''}
-                    onChange={(event) =>
-                      tracker.updateSettings({ moduleExamDates: { ...moduleExamDates, mat700: event.target.value } })
-                    }
-                  />
-                </label>
               </div>
+              <h3>Module exam dates</h3>
+              <ModuleExamDateFields
+                moduleExamDates={moduleExamDates}
+                schedule={schedule}
+                onChange={(next) => tracker.updateSettings({ moduleExamDates: next })}
+              />
               <label className="toggle-field">
                 <input
                   type="checkbox"
@@ -2183,10 +2239,61 @@ export default function App() {
                   <div><dt>SQLite integrity</dt><dd>{dataHealth.database?.integrity ?? 'unavailable'}</dd></div>
                   <div><dt>Audit events</dt><dd>{dataHealth.eventLog?.validCount ?? 0} valid</dd></div>
                   <div><dt>Quarantined</dt><dd>{dataHealth.eventLog?.malformedCount ?? 0} malformed</dd></div>
+                  <div>
+                    <dt>Last valid event</dt>
+                    <dd>
+                      {dataHealth.eventLog?.lastValidEvent
+                        ? `${dataHealth.eventLog.lastValidEvent.eventType} · ${formatExportStamp(dataHealth.eventLog.lastValidEvent.occurredAt) || 'undated'}`
+                        : 'none recorded'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Full replay</dt>
+                    <dd>{eventCoverage.replaySafe ? 'safe' : 'not safe — gaps below'}</dd>
+                  </div>
+                  <div>
+                    <dt>Recorded in the log</dt>
+                    <dd>
+                      {eventCoverage.covered} of {eventCoverage.families} families
+                      {eventCoverage.missing > 0 ? ` · ${eventCoverage.missing} never written` : ''}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Rebuildable by replay</dt>
+                    <dd>
+                      {eventCoverage.replayed} of {eventCoverage.families} families
+                    </dd>
+                  </div>
                   <div><dt>Study assets</dt><dd>{dataHealth.assets?.available ? `${dataHealth.assets.count ?? 0} indexed` : 'unavailable'}</dd></div>
                 </dl>
               )}
-              <p className="muted small">The event log is partial audit history, not a full recovery source.</p>
+              <p className="muted small">
+                The event log is partial audit history, not a full recovery source. Replaying it
+                rebuilds card status, done state, logged hours, checklists, evidence text, notes and
+                resource links, but {eventCoverage.replayGapFamilies.length} of{' '}
+                {eventCoverage.families} mutation families cannot be rebuilt from it — some are never
+                written down, and others are written but have nowhere to replay into. A replay
+                therefore cannot reproduce your current state.
+              </p>
+              <details className="advanced-data-action">
+                <summary>What a replay would not restore ({eventCoverage.replayGapFamilies.length})</summary>
+                <ul className="event-coverage-list">
+                  {EVENT_COVERAGE.filter((entry) => !entry.replayed).map((entry) => (
+                    <li key={entry.family}>
+                      <span
+                        className={`event-coverage-status event-coverage-${
+                          entry.status === 'covered' ? 'history-only' : entry.status
+                        }`}
+                      >
+                        {entry.status === 'covered' ? 'history only' : entry.status}
+                      </span>
+                      <span>
+                        <strong>{entry.family}</strong> — {entry.note}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
               <details className="advanced-data-action">
                 <summary>Advanced database repair</summary>
                 <p className="muted small">Replays only valid audit events into the SQLite mirror. JSON remains authoritative and is not replaced.</p>
@@ -2253,6 +2360,7 @@ export default function App() {
         onChecklistUpdate={tracker.updateChecklistItem}
         onChecklistDelete={tracker.deleteChecklistItem}
         onHoursChange={tracker.setActualHours}
+        onProgressChange={tracker.setCardProgress}
         onEvidenceAdd={tracker.addEvidence}
         onEvidenceUpdate={tracker.updateEvidence}
         onEvidenceDelete={tracker.deleteEvidence}
@@ -2300,9 +2408,15 @@ export default function App() {
         onOpenResource={openResource}
       />
 
-      {activeResource && <ResourceReader resource={activeResource} onClose={closeResource} />}
+      {activeResource && (
+        <Suspense fallback={<ViewLoading label="Loading resource" />}>
+          <ResourceReader resource={activeResource} onClose={closeResource} />
+        </Suspense>
+      )}
       {!activeResource && attachmentResource && (
-        <ResourceReader resource={attachmentResource} onClose={() => setAttachmentResource(null)} />
+        <Suspense fallback={<ViewLoading label="Loading attachment" />}>
+          <ResourceReader resource={attachmentResource} onClose={() => setAttachmentResource(null)} />
+        </Suspense>
       )}
 
       <Celebration trigger={celebrateSeed} />

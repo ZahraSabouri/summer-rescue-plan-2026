@@ -55,9 +55,9 @@ export function isCurrentWeek(dateString, referenceDate) {
 }
 
 // Card kinds: every card belongs to exactly one lane-family, derived from its
-// module group. The kind decides which behaviours apply — evidence requirements
-// are a study/project concept, overdue pressure never applies to life cards
-// (a missed grocery run is not "3 days overdue", it just moves on).
+// module group. The kind decides which behaviours apply. Evidence requirements
+// remain a study/project concept; date accountability is shared by every card so
+// Table, Today, Review, and Columns cannot disagree about unfinished past work.
 const KIND_BY_MODULE_GROUP = {
   'Applied ML': 'study',
   'Time Series': 'study',
@@ -75,7 +75,7 @@ export const KIND_META = {
   project: { label: 'Project', evidence: true, overdue: true },
   job: { label: 'Job hunt', evidence: false, overdue: true },
   admin: { label: 'Admin', evidence: false, overdue: true },
-  life: { label: 'Life', evidence: false, overdue: false },
+  life: { label: 'Life', evidence: false, overdue: true },
 }
 
 export function cardKind(card) {
@@ -93,9 +93,8 @@ export function requiresEvidence(card) {
 }
 
 export function isOverdue(card, referenceDate) {
-  if (card.done || !card.dueDate) return false
-  if (!kindFeatures(card).overdue) return false
-  return card.dueDate < referenceDate
+  const date = getCardDate(card)
+  return Boolean(!card.done && date && referenceDate && date < referenceDate)
 }
 
 export function checklistPercent(card) {
@@ -149,6 +148,33 @@ export function getCardDate(card) {
   return card.dueDate || card.startDate || ''
 }
 
+/**
+ * The lane shown across Today/Table/Columns is derived from the card's date.
+ * Deep Work, Waiting, and Rescue Lane remain deliberate workflow overrides;
+ * ordinary Today/This Week/Backlog labels cannot drift away from the date.
+ */
+export function cardPlanLane(card, referenceDate) {
+  if (card?.done || card?.status === 'Done') return 'Done'
+
+  const date = getCardDate(card)
+  if (date && referenceDate && date < referenceDate) {
+    if (date === addDays(referenceDate, -1)) return 'Yesterday'
+    if (date >= addDays(referenceDate, -7)) return 'Past Week'
+    if (date >= addDays(referenceDate, -30)) return 'Past Month'
+    return 'Rescue Lane'
+  }
+  if (['Deep Work', 'Waiting / Blocked'].includes(card?.status)) return card.status
+  if (card?.status === 'Rescue Lane') return 'Rescue Lane'
+  if (date === referenceDate) return 'Today'
+  if (date && isCurrentWeek(date, referenceDate)) return 'This Week'
+  if (date) return 'Backlog'
+  return card?.status || 'Backlog'
+}
+
+export function cardsDueOn(cards, date) {
+  return sortCards((Array.isArray(cards) ? cards : []).filter((card) => getCardDate(card) === date))
+}
+
 export function filterCards(cards, filters, referenceDate) {
   const search = filters.search.trim().toLowerCase()
   const next7 = addDays(referenceDate, 7)
@@ -173,7 +199,7 @@ export function filterCards(cards, filters, referenceDate) {
     if (filters.phase !== 'all' && card.phase !== filters.phase) return false
     if (filters.module !== 'all' && card.moduleGroup !== filters.module) return false
     if (filters.priority !== 'all' && card.priority !== filters.priority) return false
-    if (filters.status !== 'all' && card.status !== filters.status) return false
+    if (filters.status !== 'all' && cardPlanLane(card, referenceDate) !== filters.status) return false
     if (filters.kind && filters.kind !== 'all' && cardKind(card) !== filters.kind) return false
     if (filters.slotType !== 'all' && card.slotType !== filters.slotType) return false
     if (filters.tag !== 'all' && !(card.tags ?? []).includes(filters.tag)) return false
@@ -214,7 +240,7 @@ export function deriveStats(cards, referenceDate, mat700Active = true) {
   )
   const overdueCards = visibleCards.filter((card) => isOverdue(card, referenceDate))
   const rescueCards = visibleCards.filter(
-    (card) => card.status === 'Rescue Lane' || (card.tags ?? []).includes('rescue'),
+    (card) => cardPlanLane(card, referenceDate) === 'Rescue Lane' || (card.tags ?? []).includes('rescue'),
   )
   const waitingCards = visibleCards.filter((card) => card.status === 'Waiting / Blocked')
   const projectCards = visibleCards.filter((card) => card.moduleGroup === 'Group Project')
@@ -236,7 +262,7 @@ export function deriveStats(cards, referenceDate, mat700Active = true) {
     waitingCards,
     byPhase: buildGroupStats(visibleCards, (card) => card.phase),
     byModule: buildGroupStats(visibleCards, (card) => card.moduleGroup),
-    byStatus: buildGroupStats(visibleCards, (card) => card.status),
+    byStatus: buildGroupStats(visibleCards, (card) => cardPlanLane(card, referenceDate)),
     project: {
       total: projectCards.length,
       done: projectCards.filter((card) => card.done).length,

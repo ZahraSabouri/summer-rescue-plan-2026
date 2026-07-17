@@ -3,6 +3,7 @@ import { STATUS_COLUMNS } from '../data/constants'
 import { buildActivityHeatmap, buildBurnUp, buildHoursSeries, buildPace, bucketSeries } from '../utils/history'
 import {
   addDays,
+  cardPlanLane,
   cardKind,
   checklistDoneCount,
   formatDate,
@@ -12,6 +13,7 @@ import {
   groupBy,
   hasEvidence,
   isCurrentWeek,
+  isOverdue,
   KIND_META,
   requiresEvidence,
   sortCards,
@@ -359,46 +361,68 @@ export function DashboardView({ cards, stats, referenceDate, weekReferenceDate =
   )
 }
 
-export function BoardView({ cards, actions }) {
-  const sorted = sortCards(cards)
-  const paging = usePagedItems(sorted, 28)
-  const grouped = groupBy(paging.pageItems, (card) => card.status)
-  const totals = groupBy(sorted, (card) => card.status)
+function BoardColumn({ column, cards, actions, referenceDate }) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? cards : cards.slice(0, 12)
+
+  return (
+    <div className="board-column">
+      <header>
+        <h2>{column.label}</h2>
+        <span>{cards.length} total</span>
+      </header>
+      <div className="board-card-list">
+        {visible.map((card) => (
+          <CardSummary key={card.id} card={card} compact board referenceDate={referenceDate} {...actions} />
+        ))}
+        {cards.length === 0 && <p className="empty-state">No cards in this lane.</p>}
+        {cards.length > 12 && (
+          <button type="button" className="secondary-button" onClick={() => setShowAll((current) => !current)}>
+            {showAll ? 'Show fewer' : `Show ${cards.length - 12} more`}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function BoardView({ cards, actions, referenceDate }) {
+  const grouped = groupBy(sortCards(cards), (card) => cardPlanLane(card, referenceDate))
 
   return (
     <section aria-label="Status columns">
-      <Pagination {...paging} total={sorted.length} pageSize={28} />
+      <p className="collection-truth-note">
+        Lanes follow each card&apos;s date: today, yesterday, the previous 7 days, the previous 30 days, this week, and
+        later backlog. Deep Work, Waiting, and Rescue Lane remain deliberate overrides when the date is not already past.
+      </p>
       <div className="board-view">
-        {STATUS_COLUMNS.map((column) => {
-          const columnCards = sortCards(grouped[column.id] ?? [])
-          return (
-            <div className="board-column" key={column.id}>
-              <header>
-                <h2>{column.label}</h2>
-                <span>{columnCards.length} shown · {(totals[column.id] ?? []).length} total</span>
-              </header>
-              <div className="board-card-list">
-                {columnCards.map((card) => (
-                  <CardSummary key={card.id} card={card} compact board {...actions} />
-                ))}
-                {columnCards.length === 0 && <p className="empty-state">No cards on this page.</p>}
-              </div>
-            </div>
-          )
-        })}
+        {STATUS_COLUMNS.map((column) => (
+          <BoardColumn
+            key={column.id}
+            column={column}
+            cards={sortCards(grouped[column.id] ?? [])}
+            actions={actions}
+            referenceDate={referenceDate}
+          />
+        ))}
       </div>
-      <Pagination {...paging} total={sorted.length} pageSize={28} />
     </section>
   )
 }
 
-export function TableView({ cards, actions }) {
+export function TableView({ cards, actions, referenceDate }) {
   const sorted = sortCards(cards)
   const paging = usePagedItems(sorted, 25)
+  const openCount = sorted.filter((card) => !card.done).length
+  const doneCount = sorted.length - openCount
+  const overdueCount = sorted.filter((card) => isOverdue(card, referenceDate)).length
   return (
     <section className="table-shell" aria-label="Card table">
       <Pagination {...paging} total={sorted.length} pageSize={25} />
-      <p className="table-scroll-note">Card titles stay pinned; scroll sideways for status, hours, evidence, and completion.</p>
+      <p className="table-scroll-note">
+        {sorted.length} cards shown · {openCount} open · {doneCount} done · {overdueCount} overdue. Card titles stay
+        pinned; scroll sideways for plan lane, hours, evidence, and completion.
+      </p>
       <table className="card-table">
         <thead>
           <tr>
@@ -407,9 +431,10 @@ export function TableView({ cards, actions }) {
             <th>Kind</th>
             <th>Phase</th>
             <th>Priority</th>
-            <th>Status</th>
+            <th>Plan lane</th>
             <th>Due</th>
             <th>Hours</th>
+            <th>Progress</th>
             <th>Checklist</th>
             <th>Evidence</th>
             <th>Done</th>
@@ -430,7 +455,7 @@ export function TableView({ cards, actions }) {
               <td>{card.phase}</td>
               <td>{card.priority}</td>
               <td>
-                <select value={card.status} onChange={(event) => actions.onStatusChange(card.id, event.target.value)}>
+                <select value={cardPlanLane(card, referenceDate)} onChange={(event) => actions.onStatusChange(card.id, event.target.value)}>
                   {STATUS_COLUMNS.map((status) => (
                     <option key={status.id} value={status.id}>
                       {status.id}
@@ -449,6 +474,18 @@ export function TableView({ cards, actions }) {
                   aria-label={`Actual hours for card ${card.number}`}
                 />
                 <span className="muted"> / {hours(card.estimatedHours)}</span>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={card.progressPercent}
+                  onChange={(event) => actions.onProgressChange?.(card.id, event.target.value)}
+                  aria-label={`Progress percentage for card ${card.number}`}
+                />
+                <span className="muted">%</span>
               </td>
               <td>
                 {checklistDoneCount(card)}/{card.checklist.length}
