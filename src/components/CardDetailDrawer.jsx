@@ -10,6 +10,7 @@ import {
 } from '../data/constants'
 import { addDays, cardKind, cardPlanLane, checklistDoneCount, formatDate, isOverdue, kindFeatures, requiresEvidence } from '../utils/progress'
 import { resourcesForCard, searchResourcesForCard } from '../utils/cardResourceSearch'
+import { kindMeta } from '../utils/knowledge'
 import { CardSessionTimer } from './CardSessionTimer'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
 
@@ -104,6 +105,8 @@ export function CardDetailDrawer({
   resourceProgress = {},
   referenceDate,
   onClose,
+  linkedNotes = [],
+  onOpenKnowledgeNote,
   onStatusChange,
   onToggleDone,
   onChecklistToggle,
@@ -517,6 +520,27 @@ export function CardDetailDrawer({
               </div>
             </dl>
           </section>
+
+          {linkedNotes.length > 0 && (
+            <section className="drawer-section wide card-knowledge-panel">
+              <h3>Concept notes for this card</h3>
+              <div className="card-knowledge-row">
+                {linkedNotes.map((note) => (
+                  <button
+                    key={note.id}
+                    type="button"
+                    className={`card-knowledge-chip kind-${note.kind}`}
+                    onClick={() => onOpenKnowledgeNote?.(note)}
+                    title={note.review.label}
+                  >
+                    <span aria-hidden="true">{kindMeta(note.kind).icon}</span>
+                    {note.title}
+                    {note.review.state === 'due' && <em>due</em>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           {(linkedResources.length > 0 || hasResourceLibrary) && (
             <details className="drawer-section wide card-resource-panel">

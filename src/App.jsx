@@ -62,6 +62,8 @@ import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
 import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, TAG_OPTIONS, VIEW_OPTIONS } from './data/constants'
 import { STUDY_MODULES } from './data/studyModules'
+import { KNOWLEDGE_SEEDS } from './data/knowledgeSeeds'
+import { notesForCard, resolveModuleNotes } from './utils/knowledge'
 import { EVENT_COVERAGE, coverageSummary } from './state/eventCoverage'
 import { useTrackerState } from './state/useTrackerState'
 import {
@@ -504,6 +506,7 @@ function backupDoneCount(rawState) {
 export default function App() {
   const tracker = useTrackerState(ENRICHED_BASE_CARDS)
   const [activeView, setActiveView] = useState(() => viewFromHash())
+  const [knowledgeFocus, setKnowledgeFocus] = useState(null)
   const [filters, setFilters] = useState(FILTER_DEFAULTS)
   const [selectedCardId, setSelectedCardId] = useState(null)
   const [activeTimerCardId, setActiveTimerCardId] = useState(null)
@@ -1138,6 +1141,40 @@ export default function App() {
     onNavigateMeta: openCardFacet,
   }
 
+  // Concept notes linked to the open card, resolved from the module that owns
+  // it so the drawer can surface them without knowing about seeds or review.
+  const linkedKnowledgeNotes = useMemo(() => {
+    if (!selectedCard) return []
+    const owner = STUDY_MODULES.find((entry) => entry.moduleGroup === selectedCard.moduleGroup)
+    if (!owner) return []
+    return notesForCard(
+      resolveModuleNotes({
+        seeds: KNOWLEDGE_SEEDS,
+        knowledge: tracker.state.knowledge,
+        moduleId: owner.id,
+        referenceDate,
+      }),
+      selectedCard.id,
+    )
+  }, [referenceDate, selectedCard, tracker.state.knowledge])
+
+  function openKnowledgeNote(note) {
+    const owner = STUDY_MODULES.find((entry) => entry.id === note.moduleId)
+    if (!owner) return
+    setSelectedCardId(null)
+    setKnowledgeFocus({ moduleId: owner.id, noteId: note.id })
+    setActiveView(owner.viewId)
+  }
+
+  const knowledgeActions = {
+    onSaveNote: tracker.saveKnowledgeNote,
+    onDeleteNote: tracker.deleteKnowledgeNote,
+    onToggleStar: tracker.toggleKnowledgeStar,
+    onMarkReviewed: tracker.markKnowledgeReviewed,
+    onRateQuestion: tracker.rateKnowledgeQuestion,
+    onSetCardLinks: tracker.setKnowledgeCardLinks,
+  }
+
   function downloadBackup(exportedAt) {
     const payload = buildTrackerBackupPayload(tracker.state, tracker.snapshots, exportedAt)
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
@@ -1592,6 +1629,11 @@ export default function App() {
             moduleNote={tracker.state.moduleNotes?.[activeView] ?? ''}
             onModuleNoteChange={tracker.setModuleNote}
             moduleExamDate={moduleExamDates[activeView] ?? ''}
+            knowledge={tracker.state.knowledge}
+            knowledgeActions={knowledgeActions}
+            focusKnowledgeNoteId={
+              knowledgeFocus?.moduleId === studyModuleMap[activeView].id ? knowledgeFocus.noteId : ''
+            }
             resourceProgress={tracker.state.resourceProgress}
             recentResourceIds={tracker.state.recentResourceIds}
             onResourceOpen={tracker.markResourceOpened}
@@ -2354,6 +2396,8 @@ export default function App() {
         resourceProgress={tracker.state.resourceProgress}
         referenceDate={referenceDate}
         onClose={() => setSelectedCardId(null)}
+        linkedNotes={linkedKnowledgeNotes}
+        onOpenKnowledgeNote={openKnowledgeNote}
         onStatusChange={tracker.setStatus}
         onToggleDone={tracker.toggleDone}
         onChecklistToggle={tracker.toggleChecklistItem}

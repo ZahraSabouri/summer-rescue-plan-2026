@@ -8,6 +8,9 @@ import {
   sumHours,
 } from '../utils/progress'
 import { isActionableOverdue } from '../utils/insights'
+import { KNOWLEDGE_SEEDS } from '../data/knowledgeSeeds'
+import { knowledgeSummary, resolveModuleNotes } from '../utils/knowledge'
+import { ModuleKnowledge } from './ModuleKnowledge'
 import { codeLanguage, isPlaceholderResourceUrl, isYouTube, youtubeEmbedUrl } from '../utils/resourceLinks.js'
 import { averageResourceProgress } from '../utils/resourceProgress.js'
 import { CardSummary } from './CardSummary'
@@ -763,6 +766,7 @@ const MODULE_TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'planning', label: 'Planning' },
   { id: 'materials', label: 'Materials' },
+  { id: 'knowledge', label: 'Knowledge' },
 ]
 
 function ModuleProgressBar({ moduleCards, referenceDate }) {
@@ -815,6 +819,9 @@ export function ModuleWorkspace({
   moduleNote,
   onModuleNoteChange,
   moduleExamDate,
+  knowledge,
+  knowledgeActions,
+  focusKnowledgeNoteId = '',
   resourceProgress = {},
   recentResourceIds = [],
   onResourceOpen,
@@ -823,6 +830,15 @@ export function ModuleWorkspace({
   onResourceUpload,
 }) {
   const [tab, setTab] = useState('overview')
+
+  // Arriving from a card's "concept notes" chip opens straight onto that note.
+  // Adjusted during render rather than in an effect so the Knowledge tab is
+  // already active on the first paint.
+  const [lastFocusNoteId, setLastFocusNoteId] = useState(focusKnowledgeNoteId)
+  if (focusKnowledgeNoteId !== lastFocusNoteId) {
+    setLastFocusNoteId(focusKnowledgeNoteId)
+    if (focusKnowledgeNoteId) setTab('knowledge')
+  }
   const [openResourceId, setOpenResourceId] = useState(null)
   const [resourceQuery, setResourceQuery] = useState('')
   const [activeGroup, setActiveGroup] = useState('all')
@@ -879,6 +895,13 @@ export function ModuleWorkspace({
       (a, b) => groupRank(module.id, a.group) - groupRank(module.id, b.group) || a.group.localeCompare(b.group),
     )
   }, [module.id, visibleResources])
+  const knowledgeCounts = useMemo(
+    () =>
+      knowledgeSummary(
+        resolveModuleNotes({ seeds: KNOWLEDGE_SEEDS, knowledge, moduleId: module.id, referenceDate }),
+      ),
+    [knowledge, module.id, referenceDate],
+  )
   const openResource = module.resources.find((resource) => resource.id === openResourceId) ?? null
   const mat700Inactive = module.id === 'mat700' && !mat700Active
 
@@ -957,6 +980,11 @@ export function ModuleWorkspace({
             {item.label}
             {item.id === 'materials' && <span className="module-tab-count">{module.resources.length}</span>}
             {item.id === 'planning' && <span className="module-tab-count">{moduleCards.length}</span>}
+            {item.id === 'knowledge' && knowledgeCounts.total > 0 && (
+              <span className={`module-tab-count${knowledgeCounts.due > 0 ? ' is-due' : ''}`}>
+                {knowledgeCounts.due > 0 ? knowledgeCounts.due : knowledgeCounts.total}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -1144,6 +1172,20 @@ export function ModuleWorkspace({
               {visibleResources.length === 0 && <p className="empty-state">No matching resources.</p>}
             </div>
           </section>
+        </div>
+      )}
+
+      {tab === 'knowledge' && (
+        <div className="module-panel">
+          <ModuleKnowledge
+            module={module}
+            moduleCards={moduleCards}
+            knowledge={knowledge}
+            referenceDate={referenceDate}
+            focusNoteId={focusKnowledgeNoteId}
+            onOpenCard={actions.onOpen}
+            {...knowledgeActions}
+          />
         </div>
       )}
 

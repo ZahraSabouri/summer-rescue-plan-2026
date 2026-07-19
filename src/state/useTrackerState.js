@@ -11,6 +11,7 @@ import {
 import { detailChanges } from '../utils/cardDiff'
 import { dayLog } from '../utils/dayLog'
 import { focusRewards } from '../utils/focusRewards'
+import { emptyKnowledge, normaliseKnowledge, normaliseNote, normaliseNoteMeta } from '../utils/knowledge'
 import { cleanWeeklyLifeCardTitle, recurringLifeCardIdentity } from '../utils/lifeCards'
 import { isTrackableCard, todayString } from '../utils/progress'
 import { clampPercent, normaliseResourceProgressEntry } from '../utils/resourceProgress'
@@ -843,6 +844,82 @@ export function useTrackerState(baseCards) {
       },
       updatedAt: nowIso(),
     }))
+  }
+
+  // --- Knowledge notes -----------------------------------------------------
+  // Every mutation funnels through here so the stored shape stays normalised
+  // no matter which surface (reader, editor, card drawer) triggered it.
+  function updateKnowledge(mutate) {
+    setState((current) => {
+      const knowledge = normaliseKnowledge(current.knowledge ?? emptyKnowledge())
+      const next = mutate(knowledge)
+      if (!next) return current
+      return { ...current, knowledge: next, updatedAt: nowIso() }
+    })
+  }
+
+  function patchNoteMeta(knowledge, noteId, patch) {
+    const previous = normaliseNoteMeta(knowledge.meta[noteId])
+    return {
+      ...knowledge,
+      meta: { ...knowledge.meta, [noteId]: normaliseNoteMeta({ ...previous, ...patch }) },
+    }
+  }
+
+  // Also used when editing a seeded note: the caller passes the resolved note
+  // and it lands in state under the same id, taking over from the seed.
+  function saveKnowledgeNote(note) {
+    const clean = normaliseNote({ ...note, seeded: false, updatedAt: nowIso() })
+    if (!clean) return
+    updateKnowledge((knowledge) => ({
+      ...knowledge,
+      notes: { ...knowledge.notes, [clean.id]: clean },
+    }))
+  }
+
+  function deleteKnowledgeNote(noteId) {
+    updateKnowledge((knowledge) => {
+      const notes = { ...knowledge.notes }
+      delete notes[noteId]
+      // A seeded note has no state entry to remove, so hide it instead.
+      return patchNoteMeta({ ...knowledge, notes }, noteId, { hidden: true })
+    })
+  }
+
+  function toggleKnowledgeStar(noteId) {
+    updateKnowledge((knowledge) =>
+      patchNoteMeta(knowledge, noteId, { starred: !normaliseNoteMeta(knowledge.meta[noteId]).starred }),
+    )
+  }
+
+  function markKnowledgeReviewed(noteId, confidence = 'ok') {
+    updateKnowledge((knowledge) => {
+      const previous = normaliseNoteMeta(knowledge.meta[noteId])
+      return patchNoteMeta(knowledge, noteId, {
+        lastReviewedAt: nowIso(),
+        reviewCount: previous.reviewCount + 1,
+        confidence,
+      })
+    })
+  }
+
+  function rateKnowledgeQuestion(noteId, index, rating) {
+    updateKnowledge((knowledge) => {
+      const previous = normaliseNoteMeta(knowledge.meta[noteId])
+      const quiz = { ...previous.quiz }
+      if (quiz[index] === rating) delete quiz[index]
+      else quiz[index] = rating
+      return patchNoteMeta(knowledge, noteId, { quiz })
+    })
+  }
+
+  function setKnowledgeCardLinks(noteId, cardIds) {
+    updateKnowledge((knowledge) => {
+      const existing = knowledge.notes[noteId]
+      if (!existing) return knowledge
+      const clean = normaliseNote({ ...existing, cardIds, updatedAt: nowIso() })
+      return { ...knowledge, notes: { ...knowledge.notes, [clean.id]: clean } }
+    })
   }
 
   function updateCard(cardId, patch, action = 'Updated card', details = '') {
@@ -1713,6 +1790,7 @@ export function useTrackerState(baseCards) {
         dayLogs: current.dayLogs ?? {},
         focusRewards: current.focusRewards ?? null,
         moduleNotes: current.moduleNotes ?? {},
+        knowledge: normaliseKnowledge(current.knowledge),
         updatedAt: nowIso(),
       }
     })
@@ -1728,6 +1806,12 @@ export function useTrackerState(baseCards) {
     markAllNotificationsRead,
     markExported,
     setModuleNote,
+    saveKnowledgeNote,
+    deleteKnowledgeNote,
+    toggleKnowledgeStar,
+    markKnowledgeReviewed,
+    rateKnowledgeQuestion,
+    setKnowledgeCardLinks,
     updateCard,
     updateCardDetails,
     setStatus,

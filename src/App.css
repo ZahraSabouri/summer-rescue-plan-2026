@@ -8917,3 +8917,51 @@ button.countdown-chip:hover {
     grid-column: auto;
   }
 }
+
+/* Concept notes surfaced on a card, linked from the module Knowledge tab. */
+.card-knowledge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.card-knowledge-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--chip-bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-pill);
+}
+
+.card-knowledge-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.card-knowledge-chip.kind-concept { border-left-color: var(--blue); }
+.card-knowledge-chip.kind-cheatsheet { border-left-color: var(--green); }
+.card-knowledge-chip.kind-formula { border-left-color: #8a6bb0; }
+.card-knowledge-chip.kind-traps { border-left-color: var(--red); }
+.card-knowledge-chip.kind-qa { border-left-color: var(--amber); }
+
+.card-knowledge-chip em {
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--warning-ink);
+}
+
+.module-tab-count.is-due {
+  color: var(--warning-ink);
+  background: var(--warning-bg);
+  border-color: var(--warning-line);
+}

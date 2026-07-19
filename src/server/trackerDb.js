@@ -96,6 +96,32 @@ CREATE TABLE IF NOT EXISTS module_notes (
   updated_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS knowledge_notes (
+  id TEXT PRIMARY KEY,
+  module_id TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'concept',
+  topic TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '[]',
+  card_ids TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT,
+  updated_at TEXT
+);
+
+-- Review overlay. Keyed by note id rather than joined to knowledge_notes
+-- because it also carries state for seeded notes, which live in the app
+-- bundle and have no row of their own.
+CREATE TABLE IF NOT EXISTS knowledge_meta (
+  note_id TEXT PRIMARY KEY,
+  starred INTEGER NOT NULL DEFAULT 0,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  last_reviewed_at TEXT,
+  review_count INTEGER NOT NULL DEFAULT 0,
+  confidence TEXT,
+  quiz TEXT NOT NULL DEFAULT '{}'
+);
+
 CREATE TABLE IF NOT EXISTS resources (
   id TEXT PRIMARY KEY,
   module_id TEXT,
@@ -600,6 +626,46 @@ export function openTrackerDb(dbPath) {
       const moduleNotes = {}
       for (const row of rows('SELECT module_id, note FROM module_notes')) moduleNotes[row.module_id] = row.note
 
+      const parseJson = (value, fallback) => {
+        try {
+          return JSON.parse(value)
+        } catch {
+          return fallback
+        }
+      }
+
+      const knowledge = { notes: {}, meta: {} }
+      for (const row of rows(
+        `SELECT id, module_id, title, kind, topic, body, tags, card_ids, created_at, updated_at
+         FROM knowledge_notes`,
+      )) {
+        knowledge.notes[row.id] = {
+          id: row.id,
+          moduleId: row.module_id,
+          title: row.title ?? '',
+          kind: row.kind ?? 'concept',
+          topic: row.topic ?? '',
+          body: row.body ?? '',
+          tags: parseJson(row.tags, []),
+          cardIds: parseJson(row.card_ids, []),
+          createdAt: row.created_at ?? '',
+          updatedAt: row.updated_at ?? '',
+          seeded: false,
+        }
+      }
+      for (const row of rows(
+        'SELECT note_id, starred, hidden, last_reviewed_at, review_count, confidence, quiz FROM knowledge_meta',
+      )) {
+        knowledge.meta[row.note_id] = {
+          starred: Boolean(row.starred),
+          hidden: Boolean(row.hidden),
+          lastReviewedAt: row.last_reviewed_at ?? null,
+          reviewCount: Number(row.review_count) || 0,
+          confidence: row.confidence ?? null,
+          quiz: parseJson(row.quiz, {}),
+        }
+      }
+
       const notifications = {}
       for (const row of rows('SELECT id, card_id, kind, title, body, read, created_at FROM notifications')) {
         notifications[row.id] = {
@@ -637,7 +703,7 @@ export function openTrackerDb(dbPath) {
         else settings[row.key] = parsed
       }
 
-      return { cards, addedCards, moduleNotes, notifications, resourceProgress, settings, focusRewards }
+      return { cards, addedCards, moduleNotes, knowledge, notifications, resourceProgress, settings, focusRewards }
     },
 
     // Mirror the live JSON tracker state into the database.
@@ -758,6 +824,46 @@ export function openTrackerDb(dbPath) {
         )
         for (const [moduleId, note] of Object.entries(plainObject(state.moduleNotes))) {
           if (String(note ?? '').trim()) moduleNoteStmt.run(moduleId, text(note), orNull(state.updatedAt))
+        }
+
+        const knowledge = plainObject(state.knowledge)
+        db.exec('DELETE FROM knowledge_notes')
+        const knowledgeNoteStmt = db.prepare(
+          `INSERT INTO knowledge_notes (id, module_id, title, kind, topic, body, tags, card_ids, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        for (const [noteId, note] of Object.entries(plainObject(knowledge.notes))) {
+          const entry = plainObject(note)
+          knowledgeNoteStmt.run(
+            text(entry.id || noteId),
+            text(entry.moduleId),
+            text(entry.title),
+            text(entry.kind || 'concept'),
+            text(entry.topic),
+            text(entry.body),
+            JSON.stringify(Array.isArray(entry.tags) ? entry.tags : []),
+            JSON.stringify(Array.isArray(entry.cardIds) ? entry.cardIds : []),
+            orNull(entry.createdAt),
+            orNull(entry.updatedAt),
+          )
+        }
+
+        db.exec('DELETE FROM knowledge_meta')
+        const knowledgeMetaStmt = db.prepare(
+          `INSERT INTO knowledge_meta (note_id, starred, hidden, last_reviewed_at, review_count, confidence, quiz)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        for (const [noteId, meta] of Object.entries(plainObject(knowledge.meta))) {
+          const entry = plainObject(meta)
+          knowledgeMetaStmt.run(
+            text(noteId),
+            entry.starred ? 1 : 0,
+            entry.hidden ? 1 : 0,
+            orNull(entry.lastReviewedAt),
+            Number(entry.reviewCount) || 0,
+            orNull(entry.confidence),
+            JSON.stringify(plainObject(entry.quiz)),
+          )
         }
 
         db.exec('DELETE FROM settings')
