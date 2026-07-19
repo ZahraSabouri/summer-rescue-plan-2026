@@ -2351,6 +2351,7 @@ export default function App() {
         key={selectedCard?.id ?? 'closed-card-drawer'}
         card={selectedCard}
         resources={allResources}
+        resourceProgress={tracker.state.resourceProgress}
         referenceDate={referenceDate}
         onClose={() => setSelectedCardId(null)}
         onStatusChange={tracker.setStatus}
@@ -2381,6 +2382,8 @@ export default function App() {
         onOpenAttachment={openAttachment}
         onAddResource={tracker.addCardResource}
         onRemoveResource={tracker.removeCardResource}
+        onResourceProgressChange={tracker.updateResourceProgress}
+        onResourceReviewedToggle={tracker.toggleResourceProgress}
         onNavigateMeta={openCardFacet}
         moduleOptions={moduleOptions}
         phaseOptions={phaseOptions}

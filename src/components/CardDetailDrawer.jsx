@@ -11,6 +11,7 @@ import {
 import { addDays, cardKind, cardPlanLane, checklistDoneCount, formatDate, isOverdue, kindFeatures, requiresEvidence } from '../utils/progress'
 import { resourcesForCard, searchResourcesForCard } from '../utils/cardResourceSearch'
 import { CardSessionTimer } from './CardSessionTimer'
+import { ResourceStudyEditor } from './ResourceStudyEditor'
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
@@ -63,9 +64,44 @@ function formatStamp(value) {
   }).format(new Date(value))
 }
 
+function LinkedResourceStudyCard({
+  cardId,
+  resource,
+  progress,
+  onOpenResource,
+  onRemoveResource,
+  onResourceProgressChange,
+  onResourceReviewedToggle,
+}) {
+  return (
+    <article className="card-linked-resource">
+      <div className="card-linked-resource-head">
+        <button type="button" className="card-linked-resource-open" onClick={() => onOpenResource?.(resource.id)}>
+          <span className="type-badge">{resource.type}</span>
+          <span>
+            <strong>{resource.title}</strong>
+            <small>{resource.group}{resource.description ? ` · ${resource.description}` : ''}</small>
+          </span>
+        </button>
+        <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(cardId, resource.id)} aria-label={`Remove ${resource.title}`}>
+          &times;
+        </button>
+      </div>
+      <ResourceStudyEditor
+        compact
+        resourceId={resource.id}
+        progress={progress}
+        onProgressChange={onResourceProgressChange}
+        onToggleReviewed={onResourceReviewedToggle}
+      />
+    </article>
+  )
+}
+
 export function CardDetailDrawer({
   card,
   resources = [],
+  resourceProgress = {},
   referenceDate,
   onClose,
   onStatusChange,
@@ -93,6 +129,8 @@ export function CardDetailDrawer({
   onOpenResource,
   onAddResource,
   onRemoveResource,
+  onResourceProgressChange,
+  onResourceReviewedToggle,
   moduleOptions = MODULE_OPTIONS,
   phaseOptions = PHASE_OPTIONS,
   onNavigateMeta,
@@ -499,16 +537,16 @@ export function CardDetailDrawer({
                     <p className="muted">Open a video only when it supports the card’s current output.</p>
                     <div className="video-resource-list">
                       {videoResources.map((resource) => (
-                        <div key={resource.id} className="video-resource-card">
-                          <button type="button" onClick={() => onOpenResource?.(resource.id)}>
-                            <span className="type-badge">{resource.type}</span>
-                            <strong>{resource.title}</strong>
-                            {resource.description && <small>{resource.description}</small>}
-                          </button>
-                          <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
-                            &times;
-                          </button>
-                        </div>
+                        <LinkedResourceStudyCard
+                          key={resource.id}
+                          cardId={card.id}
+                          resource={resource}
+                          progress={resourceProgress[resource.id]}
+                          onOpenResource={onOpenResource}
+                          onRemoveResource={onRemoveResource}
+                          onResourceProgressChange={onResourceProgressChange}
+                          onResourceReviewedToggle={onResourceReviewedToggle}
+                        />
                       ))}
                     </div>
                   </div>
@@ -516,17 +554,18 @@ export function CardDetailDrawer({
                 {fileResources.length > 0 && (
                   <div className="file-resource-section">
                     <h4>Files and references <span>{fileResources.length}</span></h4>
-                    <div className="resource-chip-list">
+                    <div className="card-linked-resource-grid">
                       {fileResources.map((resource) => (
-                        <div key={resource.id} className="resource-chip">
-                          <button type="button" onClick={() => onOpenResource?.(resource.id)}>
-                            <span className="type-badge">{resource.type}</span>
-                            <strong>{resource.title}</strong>
-                          </button>
-                          <button type="button" className="resource-remove" onClick={() => onRemoveResource?.(card.id, resource.id)} aria-label={`Remove ${resource.title}`}>
-                            &times;
-                          </button>
-                        </div>
+                        <LinkedResourceStudyCard
+                          key={resource.id}
+                          cardId={card.id}
+                          resource={resource}
+                          progress={resourceProgress[resource.id]}
+                          onOpenResource={onOpenResource}
+                          onRemoveResource={onRemoveResource}
+                          onResourceProgressChange={onResourceProgressChange}
+                          onResourceReviewedToggle={onResourceReviewedToggle}
+                        />
                       ))}
                     </div>
                   </div>

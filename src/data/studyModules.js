@@ -1,4 +1,5 @@
 import { fileType, moduleFileUrl, viewerFor } from '../utils/resourceLinks.js'
+import { AML_VIDEOS } from './amlVideoLibrary.js'
 
 const MODULE_FOLDERS = {
   aml: 'CMT307 Applied Machine Learning',
@@ -43,6 +44,10 @@ function remote(moduleKey, group, title, url, options = {}) {
     description: options.description ?? '',
     tags: options.tags ?? [],
     priority: options.priority ?? 'normal',
+    // Present only for timestamped segments of a longer video, so the player can
+    // open at the right point instead of the top of a 6h52m recording.
+    ...(options.start != null ? { start: options.start } : {}),
+    ...(options.end != null ? { end: options.end } : {}),
   }
 }
 
@@ -473,32 +478,38 @@ const amlSupplementaryResources = [
   }),
 ]
 
-const amlVideoLectureResources = [
-  remote('aml', 'Video lectures', 'Applied Machine Learning Videos playlist', 'https://www.youtube.com/playlist?list=PLHofvQE1VlGtZoAULxcHb7lOsMved0CuM', {
-    id: 'aml-video-applied-ml-playlist',
-    description: 'Predetermined Applied Machine Learning study-plan playlist from the CMT307 rescue plan.',
-    tags: ['video', 'playlist', 'applied machine learning'],
-    priority: 'high',
+// One resource per specific video, generated from the verified catalogue in
+// amlVideoLibrary.js. These used to be three whole-playlist entries, which meant
+// study progress recorded against "the Caltech playlist" applied to every card
+// that linked it. Splitting them makes progress mean one video.
+const SESSION_GROUP = {
+  s1: 'Video — S1 workflow',
+  s2: 'Video — S2 preprocessing',
+  s3: 'Video — S3 regression & generalisation',
+  s4: 'Video — S4 classification & tuning',
+  s5: 'Video — S5 ensembles',
+}
+
+const amlVideoLectureResources = AML_VIDEOS.map((video) =>
+  remote('aml', SESSION_GROUP[video.session] ?? 'Video lectures', video.title, video.url, {
+    id: video.id,
+    description:
+      `${video.source}. ${video.minutes} min` +
+      (video.segmentLabel ? ` — watch ${video.segmentLabel} of the full course only.` : '.') +
+      (video.depth === 'deep' ? ' Full-length lecture: optional depth, not a first pass.' : ''),
+    tags: [
+      'video',
+      video.session,
+      ...(video.depth === 'deep' ? ['deep-dive'] : ['core']),
+      ...(video.segmentLabel ? ['segment'] : []),
+    ],
+    priority: video.depth === 'deep' ? 'normal' : 'high',
     type: 'YOUTUBE',
     viewer: 'youtube',
+    start: video.start,
+    end: video.end,
   }),
-  remote('aml', 'Video lectures', 'Applied Machine Learning in Python Complete Course', 'https://www.youtube.com/watch?v=dh1lvdp0oCo', {
-    id: 'aml-video-python-complete-course',
-    description: 'Predetermined complete applied-machine-learning Python course video from the CMT307 study plan.',
-    tags: ['video', 'python', 'course'],
-    priority: 'high',
-    type: 'YOUTUBE',
-    viewer: 'youtube',
-  }),
-  remote('aml', 'Video lectures', 'Caltech CS156 Machine Learning course playlist', 'https://www.youtube.com/playlist?list=PLD63A284B7615313A', {
-    id: 'aml-video-caltech-cs156',
-    description: 'Predetermined Caltech CS156 machine-learning playlist from the CMT307 study plan.',
-    tags: ['video', 'playlist', 'machine learning', 'theory'],
-    priority: 'high',
-    type: 'YOUTUBE',
-    viewer: 'youtube',
-  }),
-]
+)
 
 export const STUDY_MODULES = [
   {
@@ -764,6 +775,25 @@ export const STUDY_MODULES = [
       local('timeSeries', 'Quick reference', 'Lecture 5 R supplement', 'Learning Materials/ma3508_lecture5_R_supplement.pdf', {
         description: 'R supplement for lecture 5 workflows.',
         tags: ['r', 'lecture 5'],
+      }),
+      // The only videos this module has, and the only lecturer-assigned videos in the
+      // whole campaign: set as Lecture 1 homework on p.20 of ma3508_lecture1.pdf.
+      // Both are beginner "install R and use it as a calculator" tutorials, so they
+      // are attached as optional support on the R-skeleton card only — not to the
+      // Pack A cards, whose content is smoothing and decomposition, not R setup.
+      remote('timeSeries', 'R setup videos', 'An Introduction to R — brief tutorial', 'https://www.youtube.com/watch?v=LjuXiBjxryQ', {
+        id: 'ts-video-r-intro-tutorial',
+        description: 'Set as Lecture 1 homework. 17 min, beginner R setup — refresher only, no time-series content.',
+        tags: ['video', 'r', 'setup', 'lecture 1 homework'],
+        type: 'YOUTUBE',
+        viewer: 'youtube',
+      }),
+      remote('timeSeries', 'R setup videos', 'R Tutorial: Introduction to R', 'https://www.youtube.com/watch?v=7cGwYMhPDUY', {
+        id: 'ts-video-r-tutorial-intro',
+        description: 'Set as Lecture 1 homework. 20 min, beginner R setup — refresher only, no time-series content.',
+        tags: ['video', 'r', 'setup', 'lecture 1 homework'],
+        type: 'YOUTUBE',
+        viewer: 'youtube',
       }),
       ...timeSeriesPastPaperResources,
       local('timeSeries', 'Past papers', 'Mock exam', 'Some solutions/ma3508_mock_exam.pdf', {

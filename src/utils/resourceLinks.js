@@ -53,16 +53,42 @@ export function isYouTube(url = '') {
   return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|playlist\?)|youtu\.be\/)/i.test(url)
 }
 
-export function youtubeEmbedUrl(url = '') {
+// A specific video always wins over the playlist it belongs to.
+//
+// Study-plan video URLs are of the form watch?v=VIDEO&list=PLAYLIST — the list is
+// there so YouTube shows the surrounding course, not because the playlist is the
+// target. Checking for `list` first (as this did) meant every per-lecture link
+// opened the whole playlist instead, which is the behaviour the per-video split
+// exists to eliminate. Only a URL with no video id at all is a playlist link.
+//
+// `start`/`end` (seconds) scope a segment of a long recording, so a card pointing
+// at 2:55–3:30 of a 6h52m course opens there rather than at the beginning.
+export function youtubeEmbedUrl(url = '', { start, end } = {}) {
   if (/PASTE_/i.test(url)) return null
-
-  const listMatch = url.match(/[?&]list=([\w-]+)/i)
-  if (listMatch) return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}`
 
   const match = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/i,
   )
-  return match ? `https://www.youtube.com/embed/${match[1]}` : null
+
+  if (match) {
+    const params = new URLSearchParams()
+    const startAt = start ?? timestampParam(url)
+    if (startAt != null) params.set('start', String(Math.floor(startAt)))
+    if (end != null) params.set('end', String(Math.floor(end)))
+    const query = params.toString()
+    return `https://www.youtube.com/embed/${match[1]}${query ? `?${query}` : ''}`
+  }
+
+  const listMatch = url.match(/[?&]list=([\w-]+)/i)
+  if (listMatch) return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}`
+
+  return null
+}
+
+// Reads a `t=123s` / `t=123` / `start=123` param off a watch URL.
+function timestampParam(url) {
+  const match = url.match(/[?&](?:t|start)=(\d+)s?/i)
+  return match ? Number(match[1]) : null
 }
 
 export function isPlaceholderResourceUrl(url = '') {
