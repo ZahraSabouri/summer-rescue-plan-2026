@@ -239,7 +239,9 @@ export function DailyAgenda({
                 </div>
                 <div className="daily-agenda-content">
                   <div className="daily-agenda-title-row">
-                    {onOpenBlock && linkedCards.length === 0 ? (
+                    {onOpenCard && linkedCards.length > 0 ? (
+                      <button type="button" className="schedule-card-link" onClick={() => onOpenCard(linkedCards[0].id)}>{block.title}</button>
+                    ) : onOpenBlock ? (
                       <button type="button" className="schedule-card-link" onClick={() => onOpenBlock(block)}>{block.title}</button>
                     ) : <strong>{block.title}</strong>}
                     {block.protected && <span className="schedule-protected">Protected</span>}

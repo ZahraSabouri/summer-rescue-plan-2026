@@ -816,6 +816,8 @@ export function ModuleWorkspace({
   referenceDate,
   mat700Active,
   setActiveView,
+  activeTab = 'overview',
+  onTabChange,
   moduleNote,
   onModuleNoteChange,
   moduleExamDate,
@@ -825,21 +827,18 @@ export function ModuleWorkspace({
   resourceProgress = {},
   recentResourceIds = [],
   onResourceOpen,
+  onOpenResource,
+  activeResourceId = '',
   onResourceReviewedToggle,
   onResourceProgressChange,
   onResourceUpload,
 }) {
-  const [tab, setTab] = useState('overview')
+  const tab = activeTab
 
   // Arriving from a card's "concept notes" chip opens straight onto that note.
-  // Adjusted during render rather than in an effect so the Knowledge tab is
-  // already active on the first paint.
-  const [lastFocusNoteId, setLastFocusNoteId] = useState(focusKnowledgeNoteId)
-  if (focusKnowledgeNoteId !== lastFocusNoteId) {
-    setLastFocusNoteId(focusKnowledgeNoteId)
-    if (focusKnowledgeNoteId) setTab('knowledge')
-  }
-  const [openResourceId, setOpenResourceId] = useState(null)
+  useEffect(() => {
+    if (focusKnowledgeNoteId && tab !== 'knowledge') onTabChange?.('knowledge')
+  }, [focusKnowledgeNoteId, onTabChange, tab])
   const [resourceQuery, setResourceQuery] = useState('')
   const [activeGroup, setActiveGroup] = useState('all')
 
@@ -902,11 +901,10 @@ export function ModuleWorkspace({
       ),
     [knowledge, module.id, referenceDate],
   )
-  const openResource = module.resources.find((resource) => resource.id === openResourceId) ?? null
   const mat700Inactive = module.id === 'mat700' && !mat700Active
 
   function selectResource(resourceId) {
-    setOpenResourceId(resourceId)
+    onOpenResource?.(resourceId)
     onResourceOpen?.(resourceId)
   }
 
@@ -975,7 +973,7 @@ export function ModuleWorkspace({
             role="tab"
             aria-selected={tab === item.id}
             className={`module-tab${tab === item.id ? ' active' : ''}`}
-            onClick={() => setTab(item.id)}
+            onClick={() => onTabChange?.(item.id)}
           >
             {item.label}
             {item.id === 'materials' && <span className="module-tab-count">{module.resources.length}</span>}
@@ -991,7 +989,7 @@ export function ModuleWorkspace({
 
       {tab === 'overview' && (
         <div className="module-panel">
-          <ModuleStats moduleCards={moduleCards} referenceDate={referenceDate} onOpenPlanning={() => setTab('planning')} />
+          <ModuleStats moduleCards={moduleCards} referenceDate={referenceDate} onOpenPlanning={() => onTabChange?.('planning')} />
           <ModuleProgressBar moduleCards={moduleCards} referenceDate={referenceDate} />
           <ModuleGuidance module={module} />
           <section className="workspace-section">
@@ -1115,7 +1113,7 @@ export function ModuleWorkspace({
                       <ResourceCard
                         key={resource.id}
                         resource={resource}
-                        selected={openResourceId === resource.id}
+                        selected={activeResourceId === resource.id}
                         progress={resourceProgress[resource.id]}
                         onSelect={selectResource}
                         onToggleReviewed={onResourceReviewedToggle}
@@ -1137,7 +1135,7 @@ export function ModuleWorkspace({
                       <ResourceCard
                         key={resource.id}
                         resource={resource}
-                        selected={openResourceId === resource.id}
+                        selected={activeResourceId === resource.id}
                         progress={resourceProgress[resource.id]}
                         onSelect={selectResource}
                         onToggleReviewed={onResourceReviewedToggle}
@@ -1159,7 +1157,7 @@ export function ModuleWorkspace({
                       <ResourceCard
                         key={resource.id}
                         resource={resource}
-                        selected={openResourceId === resource.id}
+                        selected={activeResourceId === resource.id}
                         progress={resourceProgress[resource.id]}
                         onSelect={selectResource}
                         onToggleReviewed={onResourceReviewedToggle}
@@ -1189,7 +1187,6 @@ export function ModuleWorkspace({
         </div>
       )}
 
-      {openResource && <ResourceReader resource={openResource} onClose={() => setOpenResourceId(null)} />}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { baseCards as legacyCards } from './baseCards.js'
 
-export const CAMPAIGN_START = '2026-07-16'
+export const CAMPAIGN_START = '2026-07-20'
+export const HISTORY_SCHEDULE_START = '2026-07-16'
 export const READINESS_DEADLINE = '2026-08-16'
 export const EXAM_WINDOW_START = '2026-08-17'
 export const EXAM_WINDOW_END = '2026-08-28'
@@ -90,13 +91,13 @@ function spreadCardsAcrossWindow(cards, start, end) {
 
     return {
       ...card,
-      sourceList: '16 July 32-day reset',
+      sourceList: '20 July fresh-start plan',
       status: statusForDate(dueDate),
       startDate,
       dueDate,
       dueDateTime: `${dueDate} 18:15`,
       slotLabel: `${MODULE_SLOTS[card.moduleGroup] ?? 'Protected study blocks'} · ${startDate}${startDate === dueDate ? '' : ` to ${dueDate}`} (${hours}h)`,
-      tags: [...new Set([...(card.tags ?? []), '16-july-reset'])],
+      tags: [...new Set([...(card.tags ?? []), '20-july-reset'])],
     }
   })
 }
@@ -119,7 +120,7 @@ function selectedLegacyExamCards() {
       checklist: (card.checklist ?? []).map(resetPhaseText),
       evidenceRequirement: resetPhaseText(card.evidenceRequirement),
       doneCondition: resetPhaseText(card.doneCondition),
-      trackerNotes: [resetPhaseText(card.trackerNotes), 'Rebased from zero on 16 July for the closed 32-day readiness window.']
+      trackerNotes: [resetPhaseText(card.trackerNotes), 'Replanned from 20 July against the remaining readiness window while preserving earlier work as history.']
         .filter(Boolean)
         .join(' '),
       }
@@ -172,7 +173,7 @@ function makeCard({
     moduleGroup,
     phase,
     phaseId: phase.toLowerCase().replace(/\s+/g, '-'),
-    sourceList: '16 July 32-day reset',
+    sourceList: '20 July fresh-start plan',
     status: 'Backlog',
     priority,
     slotType: moduleGroup === 'MAT700' ? 'PM' : 'Flex',
@@ -185,7 +186,7 @@ function makeCard({
     checklist,
     evidenceRequirement: evidence,
     doneCondition: done,
-    trackerNotes: 'Created for the 16 July 32-day recovery reset.',
+    trackerNotes: 'Created for the 20 July fresh-start recovery plan.',
     tags: [...new Set(tags)],
   }
 }
@@ -421,7 +422,6 @@ const projectCards = [
 ]
 
 const JOB_MAINTENANCE_WEEKS = [
-  ['2026-07-16', '2026-07-19', 'Score the master CV once', 'Run Cardiff’s CV checker once, save the baseline feedback, and choose the five highest-value fixes.'],
   ['2026-07-20', '2026-07-26', 'Improve one clean master CV', 'Remove repetition, strengthen outcomes and measurements, and lock one clean UK master CV.'],
   ['2026-07-27', '2026-08-02', 'Create two lightweight CV tracks', 'Create Software/Backend/Platform and Data/Analytics/ML variants while keeping roughly 80–85% shared.'],
   ['2026-08-03', '2026-08-09', 'Set up Higherin', 'Create the core profile, upload the CV, set availability/location, and enable useful alerts only.'],
@@ -477,6 +477,7 @@ const adminCards = [
 ]
 
 export const rescueCards = [...examCards, ...projectCards, ...jobCards, ...adminCards]
+  .filter((card) => !card.startDate || card.startDate >= CAMPAIGN_START)
   .sort((a, b) => {
     const dateA = a.dueDate || a.startDate || '9999-12-31'
     const dateB = b.dueDate || b.startDate || '9999-12-31'
@@ -495,7 +496,7 @@ export const campaignMeta = {
   readinessDeadline: READINESS_DEADLINE,
   examWindowStart: EXAM_WINDOW_START,
   examWindowEnd: EXAM_WINDOW_END,
-  generatedFrom: '16 July zero-based reset over the legacy Trello card catalogue',
+  generatedFrom: '20 July fresh-start plan over the verified module card catalogue',
   cardCount: rescueCards.length,
   projectInternalDeadline: '2026-08-02',
   projectSubmissionDeadline: '2026-08-06',
@@ -505,7 +506,7 @@ function rule({
   id,
   title,
   category,
-  from = CAMPAIGN_START,
+  from = HISTORY_SCHEDULE_START,
   to = CAMPAIGN_END,
   weekdays = [1, 2, 3, 4, 5, 6, 7],
   start,

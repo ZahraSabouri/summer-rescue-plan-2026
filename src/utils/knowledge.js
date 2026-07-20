@@ -73,6 +73,10 @@ export function normaliseNote(value, fallbackModuleId = '') {
     kind: KIND_IDS.has(value.kind) ? value.kind : 'concept',
     topic: text(value.topic).trim() || DEFAULT_TOPIC,
     body: text(value.body),
+    // Editorial importance, set by the note's author. Kept separate from
+    // meta.starred, which is the reader's own bookmark — otherwise a seeded
+    // star and a user star fight over the same field.
+    priority: value.priority === 'high' ? 'high' : 'normal',
     tags: stringList(value.tags),
     cardIds: stringList(value.cardIds),
     createdAt: text(value.createdAt) || nowIso(),
@@ -197,6 +201,61 @@ export function searchNotes(notes, query) {
 export function notesForCard(notes, cardId) {
   if (!cardId) return []
   return notes.filter((note) => note.cardIds.includes(cardId))
+}
+
+// Many short notes are easier to author as one Markdown file per topic than as
+// one file each. A line beginning with `@@` opens a note and carries its
+// metadata as `key=value` pairs separated by `|`; everything up to the next
+// `@@` is that note's body.
+//
+//   @@ id=s1-what-is-ml | title=What ML is | kind=concept | star | tags=a,b
+//   body markdown...
+//
+export function parseNoteBundle(source, defaults = {}) {
+  const lines = String(source ?? '').replace(/\r\n?/g, '\n').split('\n')
+  const notes = []
+  let current = null
+  // Code samples are the point of these notes, so a `@@` that happens to sit
+  // inside a fenced block must not be mistaken for a note header.
+  let inFence = false
+
+  const commit = () => {
+    if (!current) return
+    const note = normaliseNote({ ...current, body: current.bodyLines.join('\n').trim(), seeded: true })
+    if (note) notes.push(note)
+    current = null
+  }
+
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) inFence = !inFence
+    if (!inFence && line.startsWith('@@')) {
+      commit()
+      const meta = {}
+      for (const part of line.slice(2).split('|')) {
+        const chunk = part.trim()
+        if (!chunk) continue
+        if (chunk === 'key') {
+          meta.priority = 'high'
+          continue
+        }
+        const split = chunk.indexOf('=')
+        if (split < 0) continue
+        meta[chunk.slice(0, split).trim()] = chunk.slice(split + 1).trim()
+      }
+      current = {
+        ...defaults,
+        ...meta,
+        cardIds: meta.cards ? meta.cards.split(',').map((id) => id.trim()).filter(Boolean) : (defaults.cardIds ?? []),
+        tags: meta.tags ? meta.tags.split(',').map((tag) => tag.trim()).filter(Boolean) : [],
+        bodyLines: [],
+      }
+      continue
+    }
+    if (current) current.bodyLines.push(line)
+  }
+  commit()
+
+  return notes
 }
 
 export function knowledgeSummary(notes) {

@@ -16,7 +16,7 @@ import { CatchUpPanel } from './CatchUpPanel'
 import { ReplanPanel } from './ReplanPanel'
 import { YesterdayStrip } from './DayReview'
 import { DailyAgenda } from './ScheduleView'
-import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
+import { alignTodayStudyBlocks, buildExecutionContext, summariseDay } from '../utils/schedule.js'
 
 function PersistedDetails({ storageKey, className, children }) {
   const [open, setOpen] = useState(() => {
@@ -250,6 +250,14 @@ export function TodayView({
     () => buildTodayPicks(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
   )
+  const agendaBlocks = useMemo(
+    () => alignTodayStudyBlocks(
+      dayBlocks,
+      picks.map((item) => item.card),
+      scheduleDate || referenceDate,
+    ),
+    [dayBlocks, picks, referenceDate, scheduleDate],
+  )
   const catchUp = useMemo(
     () => buildCatchUp(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
@@ -264,17 +272,17 @@ export function TodayView({
     return () => window.clearInterval(id)
   }, [])
   const execution = useMemo(
-    () => buildExecutionContext(dayBlocks, cards, scheduleDate || referenceDate, { now: clock, activeCard: activeTimerCard }),
-    [activeTimerCard, cards, clock, dayBlocks, referenceDate, scheduleDate],
+    () => buildExecutionContext(agendaBlocks, cards, scheduleDate || referenceDate, { now: clock, activeCard: activeTimerCard }),
+    [activeTimerCard, agendaBlocks, cards, clock, referenceDate, scheduleDate],
   )
   const capacity = useMemo(() => {
-    const summary = summariseDay(dayBlocks)
+    const summary = summariseDay(agendaBlocks)
     const academicHours = Math.round((summary.academicMinutes / 60) * 10) / 10
     return {
       academicHours,
       remainingHours: Math.max(0, Math.round((8 - academicHours) * 10) / 10),
     }
-  }, [dayBlocks])
+  }, [agendaBlocks])
 
   return (
     <div className="today-view">
@@ -389,10 +397,9 @@ export function TodayView({
         </header>
         <DailyAgenda
           date={scheduleDate || referenceDate}
-          blocks={dayBlocks}
+          blocks={agendaBlocks}
           cards={cards}
           onOpenCard={onOpenCard}
-          onOpenBlock={() => onOpenView('review')}
           onCardStatusChange={actions.onStatusChange}
           onToggleCardDone={actions.onToggleDone}
           referenceDate={referenceDate}

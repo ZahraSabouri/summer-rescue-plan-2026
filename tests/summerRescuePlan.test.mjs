@@ -26,7 +26,7 @@ function mondayOf(dateString) {
 
 test('summer rescue schedule protects capacity and contains no collisions', () => {
   const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, CAMPAIGN_END)
-  assert.equal(days.length, 32)
+  assert.equal(days.length, 28)
 
   for (const day of days) {
     const summary = summariseDay(day.blocks)
@@ -51,7 +51,6 @@ test('confirmed CMT501 classes use the TimeEdit blocks', () => {
   assert.deepEqual(
     classBlocks.map((block) => [block.date, block.start, block.end]),
     [
-      ['2026-07-16', '10:00', '13:00'],
       ['2026-07-23', '10:00', '13:00'],
       ['2026-07-30', '10:00', '13:00'],
       ['2026-07-30', '14:00', '15:00'],
@@ -85,10 +84,15 @@ test('job hunt, project, hygiene, groceries, and outside time stay bounded', () 
     assert.ok(row.groceries >= 1, `grocery block in ${week}`)
   }
 
-  for (const date of ['2026-07-19', '2026-07-26', '2026-08-09', '2026-08-16']) {
+  for (const [date, expectedAcademicMinutes] of [
+    ['2026-07-26', 360],
+    ['2026-08-02', 480],
+    ['2026-08-09', 360],
+    ['2026-08-16', 360],
+  ]) {
     const day = days.find((item) => item.date === date)
     const summary = summariseDay(day?.blocks ?? [])
-    assert.equal(summary.academicMinutes, 360, `job-action Sunday academic load on ${date}`)
+    assert.equal(summary.academicMinutes, expectedAcademicMinutes, `job-action Sunday academic load on ${date}`)
     assert.equal(summary.jobMinutes, 65, `job-maintenance Sunday load on ${date}`)
   }
 
@@ -145,7 +149,7 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
   assert.deepEqual(hoursByModule, { 'Applied ML': 70, 'Time Series': 88, MAT700: 52 })
 
   const projectCards = rescueCards.filter((card) => card.moduleGroup === 'Group Project')
-  assert.equal(projectCards.length, 5)
+  assert.equal(projectCards.length, 4)
   assert.ok(projectCards.every((card) => !/e-voting|D'Hondt/i.test(`${card.title} ${card.description}`)))
   assert.ok(projectCards.some((card) => card.dueDate === '2026-08-02'))
   assert.ok(projectCards.some((card) => card.dueDate === '2026-08-06' && /20[- ]minute/.test(`${card.title} ${card.description}`)))
@@ -153,8 +157,8 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
   const jobHours = rescueCards
     .filter((card) => card.moduleGroup === 'Job Hunt')
     .reduce((sum, card) => sum + card.estimatedHours, 0)
-  assert.equal(rescueCards.filter((card) => card.moduleGroup === 'Job Hunt').length, 5)
-  assert.equal(jobHours, 10)
+  assert.equal(rescueCards.filter((card) => card.moduleGroup === 'Job Hunt').length, 4)
+  assert.equal(jobHours, 8)
 })
 
 test('plan reset preserves completed history and drops unfinished pre-reset cards', () => {
@@ -207,7 +211,7 @@ test('plan reset preserves completed history and drops unfinished pre-reset card
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   assert.equal(migrated.settings.referenceDate, today)
-  assert.equal(migrated.settings.campaignStart, '2026-07-16')
+  assert.equal(migrated.settings.campaignStart, '2026-07-20')
   assert.equal(migrated.settings.campaignEnd, '2026-08-16')
   assert.equal(migrated.settings.mat700Active, false)
   assert.equal(migrated.settings.theme, 'dark')
@@ -215,9 +219,9 @@ test('plan reset preserves completed history and drops unfinished pre-reset card
   assert.equal(migrated.cards['card-001'].actualHours, 2.5)
   assert.equal(migrated.cards['card-001'].notes[0].text, 'Keep this')
   assert.equal(migrated.addedCards.length, 1)
-  assert.equal(migrated.addedCards[0].title, 'HISTORY — life admin completed before reset')
+  assert.equal(migrated.addedCards[0].title, 'HISTORY - 19 Jul - Keep completed custom card')
   assert.equal(migrated.addedCards[0].phase, 'Phase 0')
-  assert.equal(migrated.addedCards[0].dueDateTime, '2026-07-16 00:00')
+  assert.equal(migrated.addedCards[0].dueDateTime, '2026-07-19 23:59')
   assert.equal(migrated.cards['custom-2'], undefined)
   assert.equal(migrated.moduleNotes.aml, 'Keep module note')
   assert.equal(migrated.focusRewards.points, 140)
@@ -227,7 +231,7 @@ test('plan reset preserves completed history and drops unfinished pre-reset card
   assert.deepEqual(migrateTrackerState(migrated), migrated)
 })
 
-test('a later schema revision preserves live post-reset progress', () => {
+test('the 20 July reset preserves logged progress and drops empty old routine cards', () => {
   const live = {
     version: 4,
     cards: {
@@ -245,6 +249,41 @@ test('a later schema revision preserves live post-reset progress', () => {
   }
   const migrated = migrateTrackerState(live)
   assert.equal(migrated.cards['card-live'].actualHours, 1.5)
-  assert.equal(migrated.cards['custom-live'].status, 'This Week')
-  assert.equal(migrated.addedCards.length, 1)
+  assert.equal(migrated.cards['custom-live'], undefined)
+  assert.equal(migrated.addedCards.length, 0)
+})
+
+test('the 20 July reset files touched cards on 19 July without rewriting log timestamps', () => {
+  const live = {
+    version: 5,
+    cards: {
+      'card-001': {
+        checklist: { 'card-001-check-0': true },
+        activity: [{ id: 'a1', action: 'Updated checklist', at: '2026-07-16T16:24:19.362Z' }],
+      },
+      'card-002': {
+        status: 'Rescue Lane',
+        activity: [{ id: 'a2', action: 'Moved card', details: 'Rescue Lane', at: '2026-07-18T20:07:37.303Z' }],
+      },
+    },
+    addedCards: [],
+    dayLogs: { '2026-07-16': { note: 'Keep the day exactly as logged' } },
+    resourceProgress: {
+      'aml-video-intro': { progressPercent: 100, updatedAt: '2026-07-19T17:28:41.742Z' },
+    },
+    settings: {
+      planRevision: '2026-07-16-zero-based-32-day-plan-v9',
+      campaignStart: '2026-07-16',
+      campaignEnd: '2026-08-16',
+    },
+  }
+
+  const migrated = migrateTrackerState(live)
+  assert.equal(migrated.settings.campaignStart, '2026-07-20')
+  assert.equal(migrated.cards['card-001'].status, 'Done')
+  assert.equal(migrated.cards['card-001'].edits.dueDate, '2026-07-19')
+  assert.equal(migrated.cards['card-001'].activity[0].at, '2026-07-16T16:24:19.362Z')
+  assert.equal(migrated.cards['card-002'], undefined)
+  assert.equal(migrated.dayLogs['2026-07-16'].note, 'Keep the day exactly as logged')
+  assert.equal(migrated.resourceProgress['aml-video-intro'].updatedAt, '2026-07-19T17:28:41.742Z')
 })

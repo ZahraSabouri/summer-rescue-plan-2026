@@ -224,6 +224,23 @@
   color: var(--blue);
 }
 
+/* Editorial "this one matters" marker, distinct from the reader's own star. */
+.kn-key-mark {
+  margin-right: 4px;
+  font-size: 0.66rem;
+  color: var(--accent);
+}
+
+.kn-key-chip {
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: var(--radius-pill);
+}
+
 .kn-star-mark {
   margin-left: auto;
   font-size: 0.8rem;
@@ -632,49 +649,138 @@
 /* Tables: the reason this feature exists. Sticky header, zebra rows, and a
    scroll frame so an eight-column reference table stays readable. */
 
-.md-table-wrap {
-  max-width: 100%;
+.md-table-frame {
   margin: 0 0 14px;
-  overflow-x: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
+/* Expanded lifts the table out of the reading column to full viewport width.
+   z-index clears the app's sticky header (240) but stays under dialogs and
+   toasts (6000+). */
+.md-table-frame.is-expanded {
+  position: fixed;
+  inset: 3vh 3vw;
+  z-index: 4001;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--panel);
+  border-color: var(--line-strong);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+}
+
+.md-table-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: var(--overlay);
+}
+
+/* Holds the document's place in the flow while its table is portalled out. */
+.md-table-placeholder {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.md-table-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.md-table-meta {
+  font-family: var(--font-num);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.md-table-expand {
+  padding: 3px 12px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.md-table-expand:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.md-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.md-table-frame.is-expanded .md-table-wrap {
+  flex: 1;
+}
+
 .md-table-wrap:focus-visible {
   outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* Below this width the columns of a reference table squeeze to one word per
    line, so scroll the frame instead of crushing the content. */
 .md-table {
   width: 100%;
-  min-width: 640px;
+  min-width: 660px;
   border-collapse: collapse;
-  font-size: 0.82rem;
-  line-height: 1.45;
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
 .md-table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 9px 12px;
-  font-size: 0.74rem;
+  padding: 10px 14px;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--muted);
+  color: var(--ink);
   background: var(--chip-bg);
-  border-bottom: 1px solid var(--line-strong);
+  border-bottom: 2px solid var(--line-strong);
 }
 
 .md-table td {
-  padding: 9px 12px;
+  padding: 10px 14px;
   vertical-align: top;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+/* Vertical rules: with this many columns, row striping alone is not enough to
+   keep your eye on one column. */
+.md-table th + th,
+.md-table td + td {
+  border-left: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+}
+
+.md-table tbody tr td:first-child {
+  font-weight: 600;
 }
 
 .md-table tbody tr:nth-child(even) {
@@ -722,22 +828,156 @@
 
 .md-math-block {
   margin: 0 0 14px;
-  padding: 14px 18px;
+  padding: 16px 18px;
   overflow-x: auto;
-  font-family: var(--font-serif);
-  font-size: 1rem;
-  font-style: italic;
   text-align: center;
-  white-space: pre-wrap;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
-.md-math-inline {
-  padding: 0 3px;
+/* ---------- TeX subset rendering ---------- */
+
+.tex {
   font-family: var(--font-serif);
   font-style: italic;
+  white-space: nowrap;
+}
+
+.tex-inline {
+  padding: 0 2px;
+}
+
+.tex-display {
+  display: inline-block;
+  font-size: 1.15rem;
+  line-height: 1.9;
+  white-space: normal;
+}
+
+.tex sub,
+.tex sup {
+  font-size: 0.72em;
+  font-style: normal;
+}
+
+.tex-upright,
+.tex-bigop {
+  font-style: normal;
+}
+
+.tex-bold {
+  font-weight: 700;
+  font-style: italic;
+}
+
+.tex-bigop {
+  font-size: 1.4em;
+  padding: 0 1px;
+  vertical-align: -0.16em;
+}
+
+/* Stacked fraction, so a/b reads as a real fraction rather than a slash.
+   Fractions and big operators both align on `middle` so a formula mixing them
+   keeps one visual axis instead of stepping up and down. */
+.tex-frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  padding: 0 3px;
+  text-align: center;
+}
+
+.tex-num {
+  display: block;
+  padding: 0 4px 1px;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.92em;
+}
+
+.tex-den {
+  display: block;
+  padding: 1px 4px 0;
+  font-size: 0.92em;
+}
+
+/* Sum/product with limits above and below, display mode only. */
+.tex-bigop-limits {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.tex-bigop-limits .tex-limit {
+  font-size: 0.62em;
+  font-style: normal;
+}
+
+.tex-binom {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.tex-binom-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.86em;
+  line-height: 1.1;
+}
+
+.tex-paren {
+  font-size: 1.7em;
+  font-style: normal;
+}
+
+.tex-sqrt {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.tex-radical {
+  font-style: normal;
+}
+
+.tex-radicand {
+  border-top: 1px solid currentColor;
+  padding: 0 2px;
+  margin-top: 1px;
+}
+
+/* Accents sit above the glyph, centred. A combining character renders high and
+   to the right in this serif face, which reads as a superscript rather than a
+   bar — and x-bar / y-hat appear constantly in these notes. */
+.tex-accent {
+  position: relative;
+  display: inline-block;
+}
+
+.tex-accent-base {
+  display: inline-block;
+}
+
+.tex-accent-bar .tex-accent-base {
+  border-top: 1px solid currentColor;
+  padding-top: 1px;
+  margin-top: 2px;
+}
+
+.tex-accent-mark {
+  position: absolute;
+  top: -0.42em;
+  right: 0;
+  left: 0;
+  font-size: 0.9em;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
 }
 
 /* ---------- Self test ---------- */
@@ -1083,7 +1323,7 @@
   border: 1px solid var(--line);
 }
 
-:root[data-theme='dark'] .md-table-wrap,
+:root[data-theme='dark'] .md-table-frame,
 :root[data-theme='dark'] .kn-question,
 :root[data-theme='dark'] .md-math-block {
   background: color-mix(in srgb, var(--surface) 70%, #000);

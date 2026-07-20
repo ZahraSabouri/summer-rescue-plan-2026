@@ -15,7 +15,7 @@
 // that utils stay free of the card catalogue. examDates.test.mjs asserts they
 // have not drifted apart.
 
-export const CAMPAIGN_START = '2026-07-16'
+export const CAMPAIGN_START = '2026-07-20'
 export const EXAM_WINDOW_START = '2026-08-17'
 export const EXAM_WINDOW_END = '2026-08-28'
 

@@ -420,6 +420,7 @@ export function openTrackerDb(dbPath) {
   ensureColumn(db, 'resource_reviewed', 'progress_percent', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'resource_reviewed', 'understanding_percent', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'resource_reviewed', 'note', "TEXT NOT NULL DEFAULT ''")
+  ensureColumn(db, 'knowledge_notes', 'priority', "TEXT NOT NULL DEFAULT 'normal'")
   db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(
     'schema_version',
     String(SCHEMA_VERSION),
@@ -636,7 +637,7 @@ export function openTrackerDb(dbPath) {
 
       const knowledge = { notes: {}, meta: {} }
       for (const row of rows(
-        `SELECT id, module_id, title, kind, topic, body, tags, card_ids, created_at, updated_at
+        `SELECT id, module_id, title, kind, topic, body, priority, tags, card_ids, created_at, updated_at
          FROM knowledge_notes`,
       )) {
         knowledge.notes[row.id] = {
@@ -646,6 +647,7 @@ export function openTrackerDb(dbPath) {
           kind: row.kind ?? 'concept',
           topic: row.topic ?? '',
           body: row.body ?? '',
+          priority: row.priority === 'high' ? 'high' : 'normal',
           tags: parseJson(row.tags, []),
           cardIds: parseJson(row.card_ids, []),
           createdAt: row.created_at ?? '',
@@ -829,8 +831,8 @@ export function openTrackerDb(dbPath) {
         const knowledge = plainObject(state.knowledge)
         db.exec('DELETE FROM knowledge_notes')
         const knowledgeNoteStmt = db.prepare(
-          `INSERT INTO knowledge_notes (id, module_id, title, kind, topic, body, tags, card_ids, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO knowledge_notes (id, module_id, title, kind, topic, body, priority, tags, card_ids, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         for (const [noteId, note] of Object.entries(plainObject(knowledge.notes))) {
           const entry = plainObject(note)
@@ -841,6 +843,7 @@ export function openTrackerDb(dbPath) {
             text(entry.kind || 'concept'),
             text(entry.topic),
             text(entry.body),
+            entry.priority === 'high' ? 'high' : 'normal',
             JSON.stringify(Array.isArray(entry.tags) ? entry.tags : []),
             JSON.stringify(Array.isArray(entry.cardIds) ? entry.cardIds : []),
             orNull(entry.createdAt),

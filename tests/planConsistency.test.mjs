@@ -4,7 +4,7 @@ import test from 'node:test'
 import { scheduleExceptions, scheduleRules } from '../src/data/summerRescuePlan.js'
 import { buildDayReview, cardReviewLogKey } from '../src/utils/dayReview.js'
 import { cardPlanLane, filterCards } from '../src/utils/progress.js'
-import { buildDayTimeline, expandScheduleForDate, resolveScheduledCard } from '../src/utils/schedule.js'
+import { alignTodayStudyBlocks, buildDayTimeline, expandScheduleForDate, resolveScheduledCard } from '../src/utils/schedule.js'
 
 const REFERENCE_DATE = '2026-07-17'
 
@@ -111,6 +111,30 @@ test('one day timeline never pulls a different dated module card into an empty b
   ]
 
   assert.deepEqual(ids, ['due'])
+})
+
+test('today study blocks follow Mission order while explicit links stay pinned', () => {
+  const blocks = [
+    { id: 'breakfast', date: '2026-07-20', start: '08:00', end: '08:30', title: 'Breakfast', category: 'meal' },
+    { id: 'aml-1', date: '2026-07-20', start: '09:00', end: '11:00', title: 'Applied ML queue', category: 'study', moduleGroup: 'Applied ML' },
+    { id: 'aml-2', date: '2026-07-20', start: '11:15', end: '13:15', title: 'Applied ML queue', category: 'study', moduleGroup: 'Applied ML' },
+    { id: 'admin', date: '2026-07-20', start: '20:00', end: '20:30', title: 'Admin', category: 'admin', moduleGroup: 'Admin', cardId: 'admin-card' },
+  ]
+  const mission = [
+    card({ id: 'ts', dueDate: '2026-07-20', moduleGroup: 'Time Series' }),
+    card({ id: 'mat', dueDate: '2026-07-20', moduleGroup: 'MAT700' }),
+    card({ id: 'admin-card', dueDate: '2026-07-20', moduleGroup: 'Admin' }),
+    card({ id: 'tomorrow', dueDate: '2026-07-21', moduleGroup: 'Applied ML' }),
+  ]
+
+  const aligned = alignTodayStudyBlocks(blocks, mission, '2026-07-20')
+
+  assert.equal(aligned[0], blocks[0])
+  assert.equal(aligned[1].cardId, 'ts')
+  assert.equal(aligned[1].moduleGroup, 'Time Series')
+  assert.equal(aligned[2].cardId, 'mat')
+  assert.equal(aligned[2].moduleGroup, 'MAT700')
+  assert.equal(aligned[3], blocks[3])
 })
 
 test('review exposes every card due that day and preserves a skipped outcome', () => {

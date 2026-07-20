@@ -12,11 +12,12 @@ import {
 } from '../utils/knowledge'
 import { buildToc, countWords, parseMarkdown, readMinutes, splitNoteSections } from '../utils/markdown'
 import { formatDate } from '../utils/progress'
-import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
+import { Inline, MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import './ModuleKnowledge.css'
 
 const FILTERS = [
   { id: 'all', label: 'All' },
+  { id: 'key', label: 'Key' },
   { id: 'due', label: 'Due' },
   { id: 'starred', label: 'Starred' },
 ]
@@ -36,7 +37,14 @@ function NoteRailItem({ note, active, onSelect }) {
         {kind.icon}
       </span>
       <span className="kn-rail-text">
-        <strong>{note.title}</strong>
+        <strong>
+          {note.priority === 'high' && (
+            <span className="kn-key-mark" title="Key note">
+              ◆
+            </span>
+          )}
+          {note.title}
+        </strong>
         <small>
           {kind.label}
           {note.review.state === 'due' && <span className="kn-due-flag"> · due</span>}
@@ -87,11 +95,15 @@ function SelfTest({ note, questions, onRate }) {
           const open = revealed.has(index)
           return (
             <li key={index} className={`kn-question${rating ? ` rated-${rating}` : ''}`}>
-              <p className="kn-question-text">{entry.question}</p>
-              {entry.answer && (
+              <p className="kn-question-text">
+                <Inline nodes={entry.question} />
+              </p>
+              {entry.answerText && (
                 <div className="kn-answer-zone">
                   {open ? (
-                    <p className="kn-answer">{entry.answer}</p>
+                    <p className="kn-answer">
+                      <Inline nodes={entry.answer} />
+                    </p>
                   ) : (
                     <button type="button" className="text-button" onClick={() => toggleReveal(index)}>
                       Show answer
@@ -294,6 +306,7 @@ function NoteReader({
             {kind.label}
           </span>
           <span className="kn-topic-chip">{note.topic}</span>
+          {note.priority === 'high' && <span className="kn-key-chip">◆ Key note</span>}
           <span className={`kn-review-chip state-${note.review.state}`}>{note.review.label}</span>
         </div>
         <h2>{note.title}</h2>
@@ -478,6 +491,7 @@ export function ModuleKnowledge({
 
   const visible = useMemo(() => {
     const searched = searchNotes(notes, query)
+    if (filter === 'key') return searched.filter((note) => note.priority === 'high')
     if (filter === 'due') return searched.filter((note) => note.review.state !== 'scheduled')
     if (filter === 'starred') return searched.filter((note) => note.meta.starred)
     return searched

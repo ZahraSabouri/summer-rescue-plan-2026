@@ -8552,6 +8552,64 @@ button.countdown-chip:hover {
   width: 64px;
 }
 
+/* Keep card inputs and actions aligned even when the surrounding card is narrow. */
+.work-card-controls,
+.work-card.compact .work-card-controls,
+.work-card.board-card .work-card-controls {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.card-control-fields {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(108px, 1fr) minmax(72px, 88px) minmax(82px, 100px);
+  gap: 8px;
+  align-items: end;
+}
+
+.card-control-actions {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+.progress-percent-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 5px;
+}
+
+.progress-percent-field > span:first-child {
+  grid-column: 1 / -1;
+}
+
+.progress-percent-field input {
+  width: 100%;
+}
+
+.work-card.board-card .card-control-fields {
+  grid-template-columns: auto;
+}
+
+@media (max-width: 560px) {
+  .card-control-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 460px) {
+  .card-control-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .review-block-actions {
   display: grid;
   gap: 7px;

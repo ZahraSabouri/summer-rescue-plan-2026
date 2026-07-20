@@ -16,6 +16,8 @@ const PRIORITY_ORDER = {
   Low: 3,
 }
 
+const TODAY_STUDY_MODULES = new Set(['Applied ML', 'Time Series', 'MAT700'])
+
 function parseIsoDay(value) {
   const text = typeof value === 'string' ? value.slice(0, 10) : ''
   if (!ISO_DAY.test(text)) return null
@@ -233,6 +235,50 @@ export function summariseDay(blocks = []) {
   }
 
   return summary
+}
+
+/**
+ * Treat today's fixed study blocks as protected time capacity, then attach the
+ * ranked Mission cards to those slots in the same order. Explicit card links
+ * stay pinned, and cards from another date never enter today's agenda.
+ */
+export function alignTodayStudyBlocks(blocks = [], orderedCards = [], date = '') {
+  const day = normaliseDay(date)
+  const safeBlocks = Array.isArray(blocks) ? blocks : []
+  const safeCards = Array.isArray(orderedCards) ? orderedCards : []
+  if (!day || safeBlocks.length === 0 || safeCards.length === 0) return safeBlocks
+
+  const explicitlyLinked = new Set()
+  for (const block of safeBlocks) {
+    if (block?.cardId) explicitlyLinked.add(block.cardId)
+    if (Array.isArray(block?.cardIds)) block.cardIds.filter(Boolean).forEach((id) => explicitlyLinked.add(id))
+  }
+
+  const seen = new Set()
+  const missionCards = safeCards.filter((card) => {
+    if (!card?.id || seen.has(card.id) || explicitlyLinked.has(card.id)) return false
+    if (normaliseDay(card.dueDate || card.startDate) !== day) return false
+    if (card.done || card.status === 'Done' || !TODAY_STUDY_MODULES.has(card.moduleGroup)) return false
+    seen.add(card.id)
+    return true
+  })
+  if (missionCards.length === 0) return safeBlocks
+
+  let missionIndex = 0
+  return safeBlocks.map((block) => {
+    const hasExplicitCard = Boolean(block?.cardId || (Array.isArray(block?.cardIds) && block.cardIds.length > 0))
+    if (block?.category !== 'study' || hasExplicitCard || missionIndex >= missionCards.length) return block
+
+    const card = missionCards[missionIndex]
+    missionIndex += 1
+    return {
+      ...block,
+      cardId: card.id,
+      moduleGroup: card.moduleGroup,
+      title: `${card.moduleGroup} focus — mission ${missionIndex}`,
+      todayMissionRank: missionIndex,
+    }
+  })
 }
 
 /** Find overlapping blocks on the same date. Boundary-touching blocks do not conflict. */

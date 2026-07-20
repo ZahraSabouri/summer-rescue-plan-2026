@@ -1,7 +1,9 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { parseMarkdown } from '../utils/markdown'
+import { TexMath } from './TexMath'
 
-function Inline({ nodes }) {
+export function Inline({ nodes }) {
   return nodes.map((node, index) => {
     switch (node.type) {
       case 'text':
@@ -13,11 +15,7 @@ function Inline({ nodes }) {
           </code>
         )
       case 'math':
-        return (
-          <span key={index} className="md-math-inline">
-            {node.value}
-          </span>
-        )
+        return <TexMath key={index} source={node.value} />
       case 'strong':
         return (
           <strong key={index}>
@@ -64,6 +62,91 @@ function MarkdownList({ block }) {
   )
 }
 
+// Reference tables run to eight columns, which no reading column can hold.
+// The frame scrolls, and Expand lifts it out to full viewport width — that is
+// the only way a table this wide is actually readable.
+function MarkdownTable({ block }) {
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) return undefined
+    function onKeyDown(event) {
+      if (event.key === 'Escape') setExpanded(false)
+    }
+    // Freeze the page behind the overlay, or scrolling inside the table drifts
+    // the document underneath it.
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [expanded])
+
+  const columns = block.header.length
+
+  const frame = (
+    <div className={`md-table-frame${expanded ? ' is-expanded' : ''}`}>
+      <div className="md-table-toolbar">
+        <span className="md-table-meta">
+          {columns} columns · {block.rows.length} rows
+        </span>
+        <button type="button" className="md-table-expand" onClick={() => setExpanded((value) => !value)}>
+          {expanded ? 'Close' : 'Expand'}
+        </button>
+      </div>
+      <div className="md-table-wrap" tabIndex={0} role="group" aria-label={`Table, ${columns} columns`}>
+        <table className="md-table">
+          <thead>
+            <tr>
+              {block.header.map((cell, index) => (
+                <th key={index} style={{ textAlign: block.align[index] ?? 'left' }}>
+                  <Inline nodes={cell} />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td key={cellIndex} style={{ textAlign: block.align[cellIndex] ?? 'left' }}>
+                    <Inline nodes={cell} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+
+  if (!expanded) return frame
+
+  // Portalled to body: an ancestor in the workspace creates a stacking context,
+  // which would otherwise trap the overlay behind the app header no matter how
+  // high its z-index goes.
+  return (
+    <>
+      <div className="md-table-placeholder">
+        <span>Table expanded</span>
+        <button type="button" className="md-table-expand" onClick={() => setExpanded(false)}>
+          Close
+        </button>
+      </div>
+      {createPortal(
+        <>
+          <div className="md-table-backdrop" onClick={() => setExpanded(false)} />
+          {frame}
+        </>,
+        document.body,
+      )}
+    </>
+  )
+}
+
 function MarkdownBlock({ block }) {
   switch (block.type) {
     case 'heading': {
@@ -83,34 +166,7 @@ function MarkdownBlock({ block }) {
         </p>
       )
     case 'table':
-      // Wide reference tables are the whole point of these notes, so the table
-      // scrolls inside its own frame rather than stretching the reading column.
-      return (
-        <div className="md-table-wrap" tabIndex={0} role="group" aria-label="Table">
-          <table className="md-table">
-            <thead>
-              <tr>
-                {block.header.map((cell, index) => (
-                  <th key={index} style={{ textAlign: block.align[index] ?? 'left' }}>
-                    <Inline nodes={cell} />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {block.rows.map((row, rowIndex) => (
-                <tr key={rowIndex}>
-                  {row.map((cell, cellIndex) => (
-                    <td key={cellIndex} style={{ textAlign: block.align[cellIndex] ?? 'left' }}>
-                      <Inline nodes={cell} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+      return <MarkdownTable block={block} />
     case 'code':
       return (
         <div className="md-pre-wrap">
@@ -121,7 +177,11 @@ function MarkdownBlock({ block }) {
         </div>
       )
     case 'math':
-      return <div className="md-math-block">{block.value}</div>
+      return (
+        <div className="md-math-block">
+          <TexMath source={block.value} display />
+        </div>
+      )
     case 'quote':
       return (
         <blockquote className="md-quote">

@@ -16,6 +16,7 @@ import { TodayView } from './components/TodayView'
 import { Celebration } from './components/Celebration'
 import { ImportPreviewDialog } from './components/ImportPreviewDialog'
 import { InstallDesktopApp } from './components/InstallDesktopApp'
+import { buildHashRoute, parseHashRoute } from './utils/appRoute'
 
 // Route-level code splitting.
 //
@@ -169,15 +170,8 @@ const VIEW_META = {
 const VALID_VIEW_IDS = new Set(Object.keys(VIEW_META))
 
 function parseAppHash() {
-  if (typeof window === 'undefined') return { view: 'today', resourceId: '', resourceMode: '' }
-  const value = window.location.hash.replace(/^#\/?/, '').trim()
-  const [viewPart = '', queryString = ''] = value.split('?')
-  const params = new URLSearchParams(queryString)
-  return {
-    view: VALID_VIEW_IDS.has(viewPart) ? viewPart : 'today',
-    resourceId: params.get('resource') ?? '',
-    resourceMode: params.get('mode') ?? '',
-  }
+  if (typeof window === 'undefined') return parseHashRoute('', VALID_VIEW_IDS)
+  return parseHashRoute(window.location.hash, VALID_VIEW_IDS)
 }
 
 function viewFromHash() {
@@ -506,9 +500,10 @@ function backupDoneCount(rawState) {
 export default function App() {
   const tracker = useTrackerState(ENRICHED_BASE_CARDS)
   const [activeView, setActiveView] = useState(() => viewFromHash())
+  const [activeModuleTab, setActiveModuleTab] = useState(() => parseAppHash().tab || 'overview')
   const [knowledgeFocus, setKnowledgeFocus] = useState(null)
   const [filters, setFilters] = useState(FILTER_DEFAULTS)
-  const [selectedCardId, setSelectedCardId] = useState(null)
+  const [selectedCardId, setSelectedCardId] = useState(() => parseAppHash().cardId || null)
   const [activeTimerCardId, setActiveTimerCardId] = useState(null)
   const [sessionStartSignal, setSessionStartSignal] = useState(0)
   const [replanUndo, setReplanUndo] = useState(null)
@@ -534,10 +529,11 @@ export default function App() {
   const [moduleNameEdits, setModuleNameEdits] = useState({})
   const [phaseNameEdits, setPhaseNameEdits] = useState({})
   const [entered, setEntered] = useState(() => {
+    const route = parseAppHash()
     try {
-      return localStorage.getItem('srp-skip-intro') === '1' || Boolean(resourceIdFromHash())
+      return localStorage.getItem('srp-skip-intro') === '1' || route.view !== 'today' || Boolean(route.cardId || route.resourceId)
     } catch {
-      return Boolean(resourceIdFromHash())
+      return route.view !== 'today' || Boolean(route.cardId || route.resourceId)
     }
   })
   const [skipIntro, setSkipIntro] = useState(() => {
@@ -754,17 +750,25 @@ export default function App() {
   }, [activeView])
 
   useEffect(() => {
-    const id = window.setTimeout(() => setSelectedCardId(null), 0)
-    return () => window.clearTimeout(id)
-  }, [activeView])
-
-  useEffect(() => {
-    function onHashChange() {
-      setFilters((current) => (current.module === 'all' ? current : { ...current, module: 'all' }))
-      setActiveView(viewFromHash())
+    function syncRouteFromLocation() {
+      const route = parseAppHash()
+      setActiveView((current) => {
+        if (current !== route.view) {
+          setFilters((currentFilters) => (
+            currentFilters.module === 'all' ? currentFilters : { ...currentFilters, module: 'all' }
+          ))
+        }
+        return route.view
+      })
+      setActiveModuleTab(route.tab || 'overview')
+      setSelectedCardId(route.cardId || null)
     }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
+    window.addEventListener('hashchange', syncRouteFromLocation)
+    window.addEventListener('popstate', syncRouteFromLocation)
+    return () => {
+      window.removeEventListener('hashchange', syncRouteFromLocation)
+      window.removeEventListener('popstate', syncRouteFromLocation)
+    }
   }, [])
 
   // A refresh or view change should land you at the top of the page, not wherever
@@ -778,17 +782,6 @@ export default function App() {
     document.querySelector('.app-main')?.scrollTo?.(0, 0)
     const frame = window.requestAnimationFrame(() => pageHeadingRef.current?.focus())
     return () => window.cancelAnimationFrame(frame)
-  }, [activeView])
-
-  useEffect(() => {
-    const resourceId = resourceIdFromHash()
-    const resourceMode = resourceModeFromHash()
-    const modeQuery = resourceId && resourceMode ? `&mode=${encodeURIComponent(resourceMode)}` : ''
-    const resourceQuery = resourceId ? `?resource=${encodeURIComponent(resourceId)}${modeQuery}` : ''
-    const nextHash = `#/${activeView}${resourceQuery}`
-    if (window.location.hash !== nextHash) {
-      window.history.replaceState(null, '', nextHash)
-    }
   }, [activeView])
 
   useEffect(() => {
@@ -933,14 +926,36 @@ export default function App() {
   const standaloneResource = activeResource && resourceModeFromHash() === 'reader' ? activeResource : null
   const showCardFilters = FILTERABLE_VIEWS.has(activeView)
 
+  function writeRoute(patch, { replace = false } = {}) {
+    const nextHash = buildHashRoute({ ...parseAppHash(), ...patch })
+    if (window.location.hash === nextHash) return
+    window.history[replace ? 'replaceState' : 'pushState'](null, '', nextHash)
+  }
+
+  function openCard(cardId) {
+    setSelectedCardId(cardId)
+    writeRoute({ cardId })
+  }
+
+  function closeCard({ replace = false } = {}) {
+    setSelectedCardId(null)
+    writeRoute({ cardId: '' }, { replace })
+  }
+
+  function openModuleTab(tab) {
+    setActiveModuleTab(tab)
+    setSelectedCardId(null)
+    setOpenResourceId(null)
+    hashResourceRef.current = ''
+    writeRoute({ tab, cardId: '', resourceId: '', resourceMode: '' })
+  }
+
   useEffect(() => {
     function openHashResource() {
       const resourceId = resourceIdFromHash()
       if (!resourceId) {
-        if (hashResourceRef.current) {
-          hashResourceRef.current = ''
-          setOpenResourceId(null)
-        }
+        hashResourceRef.current = ''
+        setOpenResourceId(null)
         return
       }
 
@@ -959,7 +974,11 @@ export default function App() {
 
     openHashResource()
     window.addEventListener('hashchange', openHashResource)
-    return () => window.removeEventListener('hashchange', openHashResource)
+    window.addEventListener('popstate', openHashResource)
+    return () => {
+      window.removeEventListener('hashchange', openHashResource)
+      window.removeEventListener('popstate', openHashResource)
+    }
   }, [activeView, allResources, openResourceId, tracker])
 
   const viewMeta = VIEW_META[activeView] ?? { title: LABEL_BY_ID[activeView] ?? 'View', subtitle: '' }
@@ -1126,7 +1145,7 @@ export default function App() {
   }
 
   const actions = {
-    onOpen: setSelectedCardId,
+    onOpen: openCard,
     onStatusChange: tracker.setStatus,
     onToggleDone: tracker.toggleDone,
     onHoursChange: tracker.setActualHours,
@@ -1164,6 +1183,8 @@ export default function App() {
     setSelectedCardId(null)
     setKnowledgeFocus({ moduleId: owner.id, noteId: note.id })
     setActiveView(owner.viewId)
+    setActiveModuleTab('knowledge')
+    writeRoute({ view: owner.viewId, tab: 'knowledge', cardId: '', resourceId: '', resourceMode: '' })
   }
 
   const knowledgeActions = {
@@ -1354,7 +1375,7 @@ export default function App() {
     if (!pendingImport) return
     downloadBackup(new Date().toISOString())
     tracker.importTrackerState(pendingImport.payload)
-    setSelectedCardId(null)
+    closeCard({ replace: true })
     setPendingImport(null)
     setSettingsOpen(false)
     setMessage('Current state backed up, then import applied.')
@@ -1443,6 +1464,8 @@ export default function App() {
 
   function openResource(resourceId) {
     setOpenResourceId(resourceId)
+    hashResourceRef.current = resourceId
+    writeRoute({ resourceId, resourceMode: '' })
     tracker.markResourceOpened(resourceId)
   }
 
@@ -1490,10 +1513,7 @@ export default function App() {
   function closeResource() {
     setOpenResourceId(null)
     hashResourceRef.current = ''
-    const parsed = parseAppHash()
-    if (parsed.resourceId) {
-      window.history.replaceState(null, '', `#/${VALID_VIEW_IDS.has(parsed.view) ? parsed.view : activeView}`)
-    }
+    writeRoute({ resourceId: '', resourceMode: '' })
   }
 
   function completeFocusSession(cardId, minutes) {
@@ -1526,24 +1546,36 @@ export default function App() {
 
   function resetTracker() {
     const confirmed = window.confirm(
-      'Restore the unfinished canonical 16 July plan? Completed cards and past day/focus history are retained, and a JSON backup is downloaded first. This does not move the campaign start to today; use Re-plan remaining exam cards for slippage.',
+      'Restore the unfinished canonical 20 July plan? Completed cards and past day/focus history are retained, and a JSON backup is downloaded first. This does not move the campaign start to today; use Re-plan remaining exam cards for slippage.',
     )
     if (!confirmed) return
     downloadBackup(new Date().toISOString())
     tracker.resetTrackerState()
-    setSelectedCardId(null)
-    setMessage('Backup exported; unfinished work restored to the 16 July plan while completed history was retained.')
+    closeCard({ replace: true })
+    setMessage('Backup exported; unfinished work restored to the 20 July plan while completed history was retained.')
   }
 
   function openGlobalView(view) {
+    const tab = studyModuleMap[view] ? 'overview' : ''
     setFilters(FILTER_DEFAULTS)
     setActiveView(view)
+    setActiveModuleTab(tab || 'overview')
+    setSelectedCardId(null)
+    setOpenResourceId(null)
+    hashResourceRef.current = ''
+    writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '' })
     setNavOpen(false)
   }
 
   function openModuleView(view, moduleGroup) {
+    const tab = studyModuleMap[view] ? 'overview' : ''
     setFilters({ ...FILTER_DEFAULTS, module: moduleGroup })
     setActiveView(view)
+    setActiveModuleTab(tab || 'overview')
+    setSelectedCardId(null)
+    setOpenResourceId(null)
+    hashResourceRef.current = ''
+    writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '' })
     setNavOpen(false)
   }
 
@@ -1569,6 +1601,8 @@ export default function App() {
       setFilters(next)
       setActiveView('table')
       setSelectedCardId(null)
+      setActiveModuleTab('overview')
+      writeRoute({ view: 'table', tab: '', cardId: '', resourceId: '', resourceMode: '' })
       setNavOpen(false)
       return
     }
@@ -1578,6 +1612,8 @@ export default function App() {
     setFilters(next)
     setActiveView('table')
     setSelectedCardId(null)
+    setActiveModuleTab('overview')
+    writeRoute({ view: 'table', tab: '', cardId: '', resourceId: '', resourceMode: '' })
     setNavOpen(false)
   }
 
@@ -1596,7 +1632,7 @@ export default function App() {
           dayBlocks={dayBlocks}
           scheduleDate={dayScheduleDate}
           campaignStart={schedule.campaignStart}
-          onOpenCard={setSelectedCardId}
+          onOpenCard={openCard}
           onOpenView={openGlobalView}
           activeTimerCard={activeTimerCard}
         />
@@ -1626,6 +1662,8 @@ export default function App() {
             referenceDate={referenceDate}
             mat700Active={mat700Active}
             setActiveView={(view) => openModuleView(view, studyModuleMap[activeView].moduleGroup)}
+            activeTab={activeModuleTab}
+            onTabChange={openModuleTab}
             moduleNote={tracker.state.moduleNotes?.[activeView] ?? ''}
             onModuleNoteChange={tracker.setModuleNote}
             moduleExamDate={moduleExamDates[activeView] ?? ''}
@@ -1637,6 +1675,8 @@ export default function App() {
             resourceProgress={tracker.state.resourceProgress}
             recentResourceIds={tracker.state.recentResourceIds}
             onResourceOpen={tracker.markResourceOpened}
+            onOpenResource={openResource}
+            activeResourceId={openResourceId}
             onResourceReviewedToggle={tracker.toggleResourceProgress}
             onResourceProgressChange={tracker.updateResourceProgress}
             onResourceUpload={uploadResourceForModule}
@@ -1665,7 +1705,7 @@ export default function App() {
           exceptions={scheduleExceptions}
           cards={tracker.cards}
           referenceDate={referenceDate}
-          onOpenCard={setSelectedCardId}
+          onOpenCard={openCard}
           onCardStatusChange={tracker.setStatus}
           onToggleCardDone={tracker.toggleDone}
           moduleExamDates={moduleExamDates}
@@ -1691,7 +1731,7 @@ export default function App() {
         <DayReview
           cards={tracker.cards}
           referenceDate={referenceDate}
-          onOpenCard={setSelectedCardId}
+          onOpenCard={openCard}
           onCardStatusChange={tracker.setStatus}
           onToggleCardDone={tracker.toggleDone}
         />
@@ -1726,7 +1766,7 @@ export default function App() {
             <RescueTriage
               overdueCards={stats.overdueCards}
               referenceDate={referenceDate}
-              onOpenCard={setSelectedCardId}
+              onOpenCard={openCard}
               onMarkDone={tracker.toggleDone}
               onMoveToRescueLane={(cardId) => tracker.setStatus(cardId, 'Rescue Lane')}
               onMarkWaiting={(cardId) => tracker.setStatus(cardId, 'Waiting / Blocked')}
@@ -1965,7 +2005,7 @@ export default function App() {
                 type="button"
                 className="eyebrow topbar-home-link"
                 title="Go to Today"
-                onClick={() => setActiveView('today')}
+                onClick={() => openGlobalView('today')}
               >
                 {campaignMeta.title}
               </button>
@@ -1980,7 +2020,7 @@ export default function App() {
                 type="button"
                 className={`countdown-chip${examCountdown <= 21 ? ' urgent' : ''}`}
                 title={`${examTarget.label} date ${examTarget.date} — open the schedule`}
-                onClick={() => setActiveView('schedule')}
+                onClick={() => openGlobalView('schedule')}
               >
                 <strong>{examCountdown > 0 ? examCountdown : examCountdown === 0 ? '0' : Math.abs(examCountdown)}</strong>
                 <span>{examCountdown > 0 ? `days to ${examTarget.label}` : examCountdown === 0 ? 'exam day' : 'days after exam'}</span>
@@ -2019,7 +2059,7 @@ export default function App() {
               notifications={displayNotifications}
               referenceDate={referenceDate}
               onGoView={openGlobalView}
-              onOpenCard={setSelectedCardId}
+              onOpenCard={openCard}
               onSetRead={setDisplayNotificationRead}
               onMarkAllRead={markAllDisplayNotificationsRead}
             />
@@ -2395,7 +2435,7 @@ export default function App() {
         resources={allResources}
         resourceProgress={tracker.state.resourceProgress}
         referenceDate={referenceDate}
-        onClose={() => setSelectedCardId(null)}
+        onClose={() => closeCard()}
         linkedNotes={linkedKnowledgeNotes}
         onOpenKnowledgeNote={openKnowledgeNote}
         onStatusChange={tracker.setStatus}
@@ -2437,7 +2477,7 @@ export default function App() {
         open={addDialogOpen}
         onClose={(newCardId) => {
           setAddDialogOpen(false)
-          if (newCardId) setSelectedCardId(newCardId)
+          if (newCardId) openCard(newCardId)
         }}
         onAddCard={tracker.addCard}
         moduleOptions={moduleOptions}
@@ -2451,7 +2491,7 @@ export default function App() {
         resources={allResources}
         onClose={() => setCommandOpen(false)}
         onGoView={openGlobalView}
-        onOpenCard={setSelectedCardId}
+        onOpenCard={openCard}
         onOpenResource={openResource}
       />
 

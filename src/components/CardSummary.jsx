@@ -81,13 +81,14 @@ export function CardSummary({
       </div>
 
       <div className="work-card-controls">
-        <label className="done-toggle">
-          <input type="checkbox" checked={card.done} onChange={() => onToggleDone(card.id)} />
-          <span>Done</span>
-        </label>
+        <div className="card-control-fields">
+          <label className="done-toggle">
+            <input type="checkbox" checked={card.done} onChange={() => onToggleDone(card.id)} />
+            <span>Done</span>
+          </label>
 
-        {!board && (
-          <>
+          {!board && (
+            <>
             <select
               aria-label={`Move card ${cardNumberLabel(card.number)}`}
               value={planLane}
@@ -124,29 +125,32 @@ export function CardSummary({
               />
               <span>%</span>
             </label>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
-        {overdue && (
-          <div className="reschedule-inline" aria-label="Reschedule overdue card">
-            <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
-              Today
-            </button>
-            <button type="button" onClick={() => onReschedule?.(card.id, addDays(referenceDate, 1))}>
-              Tomorrow
-            </button>
-          </div>
-        )}
+        <div className="card-control-actions">
+          {overdue && (
+            <div className="reschedule-inline" aria-label="Reschedule overdue card">
+              <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
+                Today
+              </button>
+              <button type="button" onClick={() => onReschedule?.(card.id, addDays(referenceDate, 1))}>
+                Tomorrow
+              </button>
+            </div>
+          )}
 
-        {!isActiveSession && (
-          <button type="button" className="secondary-button" onClick={() => onStartSession?.(card.id)}>
-            Start
+          {!isActiveSession && (
+            <button type="button" className="secondary-button" onClick={() => onStartSession?.(card.id)}>
+              Start
+            </button>
+          )}
+
+          <button type="button" className="secondary-button" onClick={() => onOpen(card.id)}>
+            Details
           </button>
-        )}
-
-        <button type="button" className="secondary-button" onClick={() => onOpen(card.id)}>
-          Details
-        </button>
+        </div>
       </div>
 
       {isActiveSession && <CardSessionTimer cardId={card.id} />}

@@ -2,25 +2,54 @@ import { emptyKnowledge, normaliseKnowledge } from '../utils/knowledge.js'
 import { normaliseResourceProgressMap } from '../utils/resourceProgress.js'
 
 export const TRACKER_STATE_VERSION = 5
-export const PLAN_REVISION = '2026-07-16-zero-based-32-day-plan-v9'
-export const DEFAULT_CAMPAIGN_START = '2026-07-16'
+export const PLAN_REVISION = '2026-07-20-fresh-start-plan-v1'
+export const DEFAULT_CAMPAIGN_START = '2026-07-20'
 export const DEFAULT_CAMPAIGN_END = '2026-08-16'
 export const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
-const ZERO_BASED_REVISION_PREFIX = '2026-07-16-zero-based-32-day-plan-v'
-const RESET_MIDNIGHT = '2026-07-16T00:00:00.000Z'
+const PREVIOUS_ZERO_BASED_REVISION_PREFIX = '2026-07-16-zero-based-32-day-plan-v'
+const HISTORY_DATE = '2026-07-19'
 
-function moveCompletionToResetMidnight(cardState) {
+const BASE_HISTORY_RECORDS = {
+  'admin-summer-assessment-confirmation': 'summer assessment entry confirmed',
+  'card-001': 'AML S1 Lab 1 and workflow work logged',
+  'project-capacity-w1': 'CMT501 protected capacity used, 16-19 July',
+}
+
+function historyEdits(cardState, title) {
+  return {
+    ...(cardState.edits ?? {}),
+    title: `HISTORY - 19 Jul - ${title}`,
+    phase: 'Phase 0',
+    phaseId: 'phase-0',
+    startDate: HISTORY_DATE,
+    dueDate: HISTORY_DATE,
+    dueDateTime: `${HISTORY_DATE} 23:59`,
+    tags: [...new Set([...(cardState.edits?.tags ?? []), 'history', 'pre-reset-completion', '19-july-history'])],
+  }
+}
+
+function asHistoryState(cardState, title) {
   return {
     ...cardState,
-    updatedAt: RESET_MIDNIGHT,
-    activity: (cardState.activity ?? []).map((entry) =>
-      entry.action === 'Marked done' ||
-      entry.action === 'Added card' ||
-      (entry.action === 'Moved card' && entry.details === 'Done')
-        ? { ...entry, at: RESET_MIDNIGHT }
-        : entry,
-    ),
+    done: true,
+    status: 'Done',
+    previousStatus: cardState.previousStatus ?? cardState.status ?? 'This Week',
+    edits: historyEdits(cardState, title),
   }
+}
+
+function hasUserCardWork(cardState) {
+  return Boolean(
+    cardState?.done ||
+    cardState?.status === 'Done' ||
+    Number(cardState?.actualHours ?? 0) > 0 ||
+    Number(cardState?.progressPercent ?? 0) > 0 ||
+    Object.values(plainObject(cardState?.checklist)).some(Boolean) ||
+    (cardState?.edits?.checklist ?? []).length ||
+    (cardState?.notes ?? []).length ||
+    (cardState?.evidenceEntries ?? []).length ||
+    (cardState?.focusSessions ?? []).length,
+  )
 }
 
 function nowIso() {
@@ -110,68 +139,64 @@ export function migrateTrackerState(value) {
   const previousSettings = plainObject(value.settings)
   const planChanged = previousSettings.planRevision !== PLAN_REVISION
   const previousCards = plainObject(value.cards)
-  const zeroResetRequired = !String(previousSettings.planRevision ?? '').startsWith(ZERO_BASED_REVISION_PREFIX)
+  const previousRevision = String(previousSettings.planRevision ?? '')
+  const july20ResetRequired = previousRevision.startsWith(PREVIOUS_ZERO_BASED_REVISION_PREFIX)
+  const legacyResetRequired = planChanged && !july20ResetRequired
   const sourceAddedCards = Array.isArray(value.addedCards) ? value.addedCards : []
-  const historicalAddedIds = new Set(
-    sourceAddedCards
-      .filter((card) =>
-        (previousCards[card.id]?.done || previousCards[card.id]?.status === 'Done') &&
-        (card.startDate < DEFAULT_CAMPAIGN_START ||
-          (card.tags ?? []).includes('pre-reset-completion') ||
-          /^HISTORY\s/.test(card.title ?? '')),
-      )
-      .map((card) => card.id),
-  )
-  const cards = zeroResetRequired
-    ? Object.fromEntries(
-        Object.entries(previousCards).filter(([, card]) => card?.done || card?.status === 'Done'),
-      )
+  let cards = legacyResetRequired
+    ? Object.fromEntries(Object.entries(previousCards).filter(([, card]) => hasUserCardWork(card)))
     : { ...previousCards }
-  if (cards['admin-summer-assessment-confirmation']?.done || cards['admin-summer-assessment-confirmation']?.status === 'Done') {
-    const completed = moveCompletionToResetMidnight(cards['admin-summer-assessment-confirmation'])
-    cards['admin-summer-assessment-confirmation'] = {
-      ...completed,
-      edits: {
-        ...(completed.edits ?? {}),
-        title: 'HISTORY — summer assessment entry confirmed (completed before reset)',
-        phase: 'Phase 0',
-        phaseId: 'phase-0',
-        startDate: DEFAULT_CAMPAIGN_START,
-        dueDate: DEFAULT_CAMPAIGN_START,
-        dueDateTime: `${DEFAULT_CAMPAIGN_START} 00:00`,
-      },
+
+  if (july20ResetRequired) {
+    cards = Object.fromEntries(
+      Object.entries(cards).filter(([cardId, cardState]) => {
+        if (BASE_HISTORY_RECORDS[cardId] && hasUserCardWork(cardState)) return true
+        if (cardId === 'project-capacity-w2') return true
+        if (hasUserCardWork(cardState)) return true
+        return sourceAddedCards.some((card) => card.id === cardId && card.startDate >= DEFAULT_CAMPAIGN_START)
+      }),
+    )
+  }
+
+  for (const [cardId, title] of Object.entries(BASE_HISTORY_RECORDS)) {
+    if (cards[cardId] && hasUserCardWork(cards[cardId])) {
+      cards[cardId] = asHistoryState(cards[cardId], title)
     }
   }
-  for (const cardId of historicalAddedIds) {
-    if (cards[cardId]) cards[cardId] = moveCompletionToResetMidnight(cards[cardId])
-  }
+
   const addedCards = sourceAddedCards
-    .filter((card) => !zeroResetRequired || card.startDate >= DEFAULT_CAMPAIGN_START || cards[card.id])
-    .map((card) =>
-      historicalAddedIds.has(card.id)
-        ? {
-            ...card,
-            title: 'HISTORY — life admin completed before reset',
-            phase: 'Phase 0',
-            phaseId: 'phase-0',
-            startDate: DEFAULT_CAMPAIGN_START,
-            dueDate: DEFAULT_CAMPAIGN_START,
-            dueDateTime: `${DEFAULT_CAMPAIGN_START} 00:00`,
-            tags: [...new Set([...(card.tags ?? []), 'history', 'pre-reset-completion'])],
-          }
-        : card,
-    )
+    .filter((card) => {
+      if (!planChanged) return true
+      if (card.startDate >= DEFAULT_CAMPAIGN_START) return true
+      return hasUserCardWork(cards[card.id])
+    })
     .map((card) => {
-      if (card.startDate !== DEFAULT_CAMPAIGN_START) return card
-      if (/Groceries \+ supermarket run/.test(card.title)) return { ...card, dueDate: '2026-07-18', dueDateTime: '2026-07-18' }
-      if (/Laundry \+ room reset|Three movement breaks/.test(card.title)) return { ...card, dueDate: '2026-07-19', dueDateTime: '2026-07-19' }
-      return card
+      const cardState = cards[card.id]
+      if (!planChanged || !hasUserCardWork(cardState)) return card
+      const originalTitle = String(card.title ?? 'saved card')
+        .replace(/^HISTORY\s*[—-]\s*/i, '')
+        .replace(/\s*\(completed before reset\)\s*$/i, '')
+        .replace(/\s*\(from .*?\)\s*$/i, '')
+      cards[card.id] = asHistoryState(cardState, originalTitle)
+      return {
+        ...card,
+        title: `HISTORY - 19 Jul - ${originalTitle}`,
+        phase: 'Phase 0',
+        phaseId: 'phase-0',
+        startDate: HISTORY_DATE,
+        dueDate: HISTORY_DATE,
+        dueDateTime: `${HISTORY_DATE} 23:59`,
+        estimatedHours: 0,
+        tags: [...new Set([...(card.tags ?? []), 'history', 'pre-reset-completion', '19-july-history'])],
+      }
     })
     .map((card, index) => ({ ...card, number: `A${index + 1}`, sortOrder: 1000 + index }))
   const campaignStart =
     !previousSettings.campaignStart ||
     previousSettings.campaignStart === '2026-07-04' ||
-    previousSettings.campaignStart === '2026-07-13'
+    previousSettings.campaignStart === '2026-07-13' ||
+    previousSettings.campaignStart === '2026-07-16' ||
+    planChanged
       ? DEFAULT_CAMPAIGN_START
       : previousSettings.campaignStart
   const campaignEnd =
@@ -194,7 +219,7 @@ export function migrateTrackerState(value) {
     knowledge: normaliseKnowledge(value.knowledge),
     // Generated alerts from the abandoned pre-reset plan are noise,
     // not user work. Rebuild them from the live cards after a plan revision.
-    notifications: zeroResetRequired ? {} : plainObject(value.notifications),
+    notifications: planChanged ? {} : plainObject(value.notifications),
     resourceProgress: normaliseResourceProgressMap(value.resourceProgress),
     uploadedResources: normaliseUploadedResources(value.uploadedResources),
     recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],

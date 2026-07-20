@@ -69,7 +69,7 @@ export function JobHuntPlaybook() {
     <section className="job-playbook" aria-labelledby="job-playbook-title">
       <header className="job-playbook-header">
         <div>
-          <p className="job-playbook-eyebrow">Maintenance mode · 16 July–16 August</p>
+          <p className="job-playbook-eyebrow">Maintenance mode · 20 July–16 August</p>
           <h2 id="job-playbook-title">Job hunt playbook</h2>
           <p>
             Preserve the opportunity pipeline without letting it displace the rescue plan. The weekly

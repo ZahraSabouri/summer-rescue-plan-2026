@@ -11,6 +11,7 @@ import {
   knowledgeSummary,
   normaliseKnowledge,
   notesForCard,
+  parseNoteBundle,
   resolveModuleNotes,
   reviewStatus,
   searchNotes,
@@ -160,6 +161,49 @@ test('notesForCard filters by linked card id', () => {
   assert.equal(notesForCard(notes, '').length, 0)
 })
 
+test('parseNoteBundle splits a multi-note file and reads its metadata', () => {
+  const bundle = [
+    '@@ id=s1-a | title=First note | kind=concept | topic=S1 · Foundations | key | tags=one,two | cards=card-001',
+    'Body of the first note.',
+    '',
+    '## Check yourself',
+    '1. Question? :: Answer.',
+    '',
+    '@@ id=s1-b | title=Second note | kind=traps | topic=S1 · Debugging',
+    'Body of the second note.',
+    '',
+    '```python',
+    '@@ decorator_like = "this is inside a fence and must not split the note"',
+    '```',
+  ].join('\n')
+
+  const notes = parseNoteBundle(bundle, { moduleId: 'aml' })
+  assert.equal(notes.length, 2)
+  // The fenced `@@` line stays in the second note's body rather than opening a third.
+  assert.ok(notes[1].body.includes('decorator_like'))
+  assert.equal(notes[0].id, 's1-a')
+  assert.equal(notes[0].moduleId, 'aml')
+  assert.equal(notes[0].priority, 'high')
+  assert.deepEqual(notes[0].tags, ['one', 'two'])
+  assert.deepEqual(notes[0].cardIds, ['card-001'])
+  assert.ok(notes[0].body.includes('Check yourself'))
+  assert.equal(notes[1].priority, 'normal')
+  assert.equal(notes[1].kind, 'traps')
+  assert.deepEqual(notes[1].cardIds, [])
+})
+
+test('parseNoteBundle ignores a bundle with no note headers', () => {
+  assert.deepEqual(parseNoteBundle('just some text\nwith no headers'), [])
+  assert.deepEqual(parseNoteBundle(''), [])
+})
+
+test('the seeded key notes resolve with priority preserved', () => {
+  const seeds = parseNoteBundle('@@ id=s1-x | title=Key one | key\nBody.', { moduleId: 'aml' })
+  const resolved = resolveModuleNotes({ seeds, knowledge: emptyKnowledge(), moduleId: 'aml', referenceDate: TODAY })
+  assert.equal(resolved[0].priority, 'high')
+  assert.equal(resolved[0].meta.starred, false)
+})
+
 test('a fresh tracker state carries an empty knowledge store', () => {
   const state = createInitialTrackerState(TODAY)
   assert.deepEqual(state.knowledge, { notes: {}, meta: {} })
@@ -187,6 +231,7 @@ test('knowledge survives a SQLite projection round trip', async () => {
             kind: 'cheatsheet',
             topic: 'Foundations',
             body: '# Heading\n\n| a | b |\n| --- | --- |\n| 1 | 2 |',
+            priority: 'high',
             tags: ['recall', 'exam'],
             cardIds: ['card-7'],
             createdAt: '2026-07-19T00:00:00.000Z',

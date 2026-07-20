@@ -323,15 +323,40 @@ export function countWords(source) {
 const QUIZ_HEADING = /^check\s*yourself$/i
 const SOURCES_HEADING = /^sources?$/i
 
+// Split an inline node list at the first `::` inside a text node, keeping the
+// nodes on either side intact. Splitting the flattened text instead would
+// discard math and code formatting, which matters because questions routinely
+// contain both.
+function splitInlineOnMarker(nodes, marker) {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+    if (node.type !== 'text' || !node.value.includes(marker)) continue
+
+    const at = node.value.indexOf(marker)
+    const before = nodes.slice(0, index)
+    const head = node.value.slice(0, at)
+    if (head.trim()) before.push({ type: 'text', value: head })
+
+    const after = []
+    const tail = node.value.slice(at + marker.length)
+    if (tail.trim()) after.push({ type: 'text', value: tail })
+    after.push(...nodes.slice(index + 1))
+
+    return [before, after]
+  }
+  return [nodes, null]
+}
+
 function listItemsToQuestions(block) {
   if (!block || block.type !== 'list') return []
   return block.items.map((item) => {
-    const text = inlineText(item.content)
-    const split = text.split('::')
-    if (split.length > 1) {
-      return { question: split[0].trim(), answer: split.slice(1).join('::').trim() }
+    const [question, answer] = splitInlineOnMarker(item.content, '::')
+    return {
+      question,
+      answer,
+      questionText: inlineText(question).trim(),
+      answerText: answer ? inlineText(answer).trim() : '',
     }
-    return { question: text.trim(), answer: '' }
   })
 }
 

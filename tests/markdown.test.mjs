@@ -101,9 +101,29 @@ test('splitNoteSections lifts the quiz and sources out of the body', () => {
   const { body, questions, sources } = splitNoteSections(parseMarkdown(source))
   assert.deepEqual(types(body), ['heading', 'paragraph'])
   assert.equal(questions.length, 2)
-  assert.equal(questions[0].answer, 'Supervised classification.')
-  assert.equal(questions[1].answer, '')
+  assert.equal(questions[0].answerText, 'Supervised classification.')
+  assert.equal(questions[1].answerText, '')
   assert.equal(sources.length, 1)
+})
+
+test('a quiz question keeps math and code as nodes, not flattened text', () => {
+  const source = ['## Check yourself', '', '1. Bound on $|C_{t+1}|$ in `halving`? :: It is $|C_t|/2$.'].join('\n')
+  const [entry] = splitNoteSections(parseMarkdown(source)).questions
+
+  // The question must retain a math node so it can be rendered, not stringified.
+  assert.ok(entry.question.some((node) => node.type === 'math'))
+  assert.ok(entry.question.some((node) => node.type === 'code'))
+  assert.ok(entry.answer.some((node) => node.type === 'math'))
+  // The plain-text forms are still available and carry no TeX delimiters.
+  assert.ok(!entry.questionText.includes('$'))
+  assert.match(entry.answerText, /It is/)
+})
+
+test('a quiz item with no answer marker yields a null answer', () => {
+  const [entry] = splitNoteSections(parseMarkdown('## Check yourself\n\n1. Just a question?')).questions
+  assert.equal(entry.answer, null)
+  assert.equal(entry.answerText, '')
+  assert.equal(entry.questionText, 'Just a question?')
 })
 
 test('buildToc lists headings down to level three', () => {
