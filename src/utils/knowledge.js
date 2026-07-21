@@ -255,6 +255,36 @@ export function relatedNotesForCard(notes, card) {
   return [...explicit, ...auto]
 }
 
+/**
+ * Split a card's related notes into the ones its study sequence actually
+ * asks you to read (`required`) versus the rest of `relatedNotesForCard`'s
+ * broader session/lecture/pack-wide match (`extra`).
+ *
+ * `relatedNotesForCard` matches on a shared session key ("S1", "L5", "Pack C"
+ * — see conceptKeysFromText above), so every card sharing that key sees the
+ * SAME pool: card-001, card-005, and card-030 are all "S1" cards and all see
+ * every S1 note, whether or not that specific note is about the concepts
+ * card-001 covers, the lab card-005 runs, or the review card-030 does. That
+ * pool is genuinely useful as "everything from this stretch of the module",
+ * but presenting all of it as "for this card" reads as if 40+ notes are
+ * required reading for one card, when the card's own study sequence already
+ * named the handful that actually are. Once a card has a studySequence,
+ * `required` is that handful (its steps' noteIds) and `extra` is everything
+ * else in the pool — real, often useful, but optional/shared, not this
+ * card's assignment.
+ */
+export function splitSequenceNotes(card, notes) {
+  const sequenceNoteIds = new Set((card?.studySequence?.steps ?? []).flatMap((step) => step.noteIds ?? []))
+  if (sequenceNoteIds.size === 0) return { required: notes, extra: [] }
+  const required = []
+  const extra = []
+  for (const note of notes) {
+    if (sequenceNoteIds.has(note.id)) required.push(note)
+    else extra.push(note)
+  }
+  return { required, extra }
+}
+
 // Many short notes are easier to author as one Markdown file per topic than as
 // one file each. A line beginning with `@@` opens a note and carries its
 // metadata as `key=value` pairs separated by `|`; everything up to the next

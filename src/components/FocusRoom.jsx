@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import './FocusRoom.css'
 import { checklistDoneCount, formatDate } from '../utils/progress'
 import { focusRewards } from '../utils/focusRewards'
-import { kindMeta } from '../utils/knowledge'
+import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
 import { MarkdownDoc } from './MarkdownDoc'
 
 const MODE_LABELS = {
@@ -38,13 +38,20 @@ function boundaryDetails(boundary) {
   return { title, time: `${time}${place}` }
 }
 
-// One concept note in the Focus Room. The Markdown body is parsed only once the
-// note is expanded, so a card that links dozens of session notes opens instantly
-// instead of parsing every body up front.
-function FocusRoomNote({ note, defaultOpen }) {
-  const [open, setOpen] = useState(defaultOpen)
+// One concept note in the Focus Room. Fully controlled (open/onToggle from
+// the parent's openNoteIds set) rather than defaultOpen-and-forget, so a
+// concept chip clicked further up the page (in "How to study this card") can
+// force this specific note open and scroll to it — the Markdown body is
+// parsed only once actually open, so a card with dozens of session notes
+// still opens instantly instead of parsing every body up front.
+function FocusRoomNote({ note, open, onToggle }) {
   return (
-    <details className={`focus-room-note kind-${note.kind}`} open={defaultOpen} onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <details
+      id={`focus-room-note-${note.id}`}
+      className={`focus-room-note kind-${note.kind}`}
+      open={open}
+      onToggle={(event) => onToggle(note.id, event.currentTarget.open)}
+    >
       <summary>
         <span className="focus-room-note-icon" aria-hidden="true">{kindMeta(note.kind).icon}</span>
         <span className="focus-room-note-title">
@@ -57,6 +64,67 @@ function FocusRoomNote({ note, defaultOpen }) {
         {open ? <MarkdownDoc source={note.body} /> : null}
       </div>
     </details>
+  )
+}
+
+const STEP_KIND_LABEL = {
+  watch: 'Watch',
+  read: 'Read',
+  write: 'Write',
+  do: 'Do',
+  test: 'Self-test',
+}
+
+// Mirrors CardDetailDrawer's study-sequence step, reusing its App.css classes
+// (study-sequence-step, study-sequence-refs, etc. — loaded here too since
+// main.jsx imports App.jsx eagerly even on the Focus Room route) so the two
+// surfaces read as the same feature rather than two different UIs.
+function FocusRoomSequenceStep({ index, step, resourcesById, notesById, onOpenResource, onJumpToNote }) {
+  const stepResources = (step.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
+  const stepNotes = (step.noteIds ?? []).map((id) => notesById.get(id)).filter(Boolean)
+  return (
+    <li className={`study-sequence-step kind-${step.kind ?? 'do'}`}>
+      <div className="study-sequence-step-head">
+        <span className="study-sequence-step-number" aria-hidden="true">
+          {index + 1}
+        </span>
+        <div>
+          <strong>{step.label}</strong>
+          <span className="study-sequence-step-meta">
+            {STEP_KIND_LABEL[step.kind] ?? 'Do'}
+            {step.minutes ? ` · ~${step.minutes} min` : ''}
+          </span>
+        </div>
+      </div>
+      {step.instruction && <p className="study-sequence-instruction">{step.instruction}</p>}
+      {(stepResources.length > 0 || stepNotes.length > 0) && (
+        <div className="study-sequence-refs">
+          {stepResources.map((resource) => (
+            <button
+              key={resource.id}
+              type="button"
+              className="study-sequence-ref-chip is-resource"
+              onClick={() => onOpenResource?.(resource.id)}
+            >
+              <span className="type-badge">{resource.type}</span>
+              {resource.title}
+            </button>
+          ))}
+          {stepNotes.map((note) => (
+            <button
+              key={note.id}
+              type="button"
+              className="study-sequence-ref-chip is-note"
+              onClick={() => onJumpToNote?.(note)}
+              title="Jump to this note below"
+            >
+              <span aria-hidden="true">{kindMeta(note.kind).icon}</span>
+              {note.title}
+            </button>
+          ))}
+        </div>
+      )}
+    </li>
   )
 }
 
@@ -146,11 +214,41 @@ export function FocusRoom({
     }
   }, [])
 
+  const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
+  const notesById = useMemo(() => new Map(linkedNotes.map((note) => [note.id, note])), [linkedNotes])
+  const sequenceNotes = useMemo(() => splitSequenceNotes(activeCard, linkedNotes), [activeCard, linkedNotes])
+
   const linkedResources = useMemo(() => {
     if (!activeCard) return []
-    const byId = new Map(resources.map((resource) => [resource.id, resource]))
-    return (activeCard.resourceIds ?? []).map((id) => byId.get(id)).filter(Boolean)
-  }, [activeCard, resources])
+    return (activeCard.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
+  }, [activeCard, resourcesById])
+
+  // Which concept notes are expanded, keyed by note id — lifted here (rather
+  // than local state inside each FocusRoomNote) so a concept chip clicked in
+  // "How to study this card" can force a specific note open and scroll to it,
+  // not just toggle its own accordion. Defaults to the first required note
+  // open, reset whenever the active card changes.
+  const [openNoteIds, setOpenNoteIds] = useState(() => new Set())
+  useEffect(() => {
+    setOpenNoteIds(new Set(sequenceNotes.required[0] ? [sequenceNotes.required[0].id] : []))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCard?.id])
+
+  function toggleNoteOpen(noteId, isOpen) {
+    setOpenNoteIds((current) => {
+      const next = new Set(current)
+      if (isOpen) next.add(noteId)
+      else next.delete(noteId)
+      return next
+    })
+  }
+
+  function jumpToNote(note) {
+    setOpenNoteIds((current) => new Set(current).add(note.id))
+    window.requestAnimationFrame(() => {
+      document.getElementById(`focus-room-note-${note.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   const rewards = useSyncExternalStore(focusRewards.subscribe, focusRewards.getState)
 
@@ -174,10 +272,77 @@ export function FocusRoom({
   useEffect(() => {
     strictRef.current = rewards.strict
   }, [rewards.strict])
+
+  // "Stepping out" — a declared, logged exception to the guard, not a silent
+  // one. The guard exists to catch you lying to yourself about a quick check
+  // turning into real distraction; Gentle mode already lets you leave for
+  // free, which defeats that purpose for someone who wants Strict's
+  // accountability everywhere EXCEPT genuine "I need to look something up to
+  // understand this" moments. Writing the reason is the actual mechanism —
+  // it forces a conscious, on-the-record choice instead of just wandering
+  // off — and it's saved as a card note so a pattern of vague reasons is
+  // visible later, to the user themselves as much as anyone.
+  const GRACE_MINUTES = 10
+  const [steppingOutOpen, setSteppingOutOpen] = useState(false)
+  const [stepOutReason, setStepOutReason] = useState('')
+  const [graceUntil, setGraceUntil] = useState(null)
+  const [graceTick, setGraceTick] = useState(0)
+  const graceUntilRef = useRef(null)
+  const graceTimeoutRef = useRef(null)
+  const saveCueRef = useRef(onSaveRestartCue)
+  useEffect(() => {
+    saveCueRef.current = onSaveRestartCue
+  }, [onSaveRestartCue])
+
+  useEffect(() => {
+    if (!graceUntil) return undefined
+    const tick = window.setInterval(() => setGraceTick((value) => value + 1), 1000)
+    return () => window.clearInterval(tick)
+  }, [graceUntil])
+
+  useEffect(
+    () => () => {
+      if (graceTimeoutRef.current) window.clearTimeout(graceTimeoutRef.current)
+    },
+    [],
+  )
+
+  function submitStepOut(event) {
+    event.preventDefault()
+    const reason = stepOutReason.trim()
+    if (!reason) return
+    const until = Date.now() + GRACE_MINUTES * 60 * 1000
+    graceUntilRef.current = until
+    setGraceUntil(until)
+    if (graceTimeoutRef.current) window.clearTimeout(graceTimeoutRef.current)
+    graceTimeoutRef.current = window.setTimeout(() => {
+      graceUntilRef.current = null
+      setGraceUntil(null)
+    }, GRACE_MINUTES * 60 * 1000)
+    saveCueRef.current?.(activeCard.id, `Stepped out (${GRACE_MINUTES}m, no guard): ${reason}`)
+    setStepOutReason('')
+    setSteppingOutOpen(false)
+  }
+
+  function cancelStepOut() {
+    graceUntilRef.current = null
+    setGraceUntil(null)
+    if (graceTimeoutRef.current) {
+      window.clearTimeout(graceTimeoutRef.current)
+      graceTimeoutRef.current = null
+    }
+  }
+
+  const graceRemainingSeconds = graceUntil ? Math.max(0, Math.ceil((graceUntil - Date.now()) / 1000)) : 0
+  void graceTick // read to keep the countdown re-rendering each second; value itself is unused
+
   useEffect(() => {
     let blurTimer = null
     const leave = () => {
       if (!runningRef.current) return
+      // A declared step-out is not the guard's concern — it exists to catch
+      // undeclared wandering, not a logged, time-boxed exception.
+      if (graceUntilRef.current && Date.now() < graceUntilRef.current) return
       if (strictRef.current) {
         forfeitRef.current?.()
         focusRewards.recordBlockForfeit()
@@ -411,6 +576,53 @@ export function FocusRoom({
                 </small>
               </div>
 
+              {mode === 'focus' && (
+                <div className="focus-room-stepout" aria-label="Step out without breaking this block">
+                  {graceUntil && graceRemainingSeconds > 0 ? (
+                    <div className="focus-room-stepout-active">
+                      <span>
+                        Stepped out — <strong>{formatTimer(graceRemainingSeconds)}</strong> before the guard is back on
+                      </span>
+                      <button type="button" onClick={cancelStepOut}>
+                        I'm back
+                      </button>
+                    </div>
+                  ) : steppingOutOpen ? (
+                    <form className="focus-room-stepout-form" onSubmit={submitStepOut}>
+                      <label htmlFor="focus-room-stepout-reason">What are you stepping out to do?</label>
+                      <input
+                        id="focus-room-stepout-reason"
+                        type="text"
+                        value={stepOutReason}
+                        onChange={(event) => setStepOutReason(event.target.value)}
+                        placeholder="e.g. look up this error, re-read a note slower, ask something in my IDE"
+                        maxLength={160}
+                        autoFocus
+                      />
+                      <div className="focus-room-stepout-actions">
+                        <button type="submit" className="focus-room-start" disabled={!stepOutReason.trim()}>
+                          Start {GRACE_MINUTES}-min pass
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSteppingOutOpen(false)
+                            setStepOutReason('')
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <small>Writing it down is the point — no guard penalty for {GRACE_MINUTES} minutes, then it's back on.</small>
+                    </form>
+                  ) : (
+                    <button type="button" className="focus-room-stepout-open" onClick={() => setSteppingOutOpen(true)}>
+                      Step out without breaking this block
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="focus-room-reward-row">
                 <div className="focus-room-reward-stat">
                   <strong>⚡ {rewards.points}</strong>
@@ -549,20 +761,76 @@ export function FocusRoom({
           </aside>
         </div>
 
-        {linkedNotes.length > 0 && (
+        {activeCard.studySequence?.steps?.length > 0 && (
+          <section className="focus-room-sequence" aria-label="How to study this card">
+            <header className="focus-room-knowledge-head">
+              <div>
+                <span>How to study this card</span>
+                <h2>In order — the exact resources for this card</h2>
+              </div>
+              <p>
+                {activeCard.studySequence.steps.length} step{activeCard.studySequence.steps.length === 1 ? '' : 's'}
+                {activeCard.studySequence.totalMinutes
+                  ? ` · ~${Math.round((activeCard.studySequence.totalMinutes / 60) * 10) / 10}h`
+                  : ''}
+              </p>
+            </header>
+            {activeCard.studySequence.concepts?.length > 0 && (
+              <div className="study-sequence-concepts">
+                <h4>Must cover</h4>
+                <ul>
+                  {activeCard.studySequence.concepts.map((concept) => (
+                    <li key={concept}>{concept}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <ol className="study-sequence-steps">
+              {activeCard.studySequence.steps.map((step, index) => (
+                <FocusRoomSequenceStep
+                  key={`${activeCard.id}-step-${index}`}
+                  index={index}
+                  step={step}
+                  resourcesById={resourcesById}
+                  notesById={notesById}
+                  onOpenResource={onOpenResource}
+                  onJumpToNote={jumpToNote}
+                />
+              ))}
+            </ol>
+          </section>
+        )}
+
+        {sequenceNotes.required.length > 0 && (
           <section className="focus-room-knowledge" aria-label="Concept notes for this card">
             <header className="focus-room-knowledge-head">
               <div>
                 <span>Knowledge for this card</span>
                 <h2>The concepts behind what you’re doing</h2>
               </div>
-              <p>{linkedNotes.length} note{linkedNotes.length === 1 ? '' : 's'} · open one while you work</p>
+              <p>
+                {sequenceNotes.required.length} note{sequenceNotes.required.length === 1 ? '' : 's'} · click a concept
+                above or open one below
+              </p>
             </header>
             <div className="focus-room-knowledge-list">
-              {linkedNotes.map((note, index) => (
-                <FocusRoomNote key={note.id ?? index} note={note} defaultOpen={index === 0} />
+              {sequenceNotes.required.map((note) => (
+                <FocusRoomNote key={note.id} note={note} open={openNoteIds.has(note.id)} onToggle={toggleNoteOpen} />
               ))}
             </div>
+            {sequenceNotes.extra.length > 0 && (
+              <details className="focus-room-knowledge-extra">
+                <summary>
+                  {sequenceNotes.extra.length} more note{sequenceNotes.extra.length === 1 ? '' : 's'} from this
+                  session/pack/lecture — shared with sibling cards, not required for this one specifically
+                </summary>
+                <div className="focus-room-knowledge-list">
+                  {sequenceNotes.extra.map((note) => (
+                    <FocusRoomNote key={note.id} note={note} open={openNoteIds.has(note.id)} onToggle={toggleNoteOpen} />
+                  ))}
+                </div>
+              </details>
+            )}
           </section>
         )}
       </main>

@@ -10,9 +10,10 @@ import {
 } from '../data/constants'
 import { addDays, cardKind, cardPlanLane, checklistDoneCount, formatDate, isOverdue, kindFeatures, requiresEvidence } from '../utils/progress'
 import { resourcesForCard, searchResourcesForCard } from '../utils/cardResourceSearch'
-import { kindMeta } from '../utils/knowledge'
+import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
 import { openFocusRoomTab } from '../utils/focusSession'
 import { CardSessionTimer } from './CardSessionTimer'
+import { MarkdownDoc } from './MarkdownDoc'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -108,7 +109,7 @@ const STEP_KIND_LABEL = {
   test: 'Self-test',
 }
 
-function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResource, onOpenKnowledgeNote }) {
+function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResource, onOpenNote }) {
   const stepResources = (step.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
   const stepNotes = (step.noteIds ?? []).map((id) => notesById.get(id)).filter(Boolean)
   return (
@@ -144,7 +145,7 @@ function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResour
               key={note.id}
               type="button"
               className="study-sequence-ref-chip is-note"
-              onClick={() => onOpenKnowledgeNote?.(note)}
+              onClick={() => onOpenNote?.(note)}
             >
               <span aria-hidden="true">{kindMeta(note.kind).icon}</span>
               {note.title}
@@ -153,6 +154,67 @@ function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResour
         </div>
       )}
     </li>
+  )
+}
+
+// Opens a note in place, exactly like ResourceReader opens a video/PDF: its
+// own document.body portal stacked on top of the card drawer's portal, so
+// reading a note no longer means leaving the card (previously every note
+// chip called onOpenKnowledgeNote, which closed the drawer and navigated to
+// the module's Knowledge tab). "Open in Knowledge tab" is still offered
+// inside, for review/editing/spaced-repetition — this is a lightweight
+// preview, not a replacement for that surface.
+function NoteReader({ note, onClose, onOpenInKnowledgeTab }) {
+  useEffect(() => {
+    function onKey(event) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      className="reader-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-label={note.title}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div className="reader-window viewer-markdown is-note">
+        <header className="reader-chrome">
+          <span className="reader-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <div className="reader-addr">
+            <span className="type-badge">{kindMeta(note.kind).icon} {note.kind}</span>
+            <strong title={note.topic}>{note.title}</strong>
+          </div>
+          <div className="reader-actions">
+            {onOpenInKnowledgeTab && (
+              <button type="button" className="reader-btn" onClick={() => onOpenInKnowledgeTab(note)}>
+                Open in Knowledge tab
+              </button>
+            )}
+            <button type="button" className="reader-btn reader-close" onClick={onClose} aria-label="Close reader">
+              ✕
+            </button>
+          </div>
+        </header>
+        <div className="reader-body">
+          <div className="markdown-preview">
+            <MarkdownDoc source={note.body} />
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -210,6 +272,7 @@ export function CardDetailDrawer({
   const [form, setForm] = useState(() => createForm(card))
   const [resourceQuery, setResourceQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
+  const [openNote, setOpenNote] = useState(null)
   // Shown right after Start session so the running session can either stay in this
   // card or move to the Focus Room tab, without forcing either. The render already
   // gates on this card owning the active session, so no reset effect is needed.
@@ -287,7 +350,15 @@ export function CardDetailDrawer({
       }
       previousActiveElement?.focus()
     }
-  }, [card, onClose])
+    // Keyed on card.id, not card itself: `card` is a fresh object on every
+    // tracker-state update (useTrackerState's `cards` memo recomputes all
+    // cards whenever ANY state changes, e.g. typing in an unrelated resource
+    // note), which used to re-run this whole effect — including the "steal
+    // focus into the dialog" timer — on every keystroke anywhere in the
+    // drawer, yanking focus out of whatever field the user was typing in.
+    // id only changes when the drawer is genuinely opened for a different
+    // card (or closed), which is the one time this setup should re-run.
+  }, [card?.id, onClose])
 
   useEffect(() => {
     if (!card) return
@@ -306,12 +377,18 @@ export function CardDetailDrawer({
       setChecklistDraft('')
       setResourceQuery('')
       setEditOpen(false)
+      setOpenNote(null)
     }, 0)
     return () => window.clearTimeout(id)
-  }, [card])
+    // Same fix as the effect above: key on card.id so this draft-reset only
+    // fires on a genuine card switch, not on every unrelated tracker-state
+    // update (which previously wiped the evidence/note/checklist-add drafts
+    // and the resource search box mid-keystroke).
+  }, [card?.id])
 
   const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
   const notesById = useMemo(() => new Map(linkedNotes.map((note) => [note.id, note])), [linkedNotes])
+  const sequenceNotes = useMemo(() => splitSequenceNotes(card, linkedNotes), [card, linkedNotes])
   const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
   const videoResources = linkedResources.filter((resource) => resource.viewer === 'youtube' || resource.type === 'YOUTUBE')
   const fileResources = linkedResources.filter((resource) => resource.viewer !== 'youtube' && resource.type !== 'YOUTUBE')
@@ -642,7 +719,7 @@ export function CardDetailDrawer({
                       resourcesById={resourcesById}
                       notesById={notesById}
                       onOpenResource={onOpenResource}
-                      onOpenKnowledgeNote={onOpenKnowledgeNote}
+                      onOpenNote={setOpenNote}
                     />
                   ))}
                 </ol>
@@ -655,20 +732,24 @@ export function CardDetailDrawer({
               <summary>
                 <span>
                   <strong>Concept notes for this card</strong>
-                  <small>The knowledge behind this task — open the Focus Room to read in full</small>
+                  <small>
+                    {sequenceNotes.extra.length > 0
+                      ? 'What the sequence above actually asks you to read — click one to read it here'
+                      : 'The knowledge behind this task — click one to read it here'}
+                  </small>
                 </span>
                 <span>
-                  {linkedNotes.length} note{linkedNotes.length === 1 ? '' : 's'}
-                  {linkedNotes.some((note) => note.review.state === 'due') && ' · some due'}
+                  {sequenceNotes.required.length} note{sequenceNotes.required.length === 1 ? '' : 's'}
+                  {sequenceNotes.required.some((note) => note.review.state === 'due') && ' · some due'}
                 </span>
               </summary>
               <div className="card-knowledge-row">
-                {linkedNotes.map((note) => (
+                {sequenceNotes.required.map((note) => (
                   <button
                     key={note.id}
                     type="button"
                     className={`card-knowledge-chip kind-${note.kind}`}
-                    onClick={() => onOpenKnowledgeNote?.(note)}
+                    onClick={() => setOpenNote(note)}
                     title={note.review.label}
                   >
                     <span aria-hidden="true">{kindMeta(note.kind).icon}</span>
@@ -677,6 +758,29 @@ export function CardDetailDrawer({
                   </button>
                 ))}
               </div>
+              {sequenceNotes.extra.length > 0 && (
+                <details className="card-knowledge-extra">
+                  <summary>
+                    {sequenceNotes.extra.length} more note{sequenceNotes.extra.length === 1 ? '' : 's'} from this
+                    session/pack/lecture — shared with sibling cards, not required for this one specifically
+                  </summary>
+                  <div className="card-knowledge-row">
+                    {sequenceNotes.extra.map((note) => (
+                      <button
+                        key={note.id}
+                        type="button"
+                        className={`card-knowledge-chip kind-${note.kind}`}
+                        onClick={() => setOpenNote(note)}
+                        title={note.review.label}
+                      >
+                        <span aria-hidden="true">{kindMeta(note.kind).icon}</span>
+                        {note.title}
+                        {note.review.state === 'due' && <em>due</em>}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              )}
             </details>
           )}
 
@@ -1161,6 +1265,20 @@ export function CardDetailDrawer({
           </div>
         </div>
       </aside>
+      {openNote && (
+        <NoteReader
+          note={openNote}
+          onClose={() => setOpenNote(null)}
+          onOpenInKnowledgeTab={
+            onOpenKnowledgeNote
+              ? (note) => {
+                  setOpenNote(null)
+                  onOpenKnowledgeNote(note)
+                }
+              : null
+          }
+        />
+      )}
     </div>,
     document.body,
   )

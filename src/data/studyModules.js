@@ -488,6 +488,7 @@ const SESSION_GROUP = {
   s3: 'Video — S3 regression & generalisation',
   s4: 'Video — S4 classification & tuning',
   s5: 'Video — S5 ensembles',
+  beyond: 'Video — Beyond the exam (not tested)',
 }
 
 const amlVideoLectureResources = AML_VIDEOS.map((video) =>

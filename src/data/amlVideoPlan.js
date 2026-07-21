@@ -29,12 +29,18 @@ const CARD_VIDEO_PLAN = {
   // ---------------- Session 1 (concepts card teaches; the lab card applies) ----------------
   'card-001': {
     core: ['aml-video-ubc-1-0-ml-introduction', 'aml-video-ubc-2-1-ml-terminology'],
-    // The 6h52m full-course video's S1 slice (0:02–0:51) is intentionally not pinned
-    // here; it stays browsable in the module's "Video — S1 workflow" group and is
-    // tracked per-chunk there, so the full course can still be watched and ticked off
-    // without making this card read as unfinished.
-    optional: ['aml-video-ubc-2-4-more-terminology', 'aml-video-ubc-2-2-baselines'],
+    // The full 6h51m "Applied ML in Python" course (dh1lvdp0oCo) is split by concept
+    // across the S1/S3/S4/S5 concepts cards, so the whole 5.4h in-scope run can be
+    // watched piece-by-piece and finished by the end of the campaign. This card owns
+    // its S1 slice (0:02–0:51). The UBC short clips stay the quick core path; the
+    // course slice is the fuller treatment tracked by the checklist line below.
+    optional: [
+      'aml-video-course-s1-workflow',
+      'aml-video-ubc-2-4-more-terminology',
+      'aml-video-ubc-2-2-baselines',
+    ],
     focus: 'the 5-stage workflow, core terminology, and why a baseline is the first model',
+    checklist: 'Applied ML course video — S1 part: watch 0:02–0:51 (workflow, sklearn setup & first model).',
   },
   // card-005 is the S1 LAB (run Lab 1) — no video; its teaching lives on card-001.
 
@@ -64,12 +70,18 @@ const CARD_VIDEO_PLAN = {
       'aml-video-ubc-3-1-generalization',
       'aml-video-ubc-3-4-fundamental-tradeoff',
     ],
+    // Includes this session's four slices of the full course video (see card-001):
+    // 1:15–2:00 overfitting, 2:00–2:15 regression, 2:15–2:35 ridge/lasso, 3:29–3:40 CV.
     optional: [
       'aml-video-ubc-3-3-cross-validation',
       'aml-video-course-s3-overfitting',
+      'aml-video-course-s3-linear-regression',
+      'aml-video-course-s3-ridge-lasso',
+      'aml-video-course-s3-cross-validation',
       'aml-video-cs156-l08',
     ],
     focus: 'linear models, the bias-variance tradeoff, regularisation, and cross-validation',
+    checklist: 'Applied ML course video — S3 parts: 1:15–2:35 (overfitting → linear regression → ridge/lasso) and 3:29–3:40 (cross-validation).',
   },
   // card-014 is the S3 LAB (run Lab 3) — no video. card-016 is the timed re-run — no video.
 
@@ -81,13 +93,22 @@ const CARD_VIDEO_PLAN = {
       'aml-video-ubc-2-3-decision-trees',
       'aml-video-ubc-4-4-svm-rbf',
     ],
+    // Includes this session's five slices of the full course video (see card-001) —
+    // S4 is the biggest chunk of that video (~2h44m of it), so it is the heaviest
+    // watch-through card: 0:51–1:05 kNN, 2:35–2:50 logistic, 2:55–3:30 SVM,
+    // 3:40–4:00 trees, 4:00–5:20 evaluation.
     optional: [
       'aml-video-ubc-8-1-hyperparameter-opt',
       'aml-video-ubc-9-2-confusion-matrix',
       'aml-video-ubc-9-3-precision-recall-f1',
+      'aml-video-course-s4-knn',
+      'aml-video-course-s4-logistic',
       'aml-video-course-s4-svm-kernels',
+      'aml-video-course-s4-decision-trees',
+      'aml-video-course-s4-evaluation',
     ],
     focus: 'the classifier families (logistic, kNN, trees, SVM), what to tune, and the core metrics',
+    checklist: 'Applied ML course video — S4 parts: 0:51–1:05 (kNN), 2:35–2:50 (logistic), 2:55–3:30 (SVM, C & gamma), 3:40–4:00 (decision trees), 4:00–5:20 (confusion matrix, precision/recall, ROC).',
   },
   // card-020 is the S4 LAB (run Lab 4) — no video. card-022 is the timed re-run — no video.
 
@@ -99,8 +120,11 @@ const CARD_VIDEO_PLAN = {
       'aml-video-ubc-12-1-interpretation-motivation',
       'aml-video-ubc-12-2-feature-importances',
     ],
-    optional: ['aml-video-course-s5-ensembles', 'aml-video-cs229-l09'],
+    // The final in-scope slice of the full course video (see card-001): 5:25–5:45.
+    // 'beyond-part2' is the 5:45–6:51 tail, attached here as flagged enrichment only.
+    optional: ['aml-video-course-s5-ensembles', 'aml-video-cs229-l09', 'aml-video-course-beyond-part2'],
     focus: 'why ensembles help, bagging vs boosting, random forests, and feature importance',
+    checklist: 'Applied ML course video — S5 part: 5:25–5:45 (random forests & gradient boosting) finishes the exam-relevant course. BONUS (attached, NOT on the exam): 5:45–6:51 (~1h — neural nets, clustering, PCA); one relaxed watch if curious, no exam prep needed.',
   },
   // card-026 is the S5 LAB (run Lab 5) — no video.
 

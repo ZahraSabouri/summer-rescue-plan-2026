@@ -9242,6 +9242,29 @@ button.countdown-chip:hover {
   margin-top: 8px;
 }
 
+.card-knowledge-extra {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.card-knowledge-extra > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.76rem;
+  list-style: none;
+}
+.card-knowledge-extra > summary::-webkit-details-marker {
+  display: none;
+}
+.card-knowledge-extra > summary::before {
+  content: '+ ';
+  color: var(--accent);
+  font-weight: 700;
+}
+.card-knowledge-extra[open] > summary::before {
+  content: '− ';
+}
+
 .card-knowledge-chip {
   display: inline-flex;
   gap: 6px;

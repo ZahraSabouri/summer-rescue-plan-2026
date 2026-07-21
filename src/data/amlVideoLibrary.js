@@ -14,10 +14,12 @@
 // boundaries were derived from the video's own transcript, since its YouTube
 // chapters stop at 52:00.
 //
-// Out of scope and deliberately absent: the course video after 5:45:00 (neural
-// networks, clustering, PCA) and UBC sections 14-18 (clustering, NLP, PCA, word
-// embeddings, attention/RNN). Those are CMT307 Part 2 / group-project material and
-// the class test covers Sessions 1-5 only.
+// Out of scope for the class test (Sessions 1-5 only): the course video after
+// 5:45:00 (neural networks, clustering, PCA) and UBC sections 14-18 (clustering,
+// NLP, PCA, word embeddings, attention/RNN) are CMT307 Part 2 / group-project
+// material. The post-5:45 course tail IS included below as one clearly-flagged
+// enrichment clip (watch once, not tested) so the full video can be finished; the
+// UBC Part-2 sections stay absent.
 
 const UBC_PLAYLIST = 'PLHofvQE1VlGtZoAULxcHb7lOsMved0CuM'
 const CS229_PLAYLIST = 'PLoROMvodv4rMiGQp3WXShtMGgzqpfVfbU'
@@ -158,6 +160,12 @@ export const AML_VIDEOS = [
   ubc('12-2-feature-importances', 'tiSN18OmZOo', '12.2 Feature Importances Non-Linear Models', 9, 's5'),
   segment('s5-ensembles', 19500, 20700, 'random forests & gradient boosting', 's5'),
   cs229(9, 'wr9gUr-eWdA', 'Decision Trees and Ensemble Methods', 81, 's5'),
+
+  // ---- Beyond the exam: the course-video tail, NOT on the S1-S5 class test ----
+  // Included so the full 6h51m video can be finished, but flagged everywhere as
+  // enrichment: one relaxed ~1h watch, no exam prep. Session tag 'beyond' keeps it
+  // in its own module group, separate from the tested S1-S5 clips.
+  segment('beyond-part2', 20700, 24660, 'PART 2 (NOT on the S1–S5 exam) — neural nets, clustering & PCA', 'beyond'),
 ]
 
 export const AML_VIDEO_BY_ID = new Map(AML_VIDEOS.map((video) => [video.id, video]))

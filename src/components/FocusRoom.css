@@ -760,12 +760,136 @@
   font-size: 12px;
 }
 
+.focus-room-stepout-open {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.focus-room-stepout-open:hover,
+.focus-room-stepout-open:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.focus-room-stepout-form {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.focus-room-stepout-form label {
+  font-size: 12px;
+  font-weight: 800;
+}
+.focus-room-stepout-form input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--input-ink);
+  background: var(--input-bg);
+}
+.focus-room-stepout-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+.focus-room-stepout-actions {
+  display: flex;
+  gap: 8px;
+}
+.focus-room-stepout-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  font-weight: 700;
+  cursor: pointer;
+}
+.focus-room-stepout-actions button.focus-room-start {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.focus-room-stepout-actions button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+.focus-room-stepout-form small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.focus-room-stepout-active {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  font-size: 12px;
+}
+.focus-room-stepout-active strong {
+  font-family: var(--font-num);
+}
+.focus-room-stepout-active button {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Concept notes for the active card — the knowledge behind the task, read in
    full inside the Focus Room while the timer runs. */
+.focus-room-sequence,
 .focus-room-knowledge {
   margin-top: 22px;
   padding-top: 22px;
   border-top: 1px solid var(--line);
+}
+.focus-room-sequence .study-sequence-concepts {
+  margin-top: 14px;
+}
+.focus-room-knowledge-extra {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.focus-room-knowledge-extra > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.78rem;
+  list-style: none;
+}
+.focus-room-knowledge-extra > summary::-webkit-details-marker {
+  display: none;
+}
+.focus-room-knowledge-extra > summary::before {
+  content: '+ ';
+  color: var(--accent);
+  font-weight: 700;
+}
+.focus-room-knowledge-extra[open] > summary::before {
+  content: '− ';
+}
+.focus-room-knowledge-extra .focus-room-knowledge-list {
+  margin-top: 12px;
+}
+.focus-room-sequence .study-sequence-steps {
+  margin-top: 14px;
 }
 .focus-room-knowledge-head {
   display: flex;
