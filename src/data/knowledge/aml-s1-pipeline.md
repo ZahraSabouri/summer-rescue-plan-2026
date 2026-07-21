@@ -283,7 +283,7 @@ Detecting an outlier does not oblige you to delete it. A rule flagging a third o
 2. Why did `Informational` flag so many outliers? :: Its upper quartile is 0, so essentially every non-zero value falls outside the ceiling. The rule is a poor fit for a zero-inflated column.
 3. When should you not remove flagged outliers? :: When they are too numerous to drop without losing information, or when they are genuine extreme behaviour rather than errors.
 
-@@ id=s1-class-imbalance | title=Spotting class imbalance | kind=cheatsheet | topic=S1 · Code recipes | key | tags=code,imbalance,exam | cards=card-003
+@@ id=s1-class-imbalance | title=Spotting class imbalance | kind=cheatsheet | topic=S1 · Code recipes | key | tags=code,imbalance,exam | cards=card-005
 ```python
 df['Revenue'].value_counts()                  # raw counts
 df['Revenue'].value_counts(normalize=True)    # proportions — read this one

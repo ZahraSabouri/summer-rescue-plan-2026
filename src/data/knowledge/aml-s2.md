@@ -86,7 +86,7 @@ This is the same rule as the Tukey outlier function from Lab 1 — the boxplot i
 
 Generalization is the one people forget: replacing a precise street address with a city, or an exact age with a band. It reduces detail deliberately.
 
-@@ id=s2-why-scale | title=Why feature scaling matters | kind=concept | topic=S2 · Transformation | key | tags=scaling,exam | cards=card-005
+@@ id=s2-why-scale | title=Why feature scaling matters | kind=concept | topic=S2 · Transformation | key | tags=scaling,exam | cards=card-003
 The range of values of raw data varies widely; scaling gives all features the same range. Three reasons from the slides, each worth quoting:
 
 1. **Necessary for distance/similarity-based ML methods** — k-NN, SVM. An unscaled feature with a large range dominates the distance.
@@ -325,7 +325,7 @@ The two-column detail is the examinable bit: **transformers** use `fit()` then `
 ## Check yourself
 1. What comes immediately after "Data" in the flow, and why does the order matter? :: Train/test split — before preprocessing, so nothing learned from the test set can leak into the transform.
 
-@@ id=s2-columntransformer | title=Pipeline + ColumnTransformer: the exam-critical pattern | kind=cheatsheet | topic=S2 · Code recipes | key | tags=code,sklearn,exam,leakage | cards=card-005,card-008
+@@ id=s2-columntransformer | title=Pipeline + ColumnTransformer: the exam-critical pattern | kind=cheatsheet | topic=S2 · Code recipes | key | tags=code,sklearn,exam,leakage | cards=card-007,card-008
 The Lab 2 solution in full. **Learn this shape** — it handles mixed dtypes, imputes, encodes, scales, and makes leakage structurally impossible.
 
 ```python

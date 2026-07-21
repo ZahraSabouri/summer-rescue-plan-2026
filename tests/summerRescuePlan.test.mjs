@@ -36,6 +36,32 @@ test('summer rescue schedule protects capacity and contains no collisions', () =
   }
 })
 
+test('protected exam-module hours match the cards and the 40/35/25 priority', () => {
+  const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, READINESS_DEADLINE)
+  const scheduleHours = Object.fromEntries(['Applied ML', 'Time Series', 'MAT700'].map((moduleGroup) => [
+    moduleGroup,
+    days.flatMap((day) => day.blocks)
+      .filter((block) => block.category === 'study' && block.moduleGroup === moduleGroup)
+      .reduce((sum, block) => sum + minutesBetween(block.start, block.end) / 60, 0),
+  ]))
+  const cardHours = Object.fromEntries(Object.keys(scheduleHours).map((moduleGroup) => [
+    moduleGroup,
+    rescueCards.filter((card) => card.moduleGroup === moduleGroup)
+      .reduce((sum, card) => sum + Number(card.estimatedHours || 0), 0),
+  ]))
+
+  assert.deepEqual(scheduleHours, { 'Applied ML': 75, 'Time Series': 66, MAT700: 46 })
+  assert.deepEqual(cardHours, scheduleHours)
+  const total = Object.values(scheduleHours).reduce((sum, hours) => sum + hours, 0)
+  assert.ok(Math.abs(scheduleHours['Applied ML'] / total - 0.4) < 0.01)
+  assert.ok(Math.abs(scheduleHours['Time Series'] / total - 0.35) < 0.01)
+  assert.ok(Math.abs(scheduleHours.MAT700 / total - 0.25) < 0.01)
+
+  const launch = days.find((day) => day.date === '2026-07-20')
+  assert.equal(launch.blocks.find((block) => block.start === '09:00')?.cardId, 'card-001')
+  assert.equal(launch.blocks.find((block) => block.start === '11:15')?.cardId, 'mat700-foundation-reset')
+})
+
 test('every campaign day contains one brief admin check-in', () => {
   const days = expandScheduleRange(scheduleRules, scheduleExceptions, CAMPAIGN_START, CAMPAIGN_END)
   for (const day of days) {
@@ -146,7 +172,7 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
         .reduce((sum, card) => sum + Number(card.estimatedHours || 0), 0),
     ]),
   )
-  assert.deepEqual(hoursByModule, { 'Applied ML': 70, 'Time Series': 88, MAT700: 52 })
+  assert.deepEqual(hoursByModule, { 'Applied ML': 75, 'Time Series': 66, MAT700: 46 })
 
   const projectCards = rescueCards.filter((card) => card.moduleGroup === 'Group Project')
   assert.equal(projectCards.length, 4)
@@ -207,7 +233,7 @@ test('plan reset preserves completed history and drops unfinished pre-reset card
   }
 
   const migrated = migrateTrackerState(old)
-  assert.equal(migrated.version, 5)
+  assert.equal(migrated.version, 6)
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   assert.equal(migrated.settings.referenceDate, today)
@@ -216,8 +242,7 @@ test('plan reset preserves completed history and drops unfinished pre-reset card
   assert.equal(migrated.settings.mat700Active, false)
   assert.equal(migrated.settings.theme, 'dark')
   assert.deepEqual(migrated.settings.moduleExamDates, { aml: '2026-08-20' })
-  assert.equal(migrated.cards['card-001'].actualHours, 2.5)
-  assert.equal(migrated.cards['card-001'].notes[0].text, 'Keep this')
+  assert.equal(migrated.cards['card-001'], undefined)
   assert.equal(migrated.addedCards.length, 1)
   assert.equal(migrated.addedCards[0].title, 'HISTORY - 19 Jul - Keep completed custom card')
   assert.equal(migrated.addedCards[0].phase, 'Phase 0')
@@ -253,7 +278,7 @@ test('the 20 July reset preserves logged progress and drops empty old routine ca
   assert.equal(migrated.addedCards.length, 0)
 })
 
-test('the 20 July reset files touched cards on 19 July without rewriting log timestamps', () => {
+test('the July 20 AML launch correction resets only card 001 and its resources', () => {
   const live = {
     version: 5,
     cards: {
@@ -262,7 +287,8 @@ test('the 20 July reset files touched cards on 19 July without rewriting log tim
         activity: [{ id: 'a1', action: 'Updated checklist', at: '2026-07-16T16:24:19.362Z' }],
       },
       'card-002': {
-        status: 'Rescue Lane',
+        status: 'Done',
+        done: true,
         activity: [{ id: 'a2', action: 'Moved card', details: 'Rescue Lane', at: '2026-07-18T20:07:37.303Z' }],
       },
     },
@@ -270,6 +296,7 @@ test('the 20 July reset files touched cards on 19 July without rewriting log tim
     dayLogs: { '2026-07-16': { note: 'Keep the day exactly as logged' } },
     resourceProgress: {
       'aml-video-intro': { progressPercent: 100, updatedAt: '2026-07-19T17:28:41.742Z' },
+      'aml-video-ubc-1-0-ml-introduction': { progressPercent: 100, updatedAt: '2026-07-19T17:28:41.742Z' },
     },
     settings: {
       planRevision: '2026-07-16-zero-based-32-day-plan-v9',
@@ -280,10 +307,10 @@ test('the 20 July reset files touched cards on 19 July without rewriting log tim
 
   const migrated = migrateTrackerState(live)
   assert.equal(migrated.settings.campaignStart, '2026-07-20')
-  assert.equal(migrated.cards['card-001'].status, 'Done')
-  assert.equal(migrated.cards['card-001'].edits.dueDate, '2026-07-19')
-  assert.equal(migrated.cards['card-001'].activity[0].at, '2026-07-16T16:24:19.362Z')
-  assert.equal(migrated.cards['card-002'], undefined)
+  assert.equal(migrated.cards['card-001'], undefined)
+  assert.equal(migrated.cards['card-002'].status, 'Done')
+  assert.equal(migrated.cards['card-002'].activity[0].at, '2026-07-18T20:07:37.303Z')
   assert.equal(migrated.dayLogs['2026-07-16'].note, 'Keep the day exactly as logged')
   assert.equal(migrated.resourceProgress['aml-video-intro'].updatedAt, '2026-07-19T17:28:41.742Z')
+  assert.equal(migrated.resourceProgress['aml-video-ubc-1-0-ml-introduction'], undefined)
 })

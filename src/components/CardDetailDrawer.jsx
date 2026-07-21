@@ -11,6 +11,7 @@ import {
 import { addDays, cardKind, cardPlanLane, checklistDoneCount, formatDate, isOverdue, kindFeatures, requiresEvidence } from '../utils/progress'
 import { resourcesForCard, searchResourcesForCard } from '../utils/cardResourceSearch'
 import { kindMeta } from '../utils/knowledge'
+import { openFocusRoomTab } from '../utils/focusSession'
 import { CardSessionTimer } from './CardSessionTimer'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
 
@@ -99,6 +100,62 @@ function LinkedResourceStudyCard({
   )
 }
 
+const STEP_KIND_LABEL = {
+  watch: 'Watch',
+  read: 'Read',
+  write: 'Write',
+  do: 'Do',
+  test: 'Self-test',
+}
+
+function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResource, onOpenKnowledgeNote }) {
+  const stepResources = (step.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
+  const stepNotes = (step.noteIds ?? []).map((id) => notesById.get(id)).filter(Boolean)
+  return (
+    <li className={`study-sequence-step kind-${step.kind ?? 'do'}`}>
+      <div className="study-sequence-step-head">
+        <span className="study-sequence-step-number" aria-hidden="true">
+          {index + 1}
+        </span>
+        <div>
+          <strong>{step.label}</strong>
+          <span className="study-sequence-step-meta">
+            {STEP_KIND_LABEL[step.kind] ?? 'Do'}
+            {step.minutes ? ` · ~${step.minutes} min` : ''}
+          </span>
+        </div>
+      </div>
+      {step.instruction && <p className="study-sequence-instruction">{step.instruction}</p>}
+      {(stepResources.length > 0 || stepNotes.length > 0) && (
+        <div className="study-sequence-refs">
+          {stepResources.map((resource) => (
+            <button
+              key={resource.id}
+              type="button"
+              className="study-sequence-ref-chip is-resource"
+              onClick={() => onOpenResource?.(resource.id)}
+            >
+              <span className="type-badge">{resource.type}</span>
+              {resource.title}
+            </button>
+          ))}
+          {stepNotes.map((note) => (
+            <button
+              key={note.id}
+              type="button"
+              className="study-sequence-ref-chip is-note"
+              onClick={() => onOpenKnowledgeNote?.(note)}
+            >
+              <span aria-hidden="true">{kindMeta(note.kind).icon}</span>
+              {note.title}
+            </button>
+          ))}
+        </div>
+      )}
+    </li>
+  )
+}
+
 export function CardDetailDrawer({
   card,
   resources = [],
@@ -153,6 +210,10 @@ export function CardDetailDrawer({
   const [form, setForm] = useState(() => createForm(card))
   const [resourceQuery, setResourceQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
+  // Shown right after Start session so the running session can either stay in this
+  // card or move to the Focus Room tab, without forcing either. The render already
+  // gates on this card owning the active session, so no reset effect is needed.
+  const [sessionChoiceOpen, setSessionChoiceOpen] = useState(false)
 
   useEffect(() => {
     if (!card) return undefined
@@ -250,6 +311,7 @@ export function CardDetailDrawer({
   }, [card])
 
   const resourcesById = useMemo(() => new Map(resources.map((resource) => [resource.id, resource])), [resources])
+  const notesById = useMemo(() => new Map(linkedNotes.map((note) => [note.id, note])), [linkedNotes])
   const linkedResources = (card?.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
   const videoResources = linkedResources.filter((resource) => resource.viewer === 'youtube' || resource.type === 'YOUTUBE')
   const fileResources = linkedResources.filter((resource) => resource.viewer !== 'youtube' && resource.type !== 'YOUTUBE')
@@ -478,11 +540,38 @@ export function CardDetailDrawer({
               />
             </label>
             {activeSessionCardId !== card.id && (
-              <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  onStartSession?.(card.id)
+                  setSessionChoiceOpen(true)
+                }}
+              >
                 Start session
               </button>
             )}
             {activeSessionCardId === card.id && <CardSessionTimer cardId={card.id} />}
+            {activeSessionCardId === card.id && sessionChoiceOpen && (
+              <div className="session-start-choice" role="group" aria-label="Where to run this session">
+                <p>Session started — where do you want to work?</p>
+                <div className="session-start-choice-actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => {
+                      openFocusRoomTab(card.id)
+                      setSessionChoiceOpen(false)
+                    }}
+                  >
+                    Open Focus Room ↗
+                  </button>
+                  <button type="button" className="secondary-button" onClick={() => setSessionChoiceOpen(false)}>
+                    Stay on this card
+                  </button>
+                </div>
+              </div>
+            )}
             {overdue && (
               <div className="reschedule-inline drawer-reschedule">
                 <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
@@ -521,9 +610,58 @@ export function CardDetailDrawer({
             </dl>
           </section>
 
+          {card.studySequence?.steps?.length > 0 && (
+            <details className="drawer-section wide card-resource-panel study-sequence-panel" open>
+              <summary>
+                <span>
+                  <strong>How to study this card</strong>
+                  <small>In order — the specific pages, videos, and notes for this card only</small>
+                </span>
+                <span>
+                  {card.studySequence.steps.length} step{card.studySequence.steps.length === 1 ? '' : 's'}
+                  {card.studySequence.totalMinutes ? ` · ~${Math.round(card.studySequence.totalMinutes / 60 * 10) / 10}h` : ''}
+                </span>
+              </summary>
+              <div className="card-resource-panel-body">
+                {card.studySequence.concepts?.length > 0 && (
+                  <div className="study-sequence-concepts">
+                    <h4>Must cover</h4>
+                    <ul>
+                      {card.studySequence.concepts.map((concept) => (
+                        <li key={concept}>{concept}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <ol className="study-sequence-steps">
+                  {card.studySequence.steps.map((step, index) => (
+                    <StudySequenceStep
+                      key={`${card.id}-step-${index}`}
+                      index={index}
+                      step={step}
+                      resourcesById={resourcesById}
+                      notesById={notesById}
+                      onOpenResource={onOpenResource}
+                      onOpenKnowledgeNote={onOpenKnowledgeNote}
+                    />
+                  ))}
+                </ol>
+              </div>
+            </details>
+          )}
+
           {linkedNotes.length > 0 && (
-            <section className="drawer-section wide card-knowledge-panel">
-              <h3>Concept notes for this card</h3>
+            <details className="drawer-section wide card-knowledge-panel">
+              <summary>
+                <span>
+                  <strong>Concept notes for this card</strong>
+                  <small>The knowledge behind this task — open the Focus Room to read in full</small>
+                </span>
+                <span>
+                  {linkedNotes.length} note{linkedNotes.length === 1 ? '' : 's'}
+                  {linkedNotes.some((note) => note.review.state === 'due') && ' · some due'}
+                </span>
+              </summary>
               <div className="card-knowledge-row">
                 {linkedNotes.map((note) => (
                   <button
@@ -539,7 +677,7 @@ export function CardDetailDrawer({
                   </button>
                 ))}
               </div>
-            </section>
+            </details>
           )}
 
           {(linkedResources.length > 0 || hasResourceLibrary) && (

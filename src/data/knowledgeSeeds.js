@@ -67,6 +67,8 @@ export const KNOWLEDGE_SEEDS = [
     kind: 'concept',
     topic: 'Foundations',
     tags: ['taxonomy', 'supervised', 'unsupervised', 'reinforcement', 'session 1'],
+    // Session-1 foundations; also part of the S1–S5 consolidation card.
+    cardIds: ['card-001', 'card-005', 'card-030'],
     body: amlMlTypes,
     createdAt: '2026-07-19T00:00:00.000Z',
     updatedAt: '2026-07-19T00:00:00.000Z',
@@ -78,6 +80,7 @@ export const KNOWLEDGE_SEEDS = [
     kind: 'cheatsheet',
     topic: 'Foundations',
     tags: ['recall', 'one-page', 'exam'],
+    cardIds: ['card-001', 'card-005', 'card-030'],
     body: amlKeyNotes,
     createdAt: '2026-07-19T00:00:00.000Z',
     updatedAt: '2026-07-19T00:00:00.000Z',
@@ -89,6 +92,7 @@ export const KNOWLEDGE_SEEDS = [
     kind: 'traps',
     topic: 'Foundations',
     tags: ['traps', 'exam technique'],
+    cardIds: ['card-001', 'card-005', 'card-030'],
     body: amlTraps,
     createdAt: '2026-07-19T00:00:00.000Z',
     updatedAt: '2026-07-19T00:00:00.000Z',
@@ -100,6 +104,10 @@ export const KNOWLEDGE_SEEDS = [
     kind: 'cheatsheet',
     topic: 'Foundations',
     tags: ['recall', 'four axes', 'exam'],
+    // Live MAT700 ids after the 20 Jul re-plan (semantic, not card-NNN). Topic is
+    // "Foundations" so the session-key auto-join can't reach these — link explicitly
+    // to the foundation-reset and Lecture-1 rebuild cards.
+    cardIds: ['mat700-foundation-reset', 'mat700-rebuild-l1'],
     body: mat700KeyNotes,
     createdAt: '2026-07-19T00:00:00.000Z',
     updatedAt: '2026-07-19T00:00:00.000Z',
@@ -111,6 +119,7 @@ export const KNOWLEDGE_SEEDS = [
     kind: 'traps',
     topic: 'Foundations',
     tags: ['cross-module', 'traps', 'exam technique'],
+    cardIds: ['mat700-foundation-reset', 'mat700-rebuild-l1'],
     body: mat700VsCmt307,
     createdAt: '2026-07-19T00:00:00.000Z',
     updatedAt: '2026-07-19T00:00:00.000Z',

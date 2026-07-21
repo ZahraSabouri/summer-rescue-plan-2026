@@ -203,6 +203,58 @@ export function notesForCard(notes, cardId) {
   return notes.filter((note) => note.cardIds.includes(cardId))
 }
 
+// The seed content is authored per session ("AML S2 —"), lecture ("MAT700 — L3–L4"),
+// or pack ("TS Pack C — Read L5–L7"), and the notes carry the matching key in their
+// topic/id ("S2 · Foundations", "TS · L6 Forecasting"). We mine those keys from a
+// string so a card and a note can be matched even where no explicit `cards=` link was
+// authored — that is what lets every task card surface its own concepts. Notes are
+// already module-scoped by the caller, so keys never need a module qualifier.
+function conceptKeysFromText(text) {
+  const keys = new Set()
+  const source = String(text ?? '')
+  // Ranges first: "S1–S5", "L5–L7", "L1-L2" expand to every session/lecture inside.
+  for (const match of source.matchAll(/\b([SL])(\d+)\s*[–—-]\s*[SL]?(\d+)\b/gi)) {
+    const letter = match[1].toLowerCase()
+    const from = Number(match[2])
+    const to = Number(match[3])
+    if (Number.isFinite(from) && Number.isFinite(to) && to >= from && to - from < 30) {
+      for (let n = from; n <= to; n += 1) keys.add(`${letter}${n}`)
+    }
+  }
+  // Standalone sessions/lectures.
+  for (const match of source.matchAll(/\b([SL])(\d+)\b/gi)) keys.add(`${match[1].toLowerCase()}${match[2]}`)
+  // Time-series packs.
+  for (const match of source.matchAll(/\bPack\s+([A-Z])\b/gi)) keys.add(`pack-${match[1].toLowerCase()}`)
+  return keys
+}
+
+function conceptKeysForNote(note) {
+  return conceptKeysFromText(`${note.topic ?? ''} ${note.id ?? ''}`)
+}
+
+/**
+ * All concept notes relevant to a card: explicit `cards=` links first (curated,
+ * always shown), then any same-session/lecture/pack notes matched automatically so
+ * coverage does not depend on every note being hand-linked. Cards with no session
+ * key in their title (meta, mocks, admin) fall back to explicit links only.
+ */
+export function relatedNotesForCard(notes, card) {
+  if (!card) return []
+  const explicit = notes.filter((note) => note.cardIds.includes(card.id))
+  const cardKeys = conceptKeysFromText(card.title)
+  if (cardKeys.size === 0) return explicit
+
+  const seen = new Set(explicit.map((note) => note.id))
+  const auto = notes.filter((note) => {
+    if (seen.has(note.id)) return false
+    for (const key of conceptKeysForNote(note)) {
+      if (cardKeys.has(key)) return true
+    }
+    return false
+  })
+  return [...explicit, ...auto]
+}
+
 // Many short notes are easier to author as one Markdown file per topic than as
 // one file each. A line beginning with `@@` opens a note and carries its
 // metadata as `key=value` pairs separated by `|`; everything up to the next

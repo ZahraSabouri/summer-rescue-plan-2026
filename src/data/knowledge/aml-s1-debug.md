@@ -123,7 +123,7 @@ The lab comments this explicitly:
 
 Defaults are a starting point that proves the pipeline runs. If an exam task says "improve this model", tuning hyperparameters is one of the expected moves — along with better preprocessing and a fairer metric.
 
-@@ id=s1-sanity-checklist | title=Sixty-second sanity checklist | kind=cheatsheet | topic=S1 · Debugging | key | tags=exam,checklist,recall | cards=card-001,card-003
+@@ id=s1-sanity-checklist | title=Sixty-second sanity checklist | kind=cheatsheet | topic=S1 · Debugging | key | tags=exam,checklist,recall | cards=card-001,card-005
 Run this list over any pipeline before you trust a number it prints.
 
 1. Did I look at `df.shape` and `df.info()`?
@@ -156,7 +156,7 @@ The test is 1.5 hours plus 30 minutes upload, on a computer. Method matters as m
 ## Check yourself
 1. What is the fastest single diagnostic to print after a split? :: The four shapes — `X_train`, `X_test`, `y_train`, `y_test`. Mismatches and mis-unpacking show up immediately.
 
-@@ id=s1-shopper-dataset | title=The shopper dataset in one page | kind=cheatsheet | topic=S1 · Debugging | tags=lab,dataset | cards=card-003
+@@ id=s1-shopper-dataset | title=The shopper dataset in one page | kind=cheatsheet | topic=S1 · Debugging | tags=lab,dataset | cards=card-005
 `online_shoppers_intention.csv` — UCI Online Shoppers Purchasing Intention. The recurring worked example.
 
 **Numeric features**

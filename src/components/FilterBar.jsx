@@ -36,7 +36,22 @@ export function FilterBar({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
-  const activeCount = Object.keys(FILTER_DEFAULTS).filter((key) => filters[key] !== FILTER_DEFAULTS[key]).length
+  const selectedModules = Array.isArray(filters.modules) ? filters.modules : []
+  const activeCount = Object.keys(FILTER_DEFAULTS).filter((key) => (
+    Array.isArray(FILTER_DEFAULTS[key])
+      ? Array.isArray(filters[key]) && filters[key].length > 0
+      : filters[key] !== FILTER_DEFAULTS[key]
+  )).length
+
+  function toggleModule(moduleGroup) {
+    setFilters((current) => {
+      const currentModules = Array.isArray(current.modules) ? current.modules : []
+      const modules = currentModules.includes(moduleGroup)
+        ? currentModules.filter((item) => item !== moduleGroup)
+        : [...currentModules, moduleGroup]
+      return { ...current, module: 'all', modules }
+    })
+  }
 
   return (
     <section className={`filter-bar${mobileOpen ? ' is-open' : ''}`} aria-label="Card filters">
@@ -72,12 +87,24 @@ export function FilterBar({
         onChange={(value) => update('phase', value)}
         options={phaseOptions}
       />
-      <SelectFilter
-        label="Module / area"
-        value={filters.module}
-        onChange={(value) => update('module', value)}
-        options={moduleOptions}
-      />
+      <details className="filter-multi">
+        <summary>
+          <span>Modules / areas</span>
+          <strong>{selectedModules.length > 0 ? `${selectedModules.length} selected` : 'All'}</strong>
+        </summary>
+        <div className="filter-multi-options" role="group" aria-label="Select modules or areas">
+          {moduleOptions.map((moduleGroup) => (
+            <label key={moduleGroup}>
+              <input
+                type="checkbox"
+                checked={selectedModules.includes(moduleGroup)}
+                onChange={() => toggleModule(moduleGroup)}
+              />
+              <span>{moduleGroup}</span>
+            </label>
+          ))}
+        </div>
+      </details>
       <label className="filter-field">
         <span>Kind</span>
         <select value={filters.kind ?? 'all'} onChange={(event) => update('kind', event.target.value)}>
@@ -131,6 +158,24 @@ export function FilterBar({
           type="date"
           value={filters.exactDate ?? ''}
           onChange={(event) => setFilters((current) => ({ ...current, exactDate: event.target.value, dateMode: 'all' }))}
+        />
+      </label>
+      <label className="filter-field">
+        <span>Deadline from</span>
+        <input
+          type="date"
+          value={filters.dateFrom ?? ''}
+          max={filters.dateTo || undefined}
+          onChange={(event) => setFilters((current) => ({ ...current, dateFrom: event.target.value, exactDate: '', dateMode: 'all' }))}
+        />
+      </label>
+      <label className="filter-field">
+        <span>Deadline to</span>
+        <input
+          type="date"
+          value={filters.dateTo ?? ''}
+          min={filters.dateFrom || undefined}
+          onChange={(event) => setFilters((current) => ({ ...current, dateTo: event.target.value, exactDate: '', dateMode: 'all' }))}
         />
       </label>
 

@@ -450,6 +450,7 @@ export function ModuleKnowledge({
   knowledge,
   referenceDate,
   focusNoteId = '',
+  onSelectNote,
   onSaveNote,
   onDeleteNote,
   onToggleStar,
@@ -533,13 +534,17 @@ export function ModuleKnowledge({
       createdAt: notes.find((note) => note.id === id)?.createdAt,
     })
     setSelectedId(id)
+    onSelectNote?.(id)
     setDraft(null)
   }
 
   function removeNote(note) {
     if (!window.confirm(`Delete “${note.title}”? Its review history goes too.`)) return
     onDeleteNote(note.id)
-    if (selectedId === note.id) setSelectedId('')
+    if (selectedId === note.id) {
+      setSelectedId('')
+      onSelectNote?.('')
+    }
   }
 
   return (
@@ -591,6 +596,7 @@ export function ModuleKnowledge({
                     active={activeNote?.id === note.id}
                     onSelect={(id) => {
                       setSelectedId(id)
+                      onSelectNote?.(id)
                       setDraft(null)
                     }}
                   />

@@ -1,8 +1,9 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   buildDayTimeline,
   expandScheduleRange,
   findScheduleConflicts,
+  resolveScheduledCard,
   summariseDay,
 } from '../utils/schedule'
 import { dayLog } from '../utils/dayLog'
@@ -227,6 +228,9 @@ export function DailyAgenda({
               : null
             const fixedSchedule = isFixedScheduleBlock(block)
             const allowScheduleEdit = Boolean(editDate && !fixedSchedule)
+            const queueTarget = block.category === 'study' && linkedCards.length === 0
+              ? resolveScheduledCard(block, cards)
+              : null
             return (
               <li
                 className={`daily-agenda-item category-${block.category || 'routine'}${logStatus ? ` is-${logStatus}` : ''}${linkedCards.length > 0 ? ' has-cards' : ''}`}
@@ -239,8 +243,8 @@ export function DailyAgenda({
                 </div>
                 <div className="daily-agenda-content">
                   <div className="daily-agenda-title-row">
-                    {onOpenCard && linkedCards.length > 0 ? (
-                      <button type="button" className="schedule-card-link" onClick={() => onOpenCard(linkedCards[0].id)}>{block.title}</button>
+                    {onOpenCard && (linkedCards.length > 0 || queueTarget) ? (
+                      <button type="button" className="schedule-card-link" onClick={() => onOpenCard((linkedCards[0] ?? queueTarget).id)}>{block.title}</button>
                     ) : onOpenBlock ? (
                       <button type="button" className="schedule-card-link" onClick={() => onOpenBlock(block)}>{block.title}</button>
                     ) : <strong>{block.title}</strong>}
@@ -252,6 +256,14 @@ export function DailyAgenda({
                     {block.moduleGroup && <span>{block.moduleGroup}</span>}
                     {block.location && <span>{block.location}</span>}
                   </div>
+                  {block.category === 'study' && linkedCards.length === 0 && queueTarget && (
+                    <p className="schedule-capacity-note">
+                      Queue target #{queueTarget.number}: {queueTarget.title} · due {formatDate(queueTarget.dueDate || queueTarget.startDate)}
+                    </p>
+                  )}
+                  {block.category === 'study' && linkedCards.length === 0 && !queueTarget && (
+                    <p className="schedule-capacity-note">Protected {block.moduleGroup} capacity · no matching card exists.</p>
+                  )}
                   {linkedCards.length > 0 && (
                     <ul className="schedule-timeline-cards">
                       {linkedCards.map((card) => {
@@ -346,6 +358,8 @@ export function ScheduleView({
   moduleExamDates = {},
   campaignStart = '',
   campaignEnd = '',
+  selectedWeekStart = '',
+  onWeekChange,
 }) {
   const baseStart = useMemo(
     () => alignedWeekStart(referenceDate, campaignStart, campaignEnd),
@@ -362,7 +376,12 @@ export function ScheduleView({
     return firstWeekStart && monday < firstWeekStart ? firstWeekStart : monday
   }, [campaignEnd, firstWeekStart])
   const [navigation, setNavigation] = useState(() => ({ anchor: baseStart, start: baseStart }))
-  const selectedStart = navigation.anchor === baseStart ? navigation.start : baseStart
+  const selectedStart = validDay(selectedWeekStart)
+    ? startOfIsoWeek(selectedWeekStart)
+    : navigation.anchor === baseStart ? navigation.start : baseStart
+  useEffect(() => {
+    if (!validDay(selectedWeekStart)) onWeekChange?.(baseStart)
+  }, [baseStart, onWeekChange, selectedWeekStart])
   const start = firstWeekStart && selectedStart < firstWeekStart
     ? firstWeekStart
     : lastWeekStart && selectedStart > lastWeekStart
@@ -406,6 +425,11 @@ export function ScheduleView({
   const exams = confirmedExamDates(moduleExamDates, { campaignStart, campaignEnd })
     .sort((a, b) => a.date.localeCompare(b.date))
 
+  function openWeek(weekStart) {
+    setNavigation({ anchor: baseStart, start: weekStart })
+    onWeekChange?.(weekStart)
+  }
+
   return (
     <section className="schedule-view" aria-labelledby="schedule-view-title">
       <header className="schedule-view-header">
@@ -435,7 +459,7 @@ export function ScheduleView({
           type="button"
           className="schedule-week-button"
           disabled={!canGoPrevious}
-          onClick={() => setNavigation({ anchor: baseStart, start: previousStart })}
+          onClick={() => openWeek(previousStart)}
         >
           <span aria-hidden="true">←</span> Previous week
         </button>
@@ -443,7 +467,7 @@ export function ScheduleView({
           type="button"
           className="schedule-week-button schedule-week-current"
           disabled={start === baseStart}
-          onClick={() => setNavigation({ anchor: baseStart, start: baseStart })}
+          onClick={() => openWeek(baseStart)}
         >
           Current week
         </button>
@@ -451,7 +475,7 @@ export function ScheduleView({
           type="button"
           className="schedule-week-button"
           disabled={!canGoNext}
-          onClick={() => setNavigation({ anchor: baseStart, start: nextStart })}
+          onClick={() => openWeek(nextStart)}
         >
           Next week <span aria-hidden="true">→</span>
         </button>

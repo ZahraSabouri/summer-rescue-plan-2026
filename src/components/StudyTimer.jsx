@@ -9,6 +9,7 @@ import {
 import { FocusRoom } from './FocusRoom'
 import { studyTimerStore } from '../utils/studyTimerStore'
 import { todayString } from '../utils/progress'
+import { onFocusMessage, openFocusRoomTab, postFocusMessage } from '../utils/focusSession'
 
 const MODE_META = {
   focus: { label: 'Focus', accent: 'var(--accent)' },
@@ -59,9 +60,17 @@ export function StudyTimer({
   onChecklistToggle,
   resources = [],
   onOpenResource,
+  // 'bar' is the always-mounted top-bar timer. 'room' is the same engine running
+  // inside a dedicated Focus Room tab, which renders the room and nothing else.
+  variant = 'bar',
+  linkedNotes = [],
+  onExitRoom,
 }) {
+  const isRoom = variant === 'room'
   const [open, setOpen] = useState(false)
-  const [focusRoomOpen, setFocusRoomOpen] = useState(false)
+  // Set on the bar timer while a Focus Room tab owns the clock. The bar stops
+  // ticking and shows a pointer to that tab, so a block is never double-counted.
+  const [remoteOwner, setRemoteOwner] = useState(null)
   const [mode, setMode] = useState('focus')
   const [durations, setDurations] = useState({ focus: 25, short: 5, long: 15 })
   const [focusPreset, setFocusPreset] = useState('25-5')
@@ -195,6 +204,56 @@ export function StudyTimer({
     setRemaining(durationsRef.current.focus * 60)
   }, [])
 
+  // Stop the local clock because another tab is taking the session over. Any
+  // focus time already accrued is logged first (fragments under a minute are
+  // dropped by policy), so handing off never silently loses work — but sessions
+  // are NOT incremented here, since the block itself is continuing elsewhere.
+  const pauseForHandoff = useCallback(() => {
+    if (!runningRef.current) return
+    logFocusSegment()
+    runIdRef.current += 1
+    completedRunIdRef.current = null
+    deadlineRef.current = null
+    runningRef.current = false
+    setRunning(false)
+    setRemaining(durationsRef.current[modeRef.current] * 60)
+  }, [logFocusSegment])
+
+  // The bar timer listens for a Focus Room tab claiming or releasing the session.
+  // The room tab does not listen: it is the owner while it is open.
+  useEffect(() => {
+    if (isRoom) return undefined
+    return onFocusMessage((message) => {
+      if (message.type === 'claim') {
+        setRemoteOwner({ tabId: message.from, cardId: message.cardId ?? null })
+        pauseForHandoff()
+        return
+      }
+      if (message.type === 'release') {
+        setRemoteOwner((current) => (current && current.tabId !== message.from ? current : null))
+      }
+    })
+  }, [isRoom, pauseForHandoff])
+
+  // A room tab that closes without a clean release (crash, hard kill) would
+  // otherwise strand the bar timer as "handed off" forever. Re-check on focus.
+  useEffect(() => {
+    if (isRoom || !remoteOwner) return undefined
+    const onWindowFocus = () => {
+      let answered = false
+      const stop = onFocusMessage((message) => {
+        if (message.type === 'room-alive' && message.from === remoteOwner.tabId) answered = true
+      })
+      postFocusMessage('ping')
+      window.setTimeout(() => {
+        stop()
+        if (!answered) setRemoteOwner(null)
+      }, 600)
+    }
+    window.addEventListener('focus', onWindowFocus)
+    return () => window.removeEventListener('focus', onWindowFocus)
+  }, [isRoom, remoteOwner])
+
   // Pressing "Start" on a card sends a new startSignal. Begin the focus session
   // right away so the timer visibly runs inside the card. We key off startSignal
   // (not the activeCard reference, which also changes when a session is logged) so
@@ -214,11 +273,42 @@ export function StudyTimer({
     return () => window.clearTimeout(id)
   }, [activeCard, startSignal, logFocusSegment, startFocusRun])
 
+  // The Focus Room tab opens with the clock already running: the user pressed
+  // "Start session" to get here, so the block should be live the moment the tab
+  // paints. Only auto-start once, and only if nothing is already running.
+  const roomAutoStartedRef = useRef(false)
   useEffect(() => {
-    if (activeCard) return undefined
-    const id = window.setTimeout(() => setFocusRoomOpen(false), 0)
-    return () => window.clearTimeout(id)
-  }, [activeCard])
+    if (!isRoom || !activeCard || roomAutoStartedRef.current) return
+    roomAutoStartedRef.current = true
+    if (!runningRef.current) startFocusRun()
+  }, [isRoom, activeCard, startFocusRun])
+
+  // Claim the session for this tab and hold it for as long as the room is open.
+  // The claim is re-announced on ping so a bar timer can confirm we are alive.
+  // Keyed on the stable card id, NOT the activeCard object: the main tab re-sends a
+  // fresh card snapshot on every checklist tick, and re-running this on each one
+  // would churn claim/release and spuriously log the running block.
+  const roomCardId = isRoom ? activeCard?.id ?? '' : ''
+  useEffect(() => {
+    if (!roomCardId) return undefined
+    postFocusMessage('claim', { cardId: roomCardId })
+    const stop = onFocusMessage((message) => {
+      if (message.type === 'ping') postFocusMessage('room-alive', { cardId: roomCardId })
+    })
+    // On close, flush any focus time accrued this block so a mid-session tab close
+    // still credits the minutes (best-effort: the channel post usually lands before
+    // the tab unloads), then hand ownership back to the main tab.
+    const release = () => {
+      if (runningRef.current) logFocusSegment()
+      postFocusMessage('release', { cardId: roomCardId })
+    }
+    window.addEventListener('pagehide', release)
+    return () => {
+      window.removeEventListener('pagehide', release)
+      stop()
+      release()
+    }
+  }, [roomCardId, logFocusSegment])
 
   // Mirror the live timer into the shared store so the active card can display it.
   useEffect(() => {
@@ -230,8 +320,9 @@ export function StudyTimer({
       durations,
       sessions,
       preset: focusPreset,
+      remoteOwned: Boolean(remoteOwner),
     })
-  }, [activeCard, mode, remaining, running, durations, sessions, focusPreset])
+  }, [activeCard, mode, remaining, running, durations, sessions, focusPreset, remoteOwner])
 
   // Refresh the shared handlers every render so card controls act on live state.
   useEffect(() => {
@@ -241,12 +332,15 @@ export function StudyTimer({
       selectMode: handleSelectMode,
       selectPreset: handleSelectPreset,
       adjust: handleAdjust,
+      // The Focus Room is always its own tab now. Opening it hands the clock
+      // over; this tab keeps the card open but stops running the session.
       openFocusRoom: () => {
+        const cardId = activeCardRef.current?.id
+        if (!cardId) return
         setOpen(false)
-        setFocusRoomOpen(true)
+        openFocusRoomTab(cardId)
       },
       clearActive: () => {
-        setFocusRoomOpen(false)
         onClearActive?.()
       },
     })
@@ -435,6 +529,41 @@ export function StudyTimer({
     setRunning(true)
   }
 
+  // Focus Room tab: the room IS the page. No bar, no popover, no exit-to-nothing.
+  if (isRoom) {
+    if (!activeCard) return null
+    return (
+      <FocusRoom
+        key={activeCard.id}
+        activeCard={activeCard}
+        mode={mode}
+        durations={durations}
+        remaining={remaining}
+        running={running}
+        sessions={sessions}
+        preset={focusPreset}
+        currentBoundary={currentBoundary}
+        nextBoundary={nextBoundary}
+        onSelectMode={handleSelectMode}
+        onSelectPreset={handleSelectPreset}
+        onAdjust={handleAdjust}
+        onReset={handleReset}
+        onToggleRunning={handleToggleRunning}
+        onForfeit={forfeitRun}
+        onSaveRestartCue={onSaveRestartCue}
+        onChecklistToggle={onChecklistToggle}
+        resources={resources}
+        onOpenResource={onOpenResource}
+        linkedNotes={linkedNotes}
+        onExit={() => {
+          // Deliberate exit: log the current block before the tab closes.
+          handleReset()
+          onExitRoom?.()
+        }}
+      />
+    )
+  }
+
   return (
     <>
       <div className="timer-wrap" ref={wrapRef}>
@@ -470,6 +599,13 @@ export function StudyTimer({
             ))}
           </div>
 
+          {remoteOwner && (
+            <div className="timer-handoff-note" role="status">
+              <strong>Session running in the Focus Room tab</strong>
+              <small>This timer is paused while the Focus Room owns the clock.</small>
+            </div>
+          )}
+
           {activeCard && (
             <div className="timer-card-link">
               <span>Linked card</span>
@@ -478,10 +614,7 @@ export function StudyTimer({
               <button
                 type="button"
                 className="text-button"
-                onClick={() => {
-                  setFocusRoomOpen(false)
-                  onClearActive?.()
-                }}
+                onClick={() => onClearActive?.()}
               >
                 Clear
               </button>
@@ -490,10 +623,10 @@ export function StudyTimer({
                 className="secondary-button timer-focus-room-button"
                 onClick={() => {
                   setOpen(false)
-                  setFocusRoomOpen(true)
+                  openFocusRoomTab(activeCard.id)
                 }}
               >
-                Open Focus Room
+                {remoteOwner ? 'Go to Focus Room ↗' : 'Open Focus Room ↗'}
               </button>
             </div>
           )}
@@ -520,11 +653,15 @@ export function StudyTimer({
           </div>
 
           <div className="timer-controls">
-            <button type="button" className="secondary-button" onClick={handleReset}>
+            <button type="button" className="secondary-button" onClick={handleReset} disabled={Boolean(remoteOwner)}>
               {activeCard ? 'Log & reset' : 'Reset'}
             </button>
-            <button type="button" className="primary-button timer-go" onClick={handleToggleRunning}>
-              {running ? 'Pause' : 'Start'}
+            <button
+              type="button"
+              className="primary-button timer-go"
+              onClick={remoteOwner ? () => openFocusRoomTab(remoteOwner.cardId) : handleToggleRunning}
+            >
+              {remoteOwner ? 'Go to room ↗' : running ? 'Pause' : 'Start'}
             </button>
           </div>
 
@@ -567,31 +704,6 @@ export function StudyTimer({
         )}
       </div>
 
-      {focusRoomOpen && activeCard && (
-        <FocusRoom
-          key={activeCard.id}
-          activeCard={activeCard}
-          mode={mode}
-          durations={durations}
-          remaining={remaining}
-          running={running}
-          sessions={sessions}
-          preset={focusPreset}
-          currentBoundary={currentBoundary}
-          nextBoundary={nextBoundary}
-          onSelectMode={handleSelectMode}
-          onSelectPreset={handleSelectPreset}
-          onAdjust={handleAdjust}
-          onReset={handleReset}
-          onToggleRunning={handleToggleRunning}
-          onForfeit={forfeitRun}
-          onSaveRestartCue={onSaveRestartCue}
-          onChecklistToggle={onChecklistToggle}
-          resources={resources}
-          onOpenResource={onOpenResource}
-          onExit={() => setFocusRoomOpen(false)}
-        />
-      )}
     </>
   )
 }

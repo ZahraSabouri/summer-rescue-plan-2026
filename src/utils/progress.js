@@ -198,6 +198,8 @@ export function filterCards(cards, filters, referenceDate) {
     if (search && !cardText.includes(search)) return false
     if (filters.phase !== 'all' && card.phase !== filters.phase) return false
     if (filters.module !== 'all' && card.moduleGroup !== filters.module) return false
+    const selectedModules = Array.isArray(filters.modules) ? filters.modules : []
+    if (selectedModules.length > 0 && !selectedModules.includes(card.moduleGroup)) return false
     if (filters.priority !== 'all' && card.priority !== filters.priority) return false
     if (filters.status !== 'all' && cardPlanLane(card, referenceDate) !== filters.status) return false
     if (filters.kind && filters.kind !== 'all' && cardKind(card) !== filters.kind) return false
@@ -211,6 +213,8 @@ export function filterCards(cards, filters, referenceDate) {
     if (filters.dateMode === 'overdue' && !isOverdue(card, referenceDate)) return false
     if (filters.dateMode === 'no-date' && cardDate) return false
     if (filters.exactDate && cardDate !== filters.exactDate) return false
+    if (filters.dateFrom && (!cardDate || cardDate < filters.dateFrom)) return false
+    if (filters.dateTo && (!cardDate || cardDate > filters.dateTo)) return false
 
     return true
   })

@@ -1,6 +1,6 @@
 const INTRO_MODULES = [
-  { id: 'aml', label: 'Applied ML', desc: 'Lab-first practical fluency', accent: '--chart-aml', weight: '34% time' },
-  { id: 'time-series', label: 'Time Series', desc: 'Concepts + exam templates', accent: '--chart-ts', weight: '41% time' },
+  { id: 'aml', label: 'Applied ML', desc: 'Lab-first practical fluency', accent: '--chart-aml', weight: '40% time' },
+  { id: 'time-series', label: 'Time Series', desc: 'Concepts + exam templates', accent: '--chart-ts', weight: '35% time' },
   { id: 'team-project', label: 'Team Project', desc: 'Bounded capacity only', accent: '--chart-project', weight: 'CMT501' },
   { id: 'mat700', label: 'Data Mining', desc: 'Tutorial-first recovery', accent: '--chart-mat700', weight: '25% time' },
 ]

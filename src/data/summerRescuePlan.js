@@ -43,9 +43,11 @@ const MODULE_SLOTS = {
 // lock. The full card inventory remains intact, but estimates must fit these
 // real timetable lanes instead of the superseded June plan.
 const PHASE_CAPACITY_HOURS = {
-  'Applied ML': { 'Phase 0': 33, 'Phase 1': 19, 'Phase 2': 18 },
-  'Time Series': { 'Phase 0': 44, 'Phase 1': 22, 'Phase 2': 22 },
-  MAT700: { 'Phase 0': 27, 'Phase 1': 13, 'Phase 2': 12 },
+  // Mirrors the protected timetable below: 75h AML, 66h Time Series and 46h
+  // MAT700 (40.1% / 35.3% / 24.6% of exam-module capacity).
+  'Applied ML': { 'Phase 0': 30, 'Phase 1': 23, 'Phase 2': 22 },
+  'Time Series': { 'Phase 0': 30, 'Phase 1': 18, 'Phase 2': 18 },
+  MAT700: { 'Phase 0': 19, 'Phase 1': 15, 'Phase 2': 12 },
 }
 
 function dateRange(start, end) {
@@ -572,9 +574,11 @@ const coreRoutineRules = [
 const weekdayStudyRules = [
   // Monday — library + protected project block through 3 August.
   rule({ id: 'mon-commute-out', title: 'Travel to library', category: 'commute', to: READINESS_DEADLINE, weekdays: [1], start: '08:30', end: '09:00', location: 'Transit' }),
-  rule({ id: 'mon-aml-1', title: 'Applied ML queue — lab/video/output', category: 'study', to: READINESS_DEADLINE, weekdays: [1], start: '09:00', end: '11:00', location: 'Library', ...academic('Applied ML') }),
+  rule({ id: 'mon-aml-1-launch', title: 'Applied ML — Lab 1 end-to-end + workflow page', category: 'study', from: '2026-07-20', to: '2026-07-20', weekdays: [1], start: '09:00', end: '11:00', location: 'Library', cardId: 'card-001', ...academic('Applied ML') }),
+  rule({ id: 'mon-aml-1', title: 'Applied ML queue — lab/video/output', category: 'study', from: '2026-07-21', to: READINESS_DEADLINE, weekdays: [1], start: '09:00', end: '11:00', location: 'Library', ...academic('Applied ML') }),
   rule({ id: 'mon-break-1', title: 'Break', category: 'recovery', to: READINESS_DEADLINE, weekdays: [1], start: '11:00', end: '11:15', location: 'Library' }),
-  rule({ id: 'mon-aml-2', title: 'Applied ML queue — continue current card', category: 'study', to: READINESS_DEADLINE, weekdays: [1], start: '11:15', end: '13:15', location: 'Library', ...academic('Applied ML') }),
+  rule({ id: 'mon-mat-launch', title: 'MAT700 — foundation reset and pass specification', category: 'study', from: '2026-07-20', to: '2026-07-20', weekdays: [1], start: '11:15', end: '13:15', location: 'Library', cardId: 'mat700-foundation-reset', ...academic('MAT700') }),
+  rule({ id: 'mon-aml-2', title: 'Applied ML queue — continue current card', category: 'study', from: '2026-07-21', to: READINESS_DEADLINE, weekdays: [1], start: '11:15', end: '13:15', location: 'Library', ...academic('Applied ML') }),
   rule({ id: 'mon-lunch', title: 'Make/eat packed lunch', category: 'meal', to: READINESS_DEADLINE, weekdays: [1], start: '13:15', end: '13:45', location: 'Library', protected: true }),
   rule({ id: 'mon-ts', title: 'Time Series queue — worked problems', category: 'study', to: READINESS_DEADLINE, weekdays: [1], start: '13:45', end: '15:45', location: 'Library', ...academic('Time Series') }),
   rule({ id: 'mon-break-2', title: 'Walk / reset', category: 'recovery', to: READINESS_DEADLINE, weekdays: [1], start: '15:45', end: '16:15', location: 'Outside' }),
@@ -586,9 +590,11 @@ const weekdayStudyRules = [
   // Tuesday — home study, walk, short family call, and shower.
   rule({ id: 'tue-ts-1', title: 'Time Series queue — concepts and examples', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '08:30', end: '10:30', ...academic('Time Series') }),
   rule({ id: 'tue-break-1', title: 'Break', category: 'recovery', to: READINESS_DEADLINE, weekdays: [2], start: '10:30', end: '10:45' }),
-  rule({ id: 'tue-ts-2', title: 'Time Series queue — continue current card', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '10:45', end: '12:45', ...academic('Time Series') }),
+  rule({ id: 'tue-aml-1', title: 'Applied ML queue — continue current card', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '10:45', end: '12:45', ...academic('Applied ML') }),
   rule({ id: 'tue-lunch', title: 'Make and eat lunch', category: 'meal', to: READINESS_DEADLINE, weekdays: [2], start: '12:45', end: '13:15', protected: true }),
-  rule({ id: 'tue-mat', title: 'MAT700 study queue — tutorial-first', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '13:15', end: '15:15', ...academic('MAT700') }),
+  rule({ id: 'tue-mat-first', title: 'MAT700 study queue — tutorial-first', category: 'study', to: '2026-07-21', weekdays: [2], start: '13:15', end: '15:15', ...academic('MAT700') }),
+  rule({ id: 'tue-aml-rebalance', title: 'Applied ML queue — lab/output catch-up', category: 'study', from: '2026-07-28', to: '2026-07-28', weekdays: [2], start: '13:15', end: '15:15', ...academic('Applied ML') }),
+  rule({ id: 'tue-mat', title: 'MAT700 study queue — tutorial-first', category: 'study', from: '2026-08-04', to: READINESS_DEADLINE, weekdays: [2], start: '13:15', end: '15:15', ...academic('MAT700') }),
   rule({ id: 'tue-walk', title: 'Outside walk', category: 'recovery', to: READINESS_DEADLINE, weekdays: [2], start: '15:15', end: '15:45', location: 'Outside', protected: true }),
   rule({ id: 'tue-aml', title: 'Applied ML queue — active recall/output', category: 'study', to: READINESS_DEADLINE, weekdays: [2], start: '15:45', end: '17:45', ...academic('Applied ML') }),
   rule({ id: 'tue-dinner', title: 'Make and eat dinner', category: 'meal', to: READINESS_DEADLINE, weekdays: [2], start: '18:30', end: '19:00', protected: true }),
@@ -605,7 +611,8 @@ const weekdayStudyRules = [
   rule({ id: 'wed-dinner', title: 'Make and eat dinner', category: 'meal', to: READINESS_DEADLINE, weekdays: [3], start: '18:45', end: '19:15', protected: true }),
 
   // Friday — home study, walk, shower.
-  rule({ id: 'fri-ts-1', title: 'Time Series queue', category: 'study', to: READINESS_DEADLINE, weekdays: [5], start: '08:30', end: '10:30', ...academic('Time Series') }),
+  rule({ id: 'fri-ts-1', title: 'Time Series queue', category: 'study', to: '2026-07-31', weekdays: [5], start: '08:30', end: '10:30', ...academic('Time Series') }),
+  rule({ id: 'fri-aml-final', title: 'Applied ML final-drill queue', category: 'study', from: '2026-08-01', to: READINESS_DEADLINE, weekdays: [5], start: '08:30', end: '10:30', ...academic('Applied ML') }),
   rule({ id: 'fri-break-1', title: 'Break', category: 'recovery', to: READINESS_DEADLINE, weekdays: [5], start: '10:30', end: '10:45' }),
   rule({ id: 'fri-aml', title: 'Applied ML queue', category: 'study', to: READINESS_DEADLINE, weekdays: [5], start: '10:45', end: '12:45', ...academic('Applied ML') }),
   rule({ id: 'fri-lunch', title: 'Make and eat lunch', category: 'meal', to: READINESS_DEADLINE, weekdays: [5], start: '12:45', end: '13:15', protected: true }),

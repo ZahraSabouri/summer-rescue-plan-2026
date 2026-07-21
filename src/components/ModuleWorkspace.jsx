@@ -824,6 +824,7 @@ export function ModuleWorkspace({
   knowledge,
   knowledgeActions,
   focusKnowledgeNoteId = '',
+  onKnowledgeNoteChange,
   resourceProgress = {},
   recentResourceIds = [],
   onResourceOpen,
@@ -1181,6 +1182,7 @@ export function ModuleWorkspace({
             knowledge={knowledge}
             referenceDate={referenceDate}
             focusNoteId={focusKnowledgeNoteId}
+            onSelectNote={onKnowledgeNoteChange}
             onOpenCard={actions.onOpen}
             {...knowledgeActions}
           />

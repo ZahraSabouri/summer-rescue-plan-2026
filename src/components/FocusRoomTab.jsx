@@ -1,0 +1,166 @@
+import { useEffect, useRef, useState } from 'react'
+import { StudyTimer } from './StudyTimer'
+import { focusRewards } from '../utils/focusRewards'
+import {
+  focusRoomCardId,
+  onFocusMessage,
+  postFocusMessage,
+} from '../utils/focusSession'
+
+// The Focus Room running as its own browser tab.
+//
+// This tab deliberately does NOT mount useTrackerState: two tabs auto-saving to
+// the same localStorage key would race and clobber the campaign. Instead it asks
+// the main app tab for a read-only snapshot of the card and forwards every
+// mutation (checklist ticks, logged sessions, restart cues) back over the focus
+// channel, so the main tab stays the single writer of tracker state.
+//
+// The timer itself runs here — this tab owns the clock while it is open (see the
+// claim/release handshake in StudyTimer's room variant). Focus rewards are the
+// one piece of state this tab drives directly: it hydrates them from the main
+// tab once, then streams changes back so trees and points still persist.
+export function FocusRoomTab() {
+  const cardId = focusRoomCardId()
+  const [snapshot, setSnapshot] = useState(null)
+  const [status, setStatus] = useState(cardId ? 'connecting' : 'offline') // connecting | live | offline | closed
+  const rewardsHydratedRef = useRef(false)
+  const lastRewardsSentRef = useRef('')
+
+  // Ask the main tab for card data, retrying until it answers (it may be loading,
+  // or the room may have been reopened from history before the app tab exists).
+  useEffect(() => {
+    if (!cardId) return undefined
+
+    const stop = onFocusMessage((message) => {
+      if (message.type === 'snapshot' && message.cardId === cardId) {
+        setSnapshot({
+          card: message.card,
+          resources: message.resources ?? [],
+          currentBoundary: message.currentBoundary ?? null,
+          nextBoundary: message.nextBoundary ?? null,
+          linkedNotes: message.linkedNotes ?? [],
+        })
+        setStatus('live')
+      }
+      if (message.type === 'rewards-init' && !rewardsHydratedRef.current) {
+        rewardsHydratedRef.current = true
+        lastRewardsSentRef.current = JSON.stringify(message.state ?? {})
+        focusRewards.hydrate(message.state ?? {})
+      }
+    })
+
+    let attempts = 0
+    postFocusMessage('request-snapshot', { cardId })
+    const retry = window.setInterval(() => {
+      attempts += 1
+      if (attempts > 12) {
+        window.clearInterval(retry)
+        // Still no answer: run offline. The timer works; logging is parked until a
+        // main tab appears (a fresh snapshot flips this straight back to 'live').
+        setStatus((current) => (current === 'live' ? current : 'offline'))
+        return
+      }
+      postFocusMessage('request-snapshot', { cardId })
+    }, 600)
+
+    return () => {
+      window.clearInterval(retry)
+      stop()
+    }
+  }, [cardId])
+
+  // Stream reward changes back to the main tab so it can persist them. Deduped by
+  // value so a hydrate we just received is never echoed straight back.
+  useEffect(() => {
+    return focusRewards.subscribe(() => {
+      const serialised = JSON.stringify(focusRewards.getPersistedState())
+      if (serialised === lastRewardsSentRef.current) return
+      lastRewardsSentRef.current = serialised
+      postFocusMessage('rewards-sync', { state: focusRewards.getPersistedState() })
+    })
+  }, [])
+
+  useEffect(() => {
+    if (snapshot?.card) {
+      document.title = `Focus Room · ${snapshot.card.title}`
+    } else {
+      document.title = 'Focus Room · Summer Rescue'
+    }
+  }, [snapshot])
+
+  const forward = (action, extra = {}) => postFocusMessage('action', { action, cardId, ...extra })
+
+  function handleChecklistToggle(id, itemId) {
+    // Optimistic: reflect the tick immediately; the main tab echoes the authoritative
+    // card back in its next snapshot.
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      const checklist = (current.card.checklist ?? []).map((item) =>
+        item.id === itemId ? { ...item, done: !item.done } : item,
+      )
+      return { ...current, card: { ...current.card, checklist } }
+    })
+    forward('toggle-checklist', { itemId })
+  }
+
+  function handleCompleteSession(id, minutes) {
+    forward('complete-session', { minutes })
+    // Rewards are owned by this tab while it is open; record locally and let the
+    // rewards-sync effect persist them. The main tab only logs the card session.
+    focusRewards.recordMinutes(minutes)
+  }
+
+  function handleSaveRestartCue(id, text) {
+    forward('add-note', { text })
+    return Promise.resolve()
+  }
+
+  function exit() {
+    postFocusMessage('release', { cardId })
+    window.close()
+    // window.close() is ignored for tabs the user navigated to manually; show a
+    // dismissed state so they know it is safe to close.
+    setStatus('closed')
+  }
+
+  if (status === 'closed') {
+    return (
+      <div className="focus-tab-fallback">
+        <h1>Focus Room closed</h1>
+        <p>You can close this tab now. Your session stays logged in the main app.</p>
+      </div>
+    )
+  }
+
+  if (!snapshot?.card) {
+    return (
+      <div className="focus-tab-fallback">
+        <h1>Focus Room</h1>
+        {status === 'offline' ? (
+          <>
+            <p>Couldn’t reach the main Summer Rescue tab.</p>
+            <p>Open the app in another tab and this room will connect automatically.</p>
+          </>
+        ) : (
+          <p>Connecting to your session…</p>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <StudyTimer
+      variant="room"
+      activeCard={snapshot.card}
+      resources={snapshot.resources}
+      currentBoundary={snapshot.currentBoundary}
+      nextBoundary={snapshot.nextBoundary}
+      linkedNotes={snapshot.linkedNotes}
+      onCompleteSession={handleCompleteSession}
+      onFocusBlockComplete={(minutes) => focusRewards.recordBlockComplete(minutes)}
+      onChecklistToggle={handleChecklistToggle}
+      onSaveRestartCue={handleSaveRestartCue}
+      onExitRoom={exit}
+    />
+  )
+}

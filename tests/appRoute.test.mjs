@@ -51,12 +51,17 @@ test('round-trips navigable dates, knowledge notes, and card filters', () => {
     tab: 'knowledge',
     date: '2026-07-20',
     noteId: 'missing values & encoding',
-    filters: { module: 'Applied ML', status: 'This Week', exactDate: '2026-07-22' },
+    filters: {
+      modules: ['Applied ML', 'Time Series'],
+      status: 'This Week',
+      dateFrom: '2026-07-20',
+      dateTo: '2026-07-26',
+    },
   })
 
   assert.equal(
     hash,
-    '#/aml?tab=knowledge&date=2026-07-20&note=missing+values+%26+encoding&module=Applied+ML&status=This+Week&deadline=2026-07-22',
+    '#/aml?tab=knowledge&date=2026-07-20&note=missing+values+%26+encoding&status=This+Week&from=2026-07-20&to=2026-07-26&modules=Applied+ML&modules=Time+Series',
   )
   assert.deepEqual(parseHashRoute(hash, views), {
     view: 'aml',
@@ -66,6 +71,11 @@ test('round-trips navigable dates, knowledge notes, and card filters', () => {
     resourceMode: '',
     date: '2026-07-20',
     noteId: 'missing values & encoding',
-    filters: { module: 'Applied ML', status: 'This Week', exactDate: '2026-07-22' },
+    filters: {
+      status: 'This Week',
+      dateFrom: '2026-07-20',
+      dateTo: '2026-07-26',
+      modules: ['Applied ML', 'Time Series'],
+    },
   })
 })

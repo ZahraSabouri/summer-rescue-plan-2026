@@ -16,7 +16,7 @@ import { CatchUpPanel } from './CatchUpPanel'
 import { ReplanPanel } from './ReplanPanel'
 import { YesterdayStrip } from './DayReview'
 import { DailyAgenda } from './ScheduleView'
-import { alignTodayStudyBlocks, buildExecutionContext, summariseDay } from '../utils/schedule.js'
+import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
 
 function PersistedDetails({ storageKey, className, children }) {
   const [open, setOpen] = useState(() => {
@@ -250,14 +250,6 @@ export function TodayView({
     () => buildTodayPicks(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
   )
-  const agendaBlocks = useMemo(
-    () => alignTodayStudyBlocks(
-      dayBlocks,
-      picks.map((item) => item.card),
-      scheduleDate || referenceDate,
-    ),
-    [dayBlocks, picks, referenceDate, scheduleDate],
-  )
   const catchUp = useMemo(
     () => buildCatchUp(cards, referenceDate, mat700Active),
     [cards, referenceDate, mat700Active],
@@ -272,17 +264,17 @@ export function TodayView({
     return () => window.clearInterval(id)
   }, [])
   const execution = useMemo(
-    () => buildExecutionContext(agendaBlocks, cards, scheduleDate || referenceDate, { now: clock, activeCard: activeTimerCard }),
-    [activeTimerCard, agendaBlocks, cards, clock, referenceDate, scheduleDate],
+    () => buildExecutionContext(dayBlocks, cards, scheduleDate || referenceDate, { now: clock, activeCard: activeTimerCard }),
+    [activeTimerCard, cards, clock, dayBlocks, referenceDate, scheduleDate],
   )
   const capacity = useMemo(() => {
-    const summary = summariseDay(agendaBlocks)
+    const summary = summariseDay(dayBlocks)
     const academicHours = Math.round((summary.academicMinutes / 60) * 10) / 10
     return {
       academicHours,
       remainingHours: Math.max(0, Math.round((8 - academicHours) * 10) / 10),
     }
-  }, [agendaBlocks])
+  }, [dayBlocks])
 
   return (
     <div className="today-view">
@@ -335,7 +327,7 @@ export function TodayView({
       <section className="today-picks" aria-label="Top focus picks">
         <header className="section-head">
           <h3>{preCampaign ? 'Tomorrow’s launch queue' : 'Mission for today'}</h3>
-          <span className="muted small">Auto-picked from due dates, priority, and your split targets.</span>
+          <span className="muted small">Unfinished outputs, ranked from due dates, priority, and your split targets.</span>
         </header>
         {picks.length === 0 && (
           <p className="empty-note">All caught up. Anything you do now is a bonus lap.</p>
@@ -392,12 +384,12 @@ export function TodayView({
           <span className="muted small">
             {preCampaign
               ? 'Routines are protected blocks; outputs remain traceable cards.'
-              : 'Log each block as it actually went — Done or Skipped, directly from the agenda.'}
+              : 'Protected module capacity; each study block opens its dated card or the next real queue card.'}
           </span>
         </header>
         <DailyAgenda
           date={scheduleDate || referenceDate}
-          blocks={agendaBlocks}
+          blocks={dayBlocks}
           cards={cards}
           onOpenCard={onOpenCard}
           onCardStatusChange={actions.onStatusChange}
@@ -409,7 +401,11 @@ export function TodayView({
         />
       </section>
 
-      <YesterdayStrip cards={cards} referenceDate={referenceDate} />
+      <YesterdayStrip
+        cards={cards}
+        referenceDate={referenceDate}
+        onOpenReview={(date) => onOpenView('review', { date })}
+      />
 
       <PersistedDetails storageKey="srp-today-tools-replan" className="today-tools panel">
         <summary>

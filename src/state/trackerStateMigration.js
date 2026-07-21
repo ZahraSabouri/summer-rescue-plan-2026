@@ -1,17 +1,28 @@
 import { emptyKnowledge, normaliseKnowledge } from '../utils/knowledge.js'
 import { normaliseResourceProgressMap } from '../utils/resourceProgress.js'
 
-export const TRACKER_STATE_VERSION = 5
+export const TRACKER_STATE_VERSION = 6
 export const PLAN_REVISION = '2026-07-20-fresh-start-plan-v1'
 export const DEFAULT_CAMPAIGN_START = '2026-07-20'
 export const DEFAULT_CAMPAIGN_END = '2026-08-16'
 export const DEFAULT_EXAM_WINDOW_START = '2026-08-17'
 const PREVIOUS_ZERO_BASED_REVISION_PREFIX = '2026-07-16-zero-based-32-day-plan-v'
 const HISTORY_DATE = '2026-07-19'
+const AML_LAUNCH_CARD_ID = 'card-001'
+const AML_LAUNCH_RESOURCE_IDS = new Set([
+  'aml-study-notes-lab-1-ex1-study-notes',
+  'aml-study-notes-lab-1-ex2-study-notes',
+  'aml-session-1-s1-slides',
+  'aml-session-1-lab-1-sheet',
+  'aml-session-1-lab-1-ex1-notebook',
+  'aml-session-1-lab-1-ex2-notebook',
+  'aml-video-ubc-1-0-ml-introduction',
+  'aml-video-ubc-2-1-ml-terminology',
+  'aml-video-course-s1-workflow',
+])
 
 const BASE_HISTORY_RECORDS = {
   'admin-summer-assessment-confirmation': 'summer assessment entry confirmed',
-  'card-001': 'AML S1 Lab 1 and workflow work logged',
   'project-capacity-w1': 'CMT501 protected capacity used, 16-19 July',
 }
 
@@ -137,6 +148,7 @@ export function migrateTrackerState(value) {
   if (!value || typeof value !== 'object') return fallback
 
   const previousSettings = plainObject(value.settings)
+  const resetAmlLaunchCard = Number(value.version ?? 0) < TRACKER_STATE_VERSION
   const planChanged = previousSettings.planRevision !== PLAN_REVISION
   const previousCards = plainObject(value.cards)
   const previousRevision = String(previousSettings.planRevision ?? '')
@@ -161,6 +173,29 @@ export function migrateTrackerState(value) {
   for (const [cardId, title] of Object.entries(BASE_HISTORY_RECORDS)) {
     if (cards[cardId] && hasUserCardWork(cards[cardId])) {
       cards[cardId] = asHistoryState(cards[cardId], title)
+    }
+  }
+
+  // One deliberate July 20 correction: the user asked for this launch card,
+  // and only this card, to return to a completely untouched state.
+  if (resetAmlLaunchCard) delete cards[AML_LAUNCH_CARD_ID]
+
+  const resourceProgress = normaliseResourceProgressMap(value.resourceProgress)
+  const recentResourceIds = Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : []
+  const notifications = { ...plainObject(value.notifications) }
+  const dayLogs = Object.fromEntries(
+    Object.entries(plainObject(value.dayLogs)).map(([date, log]) => [
+      date,
+      { ...plainObject(log), blocks: { ...plainObject(log?.blocks) } },
+    ]),
+  )
+  if (resetAmlLaunchCard) {
+    for (const resourceId of AML_LAUNCH_RESOURCE_IDS) delete resourceProgress[resourceId]
+    for (const [notificationId, notification] of Object.entries(notifications)) {
+      if (notification?.cardId === AML_LAUNCH_CARD_ID) delete notifications[notificationId]
+    }
+    for (const log of Object.values(dayLogs)) {
+      if (log?.blocks && typeof log.blocks === 'object') delete log.blocks[`card:${AML_LAUNCH_CARD_ID}`]
     }
   }
 
@@ -219,12 +254,14 @@ export function migrateTrackerState(value) {
     knowledge: normaliseKnowledge(value.knowledge),
     // Generated alerts from the abandoned pre-reset plan are noise,
     // not user work. Rebuild them from the live cards after a plan revision.
-    notifications: planChanged ? {} : plainObject(value.notifications),
-    resourceProgress: normaliseResourceProgressMap(value.resourceProgress),
+    notifications: planChanged ? {} : notifications,
+    resourceProgress,
     uploadedResources: normaliseUploadedResources(value.uploadedResources),
-    recentResourceIds: Array.isArray(value.recentResourceIds) ? value.recentResourceIds.slice(0, 8) : [],
+    recentResourceIds: resetAmlLaunchCard
+      ? recentResourceIds.filter((id) => !AML_LAUNCH_RESOURCE_IDS.has(id))
+      : recentResourceIds,
     snapshots: plainObject(value.snapshots),
-    dayLogs: plainObject(value.dayLogs),
+    dayLogs,
     focusRewards:
       value.focusRewards && typeof value.focusRewards === 'object' && !Array.isArray(value.focusRewards)
         ? plainObject(value.focusRewards)

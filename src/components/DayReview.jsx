@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { dayLog } from '../utils/dayLog'
 import {
   blockLogKey,
@@ -22,6 +22,8 @@ const CATEGORY_LABELS = {
   travel: 'Travel',
   meal: 'Meal',
 }
+
+const validDay = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ''))
 
 function useDayReview(date, cards) {
   const log = useSyncExternalStore(dayLog.subscribe, dayLog.getState)
@@ -249,8 +251,20 @@ export function BlockProgressEditor({
 // Walk back through any past day: the full planned timetable (wake, wash-up,
 // meals, travel, classes, study blocks), retro-loggable block by block, joined
 // with what verifiably happened (cards completed, focus minutes).
-export function DayReview({ cards, referenceDate, onOpenCard, onCardStatusChange, onToggleCardDone }) {
-  const [selectedDate, setSelectedDate] = useState(() => addDays(referenceDate, -1))
+export function DayReview({
+  cards,
+  referenceDate,
+  selectedDate: routeDate = '',
+  onSelectedDateChange,
+  onOpenCard,
+  onCardStatusChange,
+  onToggleCardDone,
+}) {
+  const [localSelectedDate, setLocalSelectedDate] = useState(() => addDays(referenceDate, -1))
+  const selectedDate = validDay(routeDate) && routeDate <= referenceDate ? routeDate : localSelectedDate
+  useEffect(() => {
+    if (!validDay(routeDate)) onSelectedDateChange?.(localSelectedDate)
+  }, [localSelectedDate, onSelectedDateChange, routeDate])
   const review = useDayReview(selectedDate, cards)
   const timeline = useMemo(
     () => buildDayTimeline(review.entries.map((entry) => entry.block), cards, selectedDate),
@@ -278,7 +292,8 @@ export function DayReview({ cards, referenceDate, onOpenCard, onCardStatusChange
 
   function openReviewDate(date) {
     if (!date || date > referenceDate) return
-    setSelectedDate(date)
+    setLocalSelectedDate(date)
+    onSelectedDateChange?.(date)
   }
 
   function handleTimelineCardStatus(entry, linkedCards, card, status) {
@@ -302,7 +317,7 @@ export function DayReview({ cards, referenceDate, onOpenCard, onCardStatusChange
     <div className="day-review">
       <section className="panel review-header">
         <div className="review-stepper" role="group" aria-label="Choose a day to review">
-          <button type="button" className="secondary-button" onClick={() => setSelectedDate((d) => addDays(d, -1))} aria-label="Previous day">
+          <button type="button" className="secondary-button" onClick={() => openReviewDate(addDays(selectedDate, -1))} aria-label="Previous day">
             ‹
           </button>
           <div className="review-date">
@@ -312,7 +327,7 @@ export function DayReview({ cards, referenceDate, onOpenCard, onCardStatusChange
           <button
             type="button"
             className="secondary-button"
-            onClick={() => setSelectedDate((d) => addDays(d, 1))}
+            onClick={() => openReviewDate(addDays(selectedDate, 1))}
             disabled={atFuture}
             aria-label="Next day"
           >
@@ -597,7 +612,7 @@ export function DayReview({ cards, referenceDate, onOpenCard, onCardStatusChange
 
 // Compact strip for the Today view: yesterday at a glance, with a jump into the
 // full review. Uses the app's own hash routing for navigation.
-export function YesterdayStrip({ cards, referenceDate }) {
+export function YesterdayStrip({ cards, referenceDate, onOpenReview }) {
   const yesterday = addDays(referenceDate, -1)
   const review = useDayReview(yesterday, cards)
   if (review.entries.length === 0) return null
@@ -617,9 +632,7 @@ export function YesterdayStrip({ cards, referenceDate }) {
       <button
         type="button"
         className="secondary-button"
-        onClick={() => {
-          window.location.hash = '#/review'
-        }}
+        onClick={() => onOpenReview?.(yesterday)}
       >
         Review yesterday
       </button>

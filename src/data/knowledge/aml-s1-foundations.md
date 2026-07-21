@@ -1,4 +1,4 @@
-@@ id=s1-what-is-ml | title=What machine learning is | kind=concept | topic=S1 · Foundations | key | tags=definition,exam | cards=card-003
+@@ id=s1-what-is-ml | title=What machine learning is | kind=concept | topic=S1 · Foundations | key | tags=definition,exam | cards=card-001
 Algorithms that **learn a model from data** to find patterns and relationships, then **generalise to unseen data** — performing the task without explicit instructions.
 
 The whole field in one line:
@@ -47,7 +47,7 @@ Deep learning is Part 2 of this module. Part 1 is everything else.
 
 The class test is a **computer** test. That means running, reading and repairing code under time pressure — not writing essays about it.
 
-@@ id=s1-five-stage-process | title=The five-stage ML process | kind=concept | topic=S1 · The process | key | tags=pipeline,exam,workflow | cards=card-001,card-003
+@@ id=s1-five-stage-process | title=The five-stage ML process | kind=concept | topic=S1 · The process | key | tags=pipeline,exam,workflow | cards=card-001,card-005
 The backbone of the whole module. Memorise the order — exam tasks are usually "something is wrong at stage N".
 
 ```text

@@ -12,14 +12,19 @@ const FILTER_PARAMS = {
   tag: 'tag',
   dateMode: 'dates',
   exactDate: 'deadline',
+  dateFrom: 'from',
+  dateTo: 'to',
 }
 
 function parseFilters(params) {
-  return Object.fromEntries(
+  const filters = Object.fromEntries(
     Object.entries(FILTER_PARAMS)
       .map(([key, param]) => [key, params.get(param) ?? ''])
       .filter(([, value]) => value && value !== 'all'),
   )
+  const modules = params.getAll('modules').filter(Boolean)
+  if (modules.length > 0) filters.modules = [...new Set(modules)]
+  return filters
 }
 
 export function parseHashRoute(hash, validViewIds) {
@@ -64,6 +69,9 @@ export function buildHashRoute({
   for (const [key, param] of Object.entries(FILTER_PARAMS)) {
     const value = filters?.[key]
     if (value && value !== 'all') params.set(param, value)
+  }
+  for (const moduleGroup of Array.isArray(filters?.modules) ? filters.modules : []) {
+    if (moduleGroup) params.append('modules', moduleGroup)
   }
   const query = params.toString()
   return `#/${view}${query ? `?${query}` : ''}`

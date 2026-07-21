@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import './FocusRoom.css'
 import { checklistDoneCount, formatDate } from '../utils/progress'
 import { focusRewards } from '../utils/focusRewards'
+import { kindMeta } from '../utils/knowledge'
+import { MarkdownDoc } from './MarkdownDoc'
 
 const MODE_LABELS = {
   focus: 'Focus',
@@ -34,6 +36,28 @@ function boundaryDetails(boundary) {
   )
   const place = boundary.location ? ` · ${boundary.location}` : ''
   return { title, time: `${time}${place}` }
+}
+
+// One concept note in the Focus Room. The Markdown body is parsed only once the
+// note is expanded, so a card that links dozens of session notes opens instantly
+// instead of parsing every body up front.
+function FocusRoomNote({ note, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <details className={`focus-room-note kind-${note.kind}`} open={defaultOpen} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>
+        <span className="focus-room-note-icon" aria-hidden="true">{kindMeta(note.kind).icon}</span>
+        <span className="focus-room-note-title">
+          <strong>{note.title}</strong>
+          {note.topic && <small>{note.topic}</small>}
+        </span>
+        {note.review?.state === 'due' && <em className="focus-room-note-due">due</em>}
+      </summary>
+      <div className="focus-room-note-body">
+        {open ? <MarkdownDoc source={note.body} /> : null}
+      </div>
+    </details>
+  )
 }
 
 function Boundary({ label, boundary }) {
@@ -68,6 +92,7 @@ export function FocusRoom({
   onChecklistToggle,
   resources = [],
   onOpenResource,
+  linkedNotes = [],
   onExit,
 }) {
   const roomRef = useRef(null)
@@ -523,6 +548,23 @@ export function FocusRoom({
             )}
           </aside>
         </div>
+
+        {linkedNotes.length > 0 && (
+          <section className="focus-room-knowledge" aria-label="Concept notes for this card">
+            <header className="focus-room-knowledge-head">
+              <div>
+                <span>Knowledge for this card</span>
+                <h2>The concepts behind what you’re doing</h2>
+              </div>
+              <p>{linkedNotes.length} note{linkedNotes.length === 1 ? '' : 's'} · open one while you work</p>
+            </header>
+            <div className="focus-room-knowledge-list">
+              {linkedNotes.map((note, index) => (
+                <FocusRoomNote key={note.id ?? index} note={note} defaultOpen={index === 0} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="focus-room-footer">

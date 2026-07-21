@@ -21,111 +21,88 @@ import { amlVideo } from './amlVideoLibrary.js'
 //     for those.
 //
 // `core` = watch as part of this card. `optional` = deeper treatment, only if the
-// core clips left a gap. Core minutes are kept well under the card's study hours,
-// because these cards are lab-first: video is Tier 2 support, the notebook is Tier 1.
+// core clips left a gap. Videos now live on each session's CONCEPTS card (the "Learn
+// …" card), which comes before its lab: you watch to understand, then run the notebook
+// on the following card. The lab/run cards carry no video on purpose.
 
 const CARD_VIDEO_PLAN = {
-  // ---------------- Session 1 ----------------
+  // ---------------- Session 1 (concepts card teaches; the lab card applies) ----------------
   'card-001': {
     core: ['aml-video-ubc-1-0-ml-introduction', 'aml-video-ubc-2-1-ml-terminology'],
-    optional: ['aml-video-course-s1-workflow'],
-    focus: 'the 5-stage workflow and supervised/unsupervised vs classification/regression vocabulary',
-    checklist: 'Watch UBC 1.0 + 2.1 (~27 min) BEFORE opening Lab 1, then name each Lab 1 cell with its workflow stage.',
+    // The 6h52m full-course video's S1 slice (0:02–0:51) is intentionally not pinned
+    // here; it stays browsable in the module's "Video — S1 workflow" group and is
+    // tracked per-chunk there, so the full course can still be watched and ticked off
+    // without making this card read as unfinished.
+    optional: ['aml-video-ubc-2-4-more-terminology', 'aml-video-ubc-2-2-baselines'],
+    focus: 'the 5-stage workflow, core terminology, and why a baseline is the first model',
   },
-  'card-003': {
-    core: ['aml-video-ubc-2-4-more-terminology', 'aml-video-ubc-2-2-baselines'],
-    optional: [],
-    focus: 'terminology precision and why a baseline is the first model you build',
-    checklist: 'Watch UBC 2.4 + 2.2 (~30 min), then do the closed-book workflow recital without replaying them.',
-  },
+  // card-005 is the S1 LAB (run Lab 1) — no video; its teaching lives on card-001.
 
   // ---------------- Session 2 ----------------
-  'card-005': {
+  'card-003': {
     core: ['aml-video-ubc-5-1-preprocessing-intro', 'aml-video-ubc-5-2-imputation-scaling'],
-    optional: [],
-    focus: 'what preprocessing is for, and the imputation/scaling decisions Lab 2 makes',
-    checklist: 'Watch UBC 5.1 + 5.2 (~29 min) before the Lab 2 run, then tick each step off in your inventory as you meet it.',
-  },
-  'card-007': {
-    core: ['aml-video-ubc-5-4-one-hot-encoding', 'aml-video-ubc-6-1-column-transformer'],
-    optional: ['aml-video-ubc-6-2-encoding-text'],
-    focus: 'one-hot encoding and applying different transforms to different column types',
-    checklist: 'Watch UBC 5.4 + 6.1 (~29 min); write the encoding rule for a Titanic and a crx column in your own words.',
+    optional: [
+      'aml-video-ubc-5-4-one-hot-encoding',
+      'aml-video-ubc-6-1-column-transformer',
+      'aml-video-ubc-6-2-encoding-text',
+    ],
+    focus: 'what preprocessing is for and the missing → encode → scale → split order',
   },
   'card-008': {
+    // The leakage-playbook consolidation card keeps the pipelines clip — the one video
+    // that teaches "fit on train only". Kept only here so studied-progress can't leak.
     core: ['aml-video-ubc-5-3-sklearn-pipelines'],
-    optional: ['aml-video-course-s3-ridge-lasso'],
+    optional: [],
     focus: 'pipelines as the mechanism that prevents leakage — fit on train only',
-    checklist: 'Watch UBC 5.3 (~12 min) and write down exactly which step leaks if you scale before splitting.',
   },
+  // card-007 is the S2 LAB (run Lab 2) — no video.
 
-  // ---------------- Session 3 ----------------
+  // ---------------- Session 3 (concepts card) ----------------
   'card-011': {
-    core: ['aml-video-ubc-7-1-linear-regression', 'aml-video-course-s3-linear-regression'],
-    optional: ['aml-video-cs156-l03', 'aml-video-cs229-l02'],
-    focus: 'linear model form, the loss being minimised, and what training actually does',
-    checklist: 'Watch UBC 7.1 + course 2:00–2:15 (~30 min); reproduce the fit/predict/score cells from Lab 3 unaided.',
-  },
-  'card-014': {
-    core: ['aml-video-ubc-3-1-generalization', 'aml-video-ubc-3-4-fundamental-tradeoff'],
-    optional: [
-      'aml-video-cs156-l08',
-      'aml-video-cs156-l11',
-      'aml-video-cs156-l12',
-      'aml-video-course-s3-overfitting',
+    core: [
+      'aml-video-ubc-7-1-linear-regression',
+      'aml-video-ubc-3-1-generalization',
+      'aml-video-ubc-3-4-fundamental-tradeoff',
     ],
-    focus: 'generalisation, the bias-variance tradeoff, and how regularisation moves you along it',
-    checklist: 'Watch UBC 3.1 + 3.4 (~33 min). If the tradeoff still feels hand-wavy, add CS156 L08 — but only then.',
+    optional: [
+      'aml-video-ubc-3-3-cross-validation',
+      'aml-video-course-s3-overfitting',
+      'aml-video-cs156-l08',
+    ],
+    focus: 'linear models, the bias-variance tradeoff, regularisation, and cross-validation',
   },
-  'card-016': {
-    core: ['aml-video-ubc-3-3-cross-validation'],
-    optional: ['aml-video-ubc-3-2-data-splitting'],
-    focus: 'cross-validation as the reason you trust a score at all',
-    checklist: 'Watch UBC 3.3 (~11 min) only after the timed Lab 3 rebuild — do not use it as a warm-up.',
-  },
+  // card-014 is the S3 LAB (run Lab 3) — no video. card-016 is the timed re-run — no video.
 
-  // ---------------- Session 4 ----------------
+  // ---------------- Session 4 (concepts card) ----------------
   'card-017': {
     core: [
       'aml-video-ubc-7-2-logistic-regression',
       'aml-video-ubc-4-2-knn',
       'aml-video-ubc-2-3-decision-trees',
-    ],
-    optional: ['aml-video-ubc-4-1-analogy-based', 'aml-video-cs229-l03'],
-    focus: 'the three classifier families your comparison table needs before SVM is added',
-    checklist: 'Watch UBC 7.2 + 4.2 + 2.3 (~43 min); fill one comparison-table row per classifier as you go.',
-  },
-  'card-020': {
-    core: [
       'aml-video-ubc-4-4-svm-rbf',
-      'aml-video-course-s4-svm-kernels',
-      'aml-video-ubc-8-1-hyperparameter-opt',
     ],
-    optional: ['aml-video-cs156-l14', 'aml-video-cs156-l15', 'aml-video-cs229-l06', 'aml-video-cs229-l07'],
-    focus: 'kernel SVM, what C and gamma each do to the boundary, and what to tune first',
-    checklist:
-      'Watch UBC 4.4 + course 2:55–3:30 + UBC 8.1 (~59 min); write what happens to the boundary as C rises and as gamma rises.',
+    optional: [
+      'aml-video-ubc-8-1-hyperparameter-opt',
+      'aml-video-ubc-9-2-confusion-matrix',
+      'aml-video-ubc-9-3-precision-recall-f1',
+      'aml-video-course-s4-svm-kernels',
+    ],
+    focus: 'the classifier families (logistic, kNN, trees, SVM), what to tune, and the core metrics',
   },
-  'card-022': {
-    core: ['aml-video-ubc-9-2-confusion-matrix', 'aml-video-ubc-9-3-precision-recall-f1'],
-    optional: ['aml-video-ubc-7-3-probability-scores'],
-    focus: 'reading a confusion matrix and choosing between precision, recall and F1',
-    checklist: 'Watch UBC 9.2 + 9.3 (~17 min) after the timed Lab 4 rebuild; recite the four cells from memory.',
-  },
+  // card-020 is the S4 LAB (run Lab 4) — no video. card-022 is the timed re-run — no video.
 
-  // ---------------- Session 5 ----------------
+  // ---------------- Session 5 (concepts card) ----------------
   'card-024': {
-    core: ['aml-video-ubc-11-1-ensembles-motivation', 'aml-video-ubc-11-2-gradient-boosted-trees'],
+    core: [
+      'aml-video-ubc-11-1-ensembles-motivation',
+      'aml-video-ubc-11-2-gradient-boosted-trees',
+      'aml-video-ubc-12-1-interpretation-motivation',
+      'aml-video-ubc-12-2-feature-importances',
+    ],
     optional: ['aml-video-course-s5-ensembles', 'aml-video-cs229-l09'],
-    focus: 'why combining models helps, and how boosting differs from bagging',
-    checklist: 'Watch UBC 11.1 + 11.2 (~18 min) before Lab 5; fill the bagging/boosting/stacking table straight after.',
+    focus: 'why ensembles help, bagging vs boosting, random forests, and feature importance',
   },
-  'card-026': {
-    core: ['aml-video-ubc-12-1-interpretation-motivation', 'aml-video-ubc-12-2-feature-importances'],
-    optional: [],
-    focus: 'feature importance for tree ensembles and how far you can trust it',
-    checklist: 'Watch UBC 12.1 + 12.2 (~16 min); note one case where feature importance misleads you.',
-  },
+  // card-026 is the S5 LAB (run Lab 5) — no video.
 
   // ---------------- Targeted drills (topic-specific, so videos earn their place) ----------------
   'card-062': {
@@ -214,7 +191,7 @@ export function applyAmlVideoStudyPlan(cards) {
     const coreList = core.map((id) => describeVideo(amlVideo(id))).join('; ')
 
     const videoNote =
-      `Video plan (~${minutes} min core, Tier 2 — the lab stays Tier 1): ${coreList}. ` +
+      `Video plan (~${minutes} min core — watch to build the concepts before the lab): ${coreList}. ` +
       `Focus: ${plan.focus}.` +
       (optional.length ? ` Optional deeper: ${optional.map((id) => amlVideo(id).shortTitle).join('; ')}.` : '')
 

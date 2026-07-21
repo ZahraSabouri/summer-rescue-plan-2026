@@ -84,6 +84,7 @@ export const FILTER_DEFAULTS = {
   search: '',
   phase: 'all',
   module: 'all',
+  modules: [],
   kind: 'all',
   priority: 'all',
   status: 'all',
@@ -91,6 +92,8 @@ export const FILTER_DEFAULTS = {
   tag: 'all',
   dateMode: 'all',
   exactDate: '',
+  dateFrom: '',
+  dateTo: '',
 }
 
 // v2: 'progress' view added to VIEW_OPTIONS above.

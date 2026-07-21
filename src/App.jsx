@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { AddCardDialog } from './components/AddCardDialog'
 import { AccessibleDialog } from './components/AccessibleDialog'
@@ -60,11 +60,13 @@ import {
   scheduleRules,
 } from './data/summerRescuePlan'
 import { applyAmlVideoStudyPlan } from './data/amlVideoPlan'
+import { applyCardStudySequences } from './data/cardStudySequences'
 import { attachCardResourceLinks } from './data/cardResources'
 import { FILTER_DEFAULTS, MODULE_OPTIONS, PHASE_OPTIONS, TAG_OPTIONS, VIEW_OPTIONS } from './data/constants'
 import { STUDY_MODULES } from './data/studyModules'
 import { KNOWLEDGE_SEEDS } from './data/knowledgeSeeds'
-import { notesForCard, resolveModuleNotes } from './utils/knowledge'
+import { relatedNotesForCard, resolveModuleNotes } from './utils/knowledge'
+import { onFocusMessage, postFocusMessage } from './utils/focusSession'
 import { EVENT_COVERAGE, coverageSummary } from './state/eventCoverage'
 import { useTrackerState } from './state/useTrackerState'
 import {
@@ -98,7 +100,8 @@ import { focusRewards } from './utils/focusRewards'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
 const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(rescueCards)
-const ENRICHED_BASE_CARDS = attachCardResourceLinks(PLANNED_BASE_CARDS, STUDY_MODULES)
+const SEQUENCED_BASE_CARDS = applyCardStudySequences(PLANNED_BASE_CARDS)
+const ENRICHED_BASE_CARDS = attachCardResourceLinks(SEQUENCED_BASE_CARDS, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
 
@@ -143,6 +146,18 @@ const NAV_GROUPS = [
 ]
 
 const FILTERABLE_VIEWS = new Set(['evidence', 'rescue', 'table', 'dashboard', 'analytics', 'week', 'board'])
+
+function routeFilters(filters = {}) {
+  const modules = Array.isArray(filters.modules) && filters.modules.length > 0
+    ? filters.modules
+    : filters.module && filters.module !== 'all' ? [filters.module] : []
+  return {
+    ...FILTER_DEFAULTS,
+    ...filters,
+    module: 'all',
+    modules,
+  }
+}
 
 const VIEW_META = {
   today: { title: 'Today', subtitle: 'Your mission control — now, next, and protected capacity.' },
@@ -501,11 +516,18 @@ export default function App() {
   const tracker = useTrackerState(ENRICHED_BASE_CARDS)
   const [activeView, setActiveView] = useState(() => viewFromHash())
   const [activeModuleTab, setActiveModuleTab] = useState(() => parseAppHash().tab || 'overview')
-  const [knowledgeFocus, setKnowledgeFocus] = useState(null)
-  const [filters, setFilters] = useState(FILTER_DEFAULTS)
+  const [knowledgeFocus, setKnowledgeFocus] = useState(() => {
+    const route = parseAppHash()
+    return route.noteId ? { moduleId: route.view, noteId: route.noteId } : null
+  })
+  const [filters, setFilters] = useState(() => routeFilters(parseAppHash().filters))
+  const [routeDate, setRouteDate] = useState(() => parseAppHash().date || '')
   const [selectedCardId, setSelectedCardId] = useState(() => parseAppHash().cardId || null)
   const [activeTimerCardId, setActiveTimerCardId] = useState(null)
   const [sessionStartSignal, setSessionStartSignal] = useState(0)
+  // Set to the card id a Focus Room tab is mirroring, so this tab keeps feeding it
+  // fresh snapshots. '' when no room tab is connected.
+  const [focusRoomCardId, setFocusRoomCardId] = useState('')
   const [replanUndo, setReplanUndo] = useState(null)
   const [openResourceId, setOpenResourceId] = useState(null)
   const [attachmentResource, setAttachmentResource] = useState(null)
@@ -752,16 +774,12 @@ export default function App() {
   useEffect(() => {
     function syncRouteFromLocation() {
       const route = parseAppHash()
-      setActiveView((current) => {
-        if (current !== route.view) {
-          setFilters((currentFilters) => (
-            currentFilters.module === 'all' ? currentFilters : { ...currentFilters, module: 'all' }
-          ))
-        }
-        return route.view
-      })
+      setActiveView(route.view)
       setActiveModuleTab(route.tab || 'overview')
       setSelectedCardId(route.cardId || null)
+      setRouteDate(route.date || '')
+      setFilters(routeFilters(route.filters))
+      setKnowledgeFocus(route.noteId ? { moduleId: route.view, noteId: route.noteId } : null)
     }
     window.addEventListener('hashchange', syncRouteFromLocation)
     window.addEventListener('popstate', syncRouteFromLocation)
@@ -944,11 +962,28 @@ export default function App() {
 
   function openModuleTab(tab) {
     setActiveModuleTab(tab)
+    setKnowledgeFocus(null)
     setSelectedCardId(null)
     setOpenResourceId(null)
     hashResourceRef.current = ''
-    writeRoute({ tab, cardId: '', resourceId: '', resourceMode: '' })
+    writeRoute({ tab, cardId: '', resourceId: '', resourceMode: '', noteId: '' })
   }
+
+  function selectKnowledgeNote(noteId) {
+    const moduleId = studyModuleMap[activeView]?.id
+    setKnowledgeFocus(noteId && moduleId ? { moduleId, noteId } : null)
+    writeRoute({ noteId: noteId || '' })
+  }
+
+  function selectRouteDate(date) {
+    setRouteDate(date || '')
+    writeRoute({ date: date || '' })
+  }
+
+  useEffect(() => {
+    if (!FILTERABLE_VIEWS.has(activeView)) return
+    writeRoute({ filters }, { replace: true })
+  }, [activeView, filters])
 
   useEffect(() => {
     function openHashResource() {
@@ -1160,22 +1195,31 @@ export default function App() {
     onNavigateMeta: openCardFacet,
   }
 
-  // Concept notes linked to the open card, resolved from the module that owns
-  // it so the drawer can surface them without knowing about seeds or review.
-  const linkedKnowledgeNotes = useMemo(() => {
-    if (!selectedCard) return []
-    const owner = STUDY_MODULES.find((entry) => entry.moduleGroup === selectedCard.moduleGroup)
-    if (!owner) return []
-    return notesForCard(
-      resolveModuleNotes({
-        seeds: KNOWLEDGE_SEEDS,
-        knowledge: tracker.state.knowledge,
-        moduleId: owner.id,
-        referenceDate,
-      }),
-      selectedCard.id,
-    )
-  }, [referenceDate, selectedCard, tracker.state.knowledge])
+  // Concept notes linked to a card, resolved from the module that owns it so any
+  // surface (drawer, Focus Room tab) can list them without knowing about seeds or
+  // review scheduling.
+  const resolveLinkedNotesForCard = useCallback(
+    (card) => {
+      if (!card) return []
+      const owner = STUDY_MODULES.find((entry) => entry.moduleGroup === card.moduleGroup)
+      if (!owner) return []
+      return relatedNotesForCard(
+        resolveModuleNotes({
+          seeds: KNOWLEDGE_SEEDS,
+          knowledge: tracker.state.knowledge,
+          moduleId: owner.id,
+          referenceDate,
+        }),
+        card,
+      )
+    },
+    [referenceDate, tracker.state.knowledge],
+  )
+
+  const linkedKnowledgeNotes = useMemo(
+    () => resolveLinkedNotesForCard(selectedCard),
+    [resolveLinkedNotesForCard, selectedCard],
+  )
 
   function openKnowledgeNote(note) {
     const owner = STUDY_MODULES.find((entry) => entry.id === note.moduleId)
@@ -1184,7 +1228,7 @@ export default function App() {
     setKnowledgeFocus({ moduleId: owner.id, noteId: note.id })
     setActiveView(owner.viewId)
     setActiveModuleTab('knowledge')
-    writeRoute({ view: owner.viewId, tab: 'knowledge', cardId: '', resourceId: '', resourceMode: '' })
+    writeRoute({ view: owner.viewId, tab: 'knowledge', cardId: '', resourceId: '', resourceMode: '', noteId: note.id, date: '', filters: {} })
   }
 
   const knowledgeActions = {
@@ -1398,7 +1442,11 @@ export default function App() {
       delete next[value]
       return next
     })
-    if (filters.module === value) setFilters((current) => ({ ...current, module: 'all' }))
+    setFilters((current) => ({
+      ...current,
+      module: current.module === value ? 'all' : current.module,
+      modules: (current.modules ?? []).filter((module) => module !== value),
+    }))
   }
 
   function renameCustomModule(oldValue) {
@@ -1416,7 +1464,11 @@ export default function App() {
       delete next[oldValue]
       return next
     })
-    if (filters.module === oldValue) setFilters((current) => ({ ...current, module: value }))
+    setFilters((current) => ({
+      ...current,
+      module: current.module === oldValue ? value : current.module,
+      modules: (current.modules ?? []).map((module) => module === oldValue ? value : module),
+    }))
   }
 
   function addCustomPhase() {
@@ -1522,6 +1574,69 @@ export default function App() {
     setMessage(`Logged ${minutes} min focus session.`)
   }
 
+  // Bridge to the Focus Room tab. This tab stays the sole writer of tracker state:
+  // it answers the room's snapshot requests and applies the mutations the room
+  // forwards. Rewards are the exception — the room drives them while open and
+  // streams them here to persist (so we must NOT also credit minutes to rewards on
+  // a logged session, or every block would count twice).
+  const focusBridgeRef = useRef({})
+  useEffect(() => {
+    focusBridgeRef.current.send = (id) => {
+      const card = tracker.cards.find((entry) => entry.id === id)
+      if (!card) return
+      postFocusMessage('snapshot', {
+        cardId: id,
+        card,
+        resources: allResources.filter((resource) => (card.resourceIds ?? []).includes(resource.id)),
+        currentBoundary: activeTimerCardId === id ? focusExecutionContext.block ?? null : null,
+        nextBoundary: activeTimerCardId === id ? focusExecutionContext.nextBlock ?? null : null,
+        linkedNotes: resolveLinkedNotesForCard(card),
+      })
+    }
+    focusBridgeRef.current.apply = (message) => {
+      if (message.action === 'toggle-checklist') tracker.toggleChecklistItem(message.cardId, message.itemId)
+      else if (message.action === 'complete-session') {
+        tracker.addFocusSession(message.cardId, message.minutes)
+        setMessage(`Logged ${message.minutes} min focus session (Focus Room).`)
+      } else if (message.action === 'add-note') tracker.addNote(message.cardId, message.text)
+    }
+  })
+
+  useEffect(() => {
+    return onFocusMessage((message) => {
+      const bridge = focusBridgeRef.current
+      switch (message.type) {
+        case 'request-snapshot':
+        case 'claim':
+          if (message.cardId) {
+            setActiveTimerCardId(message.cardId)
+            setFocusRoomCardId(message.cardId)
+            postFocusMessage('rewards-init', { state: focusRewards.getPersistedState() })
+            bridge.send?.(message.cardId)
+          }
+          break
+        case 'release':
+          setFocusRoomCardId('')
+          break
+        case 'action':
+          bridge.apply?.(message)
+          break
+        case 'rewards-sync':
+          if (message.state) focusRewards.hydrate(message.state)
+          break
+        default:
+          break
+      }
+    })
+  }, [])
+
+  // Re-push a snapshot whenever the mirrored card's data or its schedule boundaries
+  // change, so the room reflects checklist ticks, notes and knowledge live.
+  useEffect(() => {
+    if (!focusRoomCardId) return
+    focusBridgeRef.current.send?.(focusRoomCardId)
+  }, [focusRoomCardId, activeTimerCard, focusExecutionContext, allResources, resolveLinkedNotesForCard])
+
   async function verifyDatabaseMirror() {
     if (!window.confirm('Rebuild the SQLite mirror from the audit event log? JSON remains authoritative.')) return
     try {
@@ -1555,27 +1670,31 @@ export default function App() {
     setMessage('Backup exported; unfinished work restored to the 20 July plan while completed history was retained.')
   }
 
-  function openGlobalView(view) {
+  function openGlobalView(view, { date = '' } = {}) {
     const tab = studyModuleMap[view] ? 'overview' : ''
-    setFilters(FILTER_DEFAULTS)
+    setFilters(routeFilters())
+    setRouteDate(date)
+    setKnowledgeFocus(null)
     setActiveView(view)
     setActiveModuleTab(tab || 'overview')
     setSelectedCardId(null)
     setOpenResourceId(null)
     hashResourceRef.current = ''
-    writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '' })
+    writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '', date, noteId: '', filters: {} })
     setNavOpen(false)
   }
 
   function openModuleView(view, moduleGroup) {
     const tab = studyModuleMap[view] ? 'overview' : ''
-    setFilters({ ...FILTER_DEFAULTS, module: moduleGroup })
+    setFilters(routeFilters({ module: moduleGroup }))
+    setRouteDate('')
+    setKnowledgeFocus(null)
     setActiveView(view)
     setActiveModuleTab(tab || 'overview')
     setSelectedCardId(null)
     setOpenResourceId(null)
     hashResourceRef.current = ''
-    writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '' })
+    writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '', date: '', noteId: '', filters: {} })
     setNavOpen(false)
   }
 
@@ -1596,13 +1715,13 @@ export default function App() {
       setSelectedCardId(null)
       return
     }
-    const next = { ...FILTER_DEFAULTS }
+    const next = routeFilters()
     if (type === 'all') {
       setFilters(next)
       setActiveView('table')
       setSelectedCardId(null)
       setActiveModuleTab('overview')
-      writeRoute({ view: 'table', tab: '', cardId: '', resourceId: '', resourceMode: '' })
+      writeRoute({ view: 'table', tab: '', cardId: '', resourceId: '', resourceMode: '', date: '', noteId: '', filters: next })
       setNavOpen(false)
       return
     }
@@ -1613,7 +1732,7 @@ export default function App() {
     setActiveView('table')
     setSelectedCardId(null)
     setActiveModuleTab('overview')
-    writeRoute({ view: 'table', tab: '', cardId: '', resourceId: '', resourceMode: '' })
+    writeRoute({ view: 'table', tab: '', cardId: '', resourceId: '', resourceMode: '', date: '', noteId: '', filters: next })
     setNavOpen(false)
   }
 
@@ -1672,6 +1791,7 @@ export default function App() {
             focusKnowledgeNoteId={
               knowledgeFocus?.moduleId === studyModuleMap[activeView].id ? knowledgeFocus.noteId : ''
             }
+            onKnowledgeNoteChange={selectKnowledgeNote}
             resourceProgress={tracker.state.resourceProgress}
             recentResourceIds={tracker.state.recentResourceIds}
             onResourceOpen={tracker.markResourceOpened}
@@ -1694,7 +1814,7 @@ export default function App() {
             mat700Active={mat700Active}
             actions={actions}
             schedule={schedule}
-            scopeLabel={filters.module !== 'all' ? filters.module : ''}
+            scopeLabel={(filters.modules ?? []).join(', ')}
           />
         )
     }
@@ -1711,6 +1831,8 @@ export default function App() {
           moduleExamDates={moduleExamDates}
           campaignStart={schedule.campaignStart}
           campaignEnd={schedule.campaignEnd}
+          selectedWeekStart={routeDate}
+          onWeekChange={selectRouteDate}
         />
       )
     }
@@ -1734,6 +1856,8 @@ export default function App() {
           onOpenCard={openCard}
           onCardStatusChange={tracker.setStatus}
           onToggleCardDone={tracker.toggleDone}
+          selectedDate={routeDate}
+          onSelectedDateChange={selectRouteDate}
         />
       )
     }

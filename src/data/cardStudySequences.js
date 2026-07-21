@@ -1,0 +1,4008 @@
+// Per-card study sequence: the "how / what / in what order" layer.
+//
+// Two things already exist and are NOT duplicated here:
+//   * card.checklist — what to do, already roughly ordered.
+//   * cardResources.js / relatedNotesForCard (utils/knowledge.js) — a broad,
+//     session/lecture/pack-keyed pool of "might be relevant" resources and
+//     notes, capped at up to 24 resources and every note that shares a
+//     session key (which, for a card like "AML S2 — ..." with dozens of S2
+//     notes, means every S2 note, code recipes and all, on the concepts card
+//     that hasn't touched code yet).
+//
+// What's missing is the plan: for THIS card, given its checklist and its
+// estimated hours, exactly which few resources and notes to open, in what
+// order, and why — sized so a limited study block is spent on the right
+// handful of items instead of triaging a flat pile. That's what this file
+// adds, one entry per card, in the same spirit as amlVideoPlan.js's explicit
+// per-card table (and deliberately separate from it, and from the generated
+// baseCards.js, for the same reason: hand-curated content should not live in
+// a generated file or be inferred from a regex over the title).
+//
+// `concepts` are the card's must-cover items, stated plainly so progress can
+// be checked against them directly rather than against the checklist prose.
+// `steps` is the ordered sequence. Each step names the specific resourceIds
+// (from studyModules.js) and/or noteIds (from src/data/knowledge/*.md) it
+// needs — ids the reader can click straight through to.
+//
+// `minutes` are sized against card.estimatedHours AS COMPRESSED BY THE 20 JUL
+// FRESH-START RE-PLAN (summerRescuePlan.js: fitExamCardsToTimetable), not the
+// original, roomier hours in baseCards.js — e.g. card-001 shows 2.25h live,
+// not the 3.5h its own checklist text was written against. Video-watch steps
+// stay at their real length (a video is what it is); read/write/test steps
+// are the ones cut, and cut for real — fewer notes per step, not just smaller
+// numbers next to the same content — with an explicit steer to the single
+// highest-value item first when a step still can't fit. If a future re-plan
+// changes a card's estimatedHours again, re-check the steps below still sum
+// close to it; the app renders whatever sum results, right or wrong.
+//
+// Cards with no entry fall back to the checklist plus the existing
+// broad resource/note matching, untouched — this is additive only.
+
+export const CARD_STUDY_SEQUENCE = {
+  // ---------------------------------------------------------------- AML ----
+  'card-001': {
+    // live: 2.25h / 135min
+    concepts: [
+      'Supervised vs unsupervised learning, with one example each',
+      'Classification vs regression, with one example each',
+      'The 5-stage ML workflow: data → EDA → preprocess → model → evaluate',
+    ],
+    steps: [
+      {
+        label: 'Watch: ML introduction + terminology',
+        kind: 'watch',
+        minutes: 27,
+        resourceIds: ['aml-video-ubc-1-0-ml-introduction', 'aml-video-ubc-2-1-ml-terminology'],
+        instruction:
+          'Watch both back to back for vocabulary only — what a model is, what "learning" means here. Don\'t take notes yet, just absorb the shape of it.',
+      },
+      {
+        label: 'Watch: course workflow segment (0:02–0:51)',
+        kind: 'watch',
+        minutes: 49,
+        resourceIds: ['aml-video-course-s1-workflow'],
+        instruction:
+          'This is the 5-stage workflow demonstrated end to end on a real dataset. Watch for the SHAPE of the pipeline (what comes before what) — the code syntax is not the point yet.',
+      },
+      {
+        label: 'Read: S1 "Overview of Machine Learning" slides',
+        kind: 'read',
+        minutes: 20,
+        resourceIds: ['aml-session-1-s1-slides'],
+        noteIds: ['s1-what-is-ml', 's1-ai-ml-dl', 's1-supervised', 's1-unsupervised'],
+        instruction:
+          'Skim the slides once, then lean on the four notes for the actual definitions. Write one original example each for supervised, unsupervised, classification, and regression — don\'t reuse the slide\'s example, that\'s not evidence you understood it. If time is short, the two paradigm notes matter more than a full slide read.',
+      },
+      {
+        label: 'Write: the 5-stage workflow page',
+        kind: 'write',
+        minutes: 25,
+        noteIds: ['s1-five-stage-process', 's1-module-shape'],
+        instruction:
+          'Closed-book: one line per stage (data → EDA → preprocess → model → evaluate), in your own words. This is AML_S1_workflow.md — the evidence this card asks for. s1-module-shape is a 90-second read on what the class test actually looks like; worth it even under time pressure.',
+      },
+      {
+        label: 'Self-test: closed-book recite',
+        kind: 'test',
+        minutes: 14,
+        noteIds: ['s1-paradigm-picker'],
+        instruction:
+          'Recite the 5 stages from memory, then run the paradigm-picker cheat sheet\'s quick tests. List any term you can\'t place cold — carry that list into card-005 (the Lab 1 run), where code will force you to resolve it.',
+      },
+    ],
+  },
+
+  'card-003': {
+    // live: 1.25h / 75min — compressed hard from the original 2h; the two
+    // write steps are merged into one consolidated pass rather than trimmed
+    // separately, because splitting a 30min budget two ways left neither
+    // half usable.
+    concepts: [
+      'Preprocessing order: missing → encode → scale → split',
+      'Missing-values rule: drop vs impute (mean/median/mode) — with reasoning',
+      'Encoding rule: one-hot vs label/ordinal — which and why',
+      'Scaling rule: which model families need it, which don\'t',
+      'Leakage rule: fit every transformer on train only',
+    ],
+    steps: [
+      {
+        label: 'Watch: preprocessing intro + imputation & scaling',
+        kind: 'watch',
+        minutes: 29,
+        resourceIds: ['aml-video-ubc-5-1-preprocessing-intro', 'aml-video-ubc-5-2-imputation-scaling'],
+        instruction: 'Watch for the ORDER things happen in, not the code — that order is what the rest of this card asks you to write down.',
+      },
+      {
+        label: 'Read: S2 "Data preprocessing" slides',
+        kind: 'read',
+        minutes: 16,
+        resourceIds: ['aml-session-2-s2-preprocessing-slides'],
+        noteIds: ['s2-why', 's2-dirty-data'],
+        instruction:
+          'Read s2-why first — one line, and it\'s a quotable exam line. Skim the slides holding "missing → encode → scale → split" as the order to check every step against; s2-dirty-data if time allows.',
+      },
+      {
+        label: 'Write: all four rules in one pass',
+        kind: 'write',
+        minutes: 30,
+        noteIds: ['s2-missing-four-strategies', 's2-encoding-picker', 's2-why-scale', 's2-trap-encode-before-split'],
+        instruction:
+          'This card is short on time, so do all four rules as one tight pass rather than four separate write-ups: missing-values (drop vs impute mean/median/mode + when), encoding (one-hot vs ordinal + when), scaling (which model families need it and why — s2-why-scale gives you three ready reasons), and leakage (fit every transformer on train only — s2-trap-encode-before-split states it as the mistake it prevents). One paragraph each, in your own words. If something has to give, keep scaling and leakage — they\'re the two that show up as planted faults in the lab.',
+      },
+    ],
+  },
+
+  'card-005': {
+    // live: 2h / 120min
+    concepts: [
+      'Both Lab 1 notebooks run clean, top to bottom',
+      'Dataset shape, target (Revenue), and class balance recorded',
+      'Every cell labelled with its workflow stage',
+      'Terms flagged in card-001 resolved',
+    ],
+    steps: [
+      {
+        label: 'Set up: open the lab sheet, review flagged terms',
+        kind: 'read',
+        minutes: 5,
+        resourceIds: ['aml-session-1-lab-1-sheet'],
+        noteIds: ['s1-import-recall'],
+        instruction:
+          'Quick skim of the lab sheet and your flagged-terms list from card-001 — just enough to know what each exercise is asking before you run anything.',
+      },
+      {
+        label: 'Run: Lab 1 Ex1 notebook, top to bottom',
+        kind: 'do',
+        minutes: 55,
+        resourceIds: ['aml-session-1-lab-1-ex1-notebook'],
+        noteIds: ['s1-debug-triage', 's1-trap-split-order'],
+        instruction:
+          'Run every cell in order. When something breaks, use s1-debug-triage\'s "where to look first" order before guessing — most breaks here are import/path/version, exactly what the checklist warns about. s1-trap-split-order covers the single most common way train_test_split output gets unpacked wrong.',
+      },
+      {
+        label: 'Run: Lab 1 Ex2 notebook, then record the dataset',
+        kind: 'do',
+        minutes: 35,
+        resourceIds: ['aml-session-1-lab-1-ex2-notebook'],
+        noteIds: ['s1-shopper-dataset', 's1-class-imbalance', 's1-tabular-shape'],
+        instruction:
+          'Run Ex2 clean. Using s1-shopper-dataset as the answer key, record: dataset shape, the target column (Revenue), and the class balance — s1-class-imbalance says exactly what "checking class balance" means and why (this sets up the metrics work in card-062 later).',
+      },
+      {
+        label: 'Write: label every cell with its workflow stage',
+        kind: 'write',
+        minutes: 20,
+        noteIds: ['s1-lab-five-steps'],
+        instruction:
+          'Go back through both notebooks and write one line per cell (or cell group): which of the 5 stages it belongs to. s1-lab-five-steps gives the lab\'s own wording of the process, so your labels match how the exam will describe it.',
+      },
+      {
+        label: 'Self-test: sanity checklist',
+        kind: 'test',
+        minutes: 5,
+        noteIds: ['s1-sanity-checklist'],
+        instruction:
+          'Run the 60-second sanity checklist against what you just built, and confirm every term flagged in card-001 is now resolved. Anything still shaky goes on your S1 error log, not into silence.',
+      },
+    ],
+  },
+
+  // ---------------------------------------------------------- Time Series ----
+  'card-002': {
+    // live: 1.75h / 105min — compressed from 3h, so the original 4-step plan
+    // (redo examples / check smoothing / check Holt-Winters / flag shaky)
+    // merges smoothing + Holt-Winters into one consolidated check rather than
+    // two, and "redo every worked example" becomes "redo one per method,
+    // more only if time remains" — stated explicitly below, not left implicit.
+    concepts: [
+      'SMA / centred MA / weighted MA / simple exponential smoothing — formula and when to use each',
+      'Holt-Winters: the three update equations (level, trend, season)',
+      'Additive vs multiplicative decomposition, one line each',
+    ],
+    steps: [
+      {
+        label: 'Read + redo: Pack A and Lectures 1–2, worked examples first',
+        kind: 'do',
+        minutes: 50,
+        resourceIds: [
+          'timeSeries-study-packs-pack-a-l1-l2-intro-and-smoothing',
+          'timeSeries-lecture-notes-lecture-1-learning-material-notes',
+          'timeSeries-lecture-notes-lecture-2-learning-material-notes',
+        ],
+        instruction:
+          'This session is short: redo ONE worked example per method (SMA, CMA/WMA, SES, Holt-Winters) on paper from the method name alone before checking the solution — cover every method once rather than exhausting Pack A on the first one. Only loop back for a second example on a method that genuinely didn\'t land.',
+      },
+      {
+        label: 'Consolidate: smoothing, Holt-Winters, and decomposition',
+        kind: 'read',
+        minutes: 40,
+        noteIds: ['ts-smoothing', 'ts-holt-winters'],
+        instruction:
+          'Compare your worked numbers against ts-smoothing\'s worked example ($m=3$ on $\\{3,7,2,5,4,8,6\\}$), then write one line each on where SMA/SES (real-time), CMA/WMA (offline, no periodicity), and Holt-Winters (monthly econometric) apply. In ts-holt-winters, write the three update equations from memory first, then check — its table gives you additive vs multiplicative directly, write that one line each too.',
+      },
+      {
+        label: 'Flag the shakiest 1–2 steps',
+        kind: 'test',
+        minutes: 15,
+        instruction:
+          'Name the 1–2 steps from today that took longest or felt most guessed, in writing. This list is exactly what card-006\'s recall prompts and self-test should target first.',
+      },
+    ],
+  },
+
+  'card-006': {
+    // live: 1.75h / 105min — compressed from 3h; the master-reference
+    // cross-check is folded into the compression step (a quick check, not a
+    // separate pass) rather than dropped, since a formula sheet built from
+    // memory alone is exactly the kind of thing worth one honest check.
+    concepts: [
+      'One-page formula sheet: SMA, SES, Holt-Winters (3 equations), decomposition',
+      '10 closed-book recall prompts spanning smoothing + decomposition',
+      'Self-test scored, weak topics flagged for Pack B',
+    ],
+    steps: [
+      {
+        label: 'Compress: build the one-page formula sheet',
+        kind: 'write',
+        minutes: 55,
+        noteIds: ['ts-smoothing', 'ts-holt-winters'],
+        resourceIds: [
+          'timeSeries-quick-reference-master-formula-and-r-code-sheet',
+          'timeSeries-quick-reference-r-comprehensive-cheat-sheet',
+        ],
+        instruction:
+          'Using ts-smoothing and ts-holt-winters as your source, not the raw slides, compress to one page: SMA/CMA/WMA/SES formulas, the 3 Holt-Winters equations, additive vs multiplicative in one line each. Spend your last 10 minutes cross-checking against the master formula/R-code sheet for anything missing, and pull in the matching R call (HoltWinters(), etc.) from the R cheat sheet.',
+      },
+      {
+        label: 'Write: 10 closed-book recall prompts',
+        kind: 'write',
+        minutes: 25,
+        instruction:
+          'Write 10 prompts spanning smoothing and decomposition — start from the "Check yourself" questions inside ts-smoothing and ts-holt-winters, then add your own until you have 10 that would embarrass you if you couldn\'t answer them cold.',
+      },
+      {
+        label: 'Self-test, mark, and flag',
+        kind: 'test',
+        minutes: 25,
+        instruction:
+          'Sit the 10 prompts closed-book, mark against your sheet, and score it. Anything under 8/10 by topic gets named explicitly and carried forward — Pack B (card-009/010) is next, and a named weak topic here is one less surprise at the mock.',
+      },
+    ],
+  },
+
+  // ---- Generated by the study-sequence-fill workflow (2026-07-21), one
+  // agent per cluster below, each grounded in the exact resource/knowledge
+  // files for its cards. Validated afterward: every resourceId/noteId checked
+  // against the real inventories (0 invalid found across all 90 cards), and
+  // every card's total planned minutes checked against its live estimatedHours
+  // (0 outside a 25%/20min tolerance). ----
+
+  // AML — S2 lab + playbook
+  'card-007': {
+    "concepts": [
+      "The full preprocessing order applied end-to-end on two real datasets: clean placeholder-missing values -> impute -> encode -> scale -> split",
+      "Spotting missing-value placeholders that isna() cannot see (crx's '?' markers hiding inside object-typed numeric columns)"
+    ],
+    "steps": [
+      {
+        "label": "Do: run Lab 2 clean on Titanic + crx",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Run top-to-bottom on Titanic first (quick), then crx. crx's A2/A14 will load as dtype object because of '?' placeholders — replace with np.nan and cast to float per the cleaning note before continuing. Don't stop to fully fix every error yet, just get both datasets executing.",
+        "resourceIds": [
+          "aml-session-2-lab-2-preprocessing-notebook"
+        ],
+        "noteIds": [
+          "s2-crx-cleaning",
+          "s2-trap-placeholder-missing"
+        ]
+      },
+      {
+        "label": "Write: ordered preprocessing inventory",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "For each dataset, list every preprocessing operation in the exact order it ran, and tag each column touched as imputed / encoded / scaled. Use the ColumnTransformer note to see how the categorical and numeric branches fork by dtype.",
+        "noteIds": [
+          "s2-missing-four-strategies",
+          "s2-encoding-onehot",
+          "s2-columntransformer"
+        ]
+      },
+      {
+        "label": "Self-check: verify order, save notebook",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Check your inventory's order against the two debugging notes (split before fitting anything; impute before scale). Diff any mismatch against the solution notebook, fix it, then save the executed notebook as your evidence.",
+        "resourceIds": [
+          "aml-session-2-lab-2-solution-notebook"
+        ],
+        "noteIds": [
+          "s2-trap-encode-before-split",
+          "s2-trap-scaling-choice"
+        ]
+      }
+    ]
+  },
+  'card-008': {
+    "concepts": [
+      "Why features need scaling, which model families require it (distance-based, gradient-descent, regularised) and which don't (trees)",
+      "The two leakage sneak-in routes — fitting a transformer on the full dataset before splitting, and preprocessing outside a Pipeline so it re-fits silently during CV/GridSearchCV — and the Pipeline fix"
+    ],
+    "steps": [
+      {
+        "label": "Watch: sklearn Pipelines — the leakage fix",
+        "kind": "watch",
+        "minutes": 12,
+        "instruction": "Watch UBC 5.3 once through. This is the video that shows Pipeline.fit/transform as the mechanical reason leakage becomes structurally impossible — the concept your playbook's leakage section rests on.",
+        "resourceIds": [
+          "aml-video-ubc-5-3-sklearn-pipelines"
+        ]
+      },
+      {
+        "label": "Read: scaling rule + which models need it",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Read both notes. Extract: the three reasons to scale, which model families require it vs which don't (trees), and when to pick min-max vs z-score.",
+        "noteIds": [
+          "s2-why-scale",
+          "s2-minmax-zscore"
+        ]
+      },
+      {
+        "label": "Read: leakage traps — the two sneak-in routes",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Read both. Note the two routes: (1) fitting any transformer — scaler, imputer, encoder, PCA — on the full dataset before splitting, and (2) running manual preprocessing outside a Pipeline so it silently re-fits during cross-validation/GridSearchCV.",
+        "noteIds": [
+          "s2-trap-encode-before-split",
+          "s2-columntransformer"
+        ]
+      },
+      {
+        "label": "Write: assemble the one-page playbook",
+        "kind": "write",
+        "minutes": 50,
+        "instruction": "Produce AML_S2_preprocessing_playbook.md as one page under five headers: missing -> encode -> scale -> split -> leakage. Under each: the rule in one line plus the sklearn class or pattern. The leakage header states the two sneak-in routes and the Pipeline fix.",
+        "noteIds": [
+          "s2-missing-four-strategies",
+          "s2-encoding-picker",
+          "s2-columntransformer"
+        ]
+      },
+      {
+        "label": "Dry-run: apply the playbook to crx from memory",
+        "kind": "test",
+        "minutes": 28,
+        "instruction": "Closed-book, no notebook: talk through crx column by column (A1-A15, Target) stating what each playbook header would do to it, in order missing -> encode -> scale -> split -> leakage. Flag any column you can't classify cold and go fix your playbook, not the slides."
+      }
+    ]
+  },
+
+  // AML — S3
+  'card-011': {
+    "concepts": [
+      "Linear regression as minimising OLS squared-error loss; the linear model form (w^Tx + b)",
+      "The fundamental tradeoff: overfitting vs underfitting, defined by training error and the train-test gap",
+      "Regularisation: ridge (L2) vs lasso (L1) vs elastic net, and when to prefer each",
+      "Why a cross-validated score is trusted over a test score you tuned against"
+    ],
+    "steps": [
+      {
+        "label": "Watch: UBC 7.1 linear regression + 3.1/3.4 generalisation & tradeoff",
+        "kind": "watch",
+        "minutes": 48,
+        "instruction": "Watch back to back for vocabulary and the shape of the fundamental tradeoff. Don't stop to take notes — the slides + notes step right after covers the detail.",
+        "resourceIds": [
+          "aml-video-ubc-7-1-linear-regression",
+          "aml-video-ubc-3-1-generalization",
+          "aml-video-ubc-3-4-fundamental-tradeoff"
+        ]
+      },
+      {
+        "label": "Read: S3 slides — linear model form and the loss",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Skim the slides once for the linear-model form and OLS. Use the two notes to pin the exact loss formula and the four names for it (objective/loss/cost/error function).",
+        "resourceIds": [
+          "aml-session-3-s3-regression-and-evaluation-slides"
+        ],
+        "noteIds": [
+          "s3-linear-model",
+          "s3-ols"
+        ]
+      },
+      {
+        "label": "Write: AML_S3_regression_concepts.md",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Closed-book: define overfitting/underfitting via the two-ability framing (training error / gap), state the regularisation definition precisely, contrast ridge vs lasso penalties and their effect on weights, note k-fold cross-validation (k=10 default), and log the metric table (MSE/RMSE/MAE/MAPE) with when to use each.",
+        "noteIds": [
+          "s3-generalisation",
+          "s3-regularisation",
+          "s3-ridge-lasso-elastic",
+          "s3-assessment-methods",
+          "s3-regression-metrics"
+        ]
+      },
+      {
+        "label": "Self-test: why trust the CV score",
+        "kind": "test",
+        "minutes": 12,
+        "instruction": "Closed-book, one sentence: why a cross-validated/validation score is trustworthy while a test score you've tuned against is not. Check your line against the note only after writing it.",
+        "noteIds": [
+          "s3-trap-test-set-tuning"
+        ]
+      }
+    ]
+  },
+  'card-014': {
+    "concepts": [
+      "Running the Lab 3 fit/predict/score pipeline end-to-end without manual patches",
+      "Ridge vs lasso coefficient behaviour in practice (shrink toward zero vs exact zero)",
+      "Reading a train-vs-CV score gap as evidence of overfitting/underfitting"
+    ],
+    "steps": [
+      {
+        "label": "Do: run Lab 3 end-to-end clean",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "Restart the kernel and run every cell in order: split, OLS fit, ridge/lasso fits, predict, score. Don't skip cells even if they look redundant — the point is reproducing the whole pipeline clean.",
+        "resourceIds": [
+          "aml-session-3-lab-3-linear-models-notebook"
+        ]
+      },
+      {
+        "label": "Write: tie results to your S3 concepts",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "In a markdown cell (or a linked note): compare the ridge vs lasso coefficients you actually got against the shrink-vs-zero-out behaviour, then record your train score vs cross-validation score and explain any gap using the training-error/gap framing.",
+        "noteIds": [
+          "s3-ridge-lasso-elastic",
+          "s3-which-regression",
+          "s3-generalisation"
+        ]
+      },
+      {
+        "label": "Save: restart & run all, save executed notebook",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Restart & Run All once more to confirm every cell reproduces with no manual fixes, then save the executed .ipynb as your evidence file."
+      }
+    ]
+  },
+  'card-016': {
+    "concepts": [
+      "Reconstructing the Lab 3 model + evaluation cells from memory under time pressure",
+      "MAE/MSE/R^2 and regression metric choice; confusion matrix, precision/recall, and the accuracy-on-imbalance trap",
+      "Naming exactly which pieces failed to reproduce, as a targeted revision list"
+    ],
+    "steps": [
+      {
+        "label": "Timed: rebuild Lab 3 model + evaluation cells from blank",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Set a 20-25 min timer. From a blank notebook, rebuild the Lab 3 pipeline from memory: split, fit OLS + a regularised model, predict, score. Stop when the timer ends regardless of completion — the gaps are the data for step 3."
+      },
+      {
+        "label": "Recite: regression + classification evaluation metrics",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Closed-book, out loud or on paper: MAE/MSE/R^2 and when each is preferred; then the confusion-matrix cells, precision vs recall, and the 99.9%-accuracy trap. Check each against the note only after answering.",
+        "noteIds": [
+          "s3-regression-metrics",
+          "s3-confusion-matrix",
+          "s3-precision-recall-f",
+          "s3-accuracy-limitation"
+        ]
+      },
+      {
+        "label": "Write: reconstruction gap log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "List exactly which cells or metrics you couldn't reproduce from memory and why (formula forgotten vs sklearn API forgotten vs logic gap) — this is your evidence and next revision's target list."
+      }
+    ]
+  },
+
+  // AML — S4
+  'card-017': {
+    "concepts": [
+      "Four classifier families (logistic regression, kNN, decision trees, SVM/RBF) and when each is appropriate",
+      "Confusion matrix and precision/recall/F1 definitions",
+      "Comparison-table shape: idea, when to use, key hyperparameter per classifier"
+    ],
+    "steps": [
+      {
+        "label": "Watch: the four classifier clips",
+        "kind": "watch",
+        "minutes": 54,
+        "instruction": "Watch back to back. For each, note only: the core idea in one line, and the one hyperparameter you'd tune first.",
+        "resourceIds": [
+          "aml-video-ubc-7-2-logistic-regression",
+          "aml-video-ubc-4-2-knn",
+          "aml-video-ubc-2-3-decision-trees",
+          "aml-video-ubc-4-4-svm-rbf"
+        ]
+      },
+      {
+        "label": "Watch: confusion matrix + precision/recall/F1",
+        "kind": "watch",
+        "minutes": 17,
+        "instruction": "These two are the source for the metrics definitions — no written note covers them. Write the confusion-matrix layout (TP/FP/FN/TN) and the precision/recall/F1 formulas as you watch.",
+        "resourceIds": [
+          "aml-video-ubc-9-2-confusion-matrix",
+          "aml-video-ubc-9-3-precision-recall-f1"
+        ]
+      },
+      {
+        "label": "Read: S4 slides + classifier-picker cheatsheet",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Skim the slides once for the summary verdicts, then lock in the appropriateness call (training/prediction cost, scaling, interpretability) from the cheatsheet table.",
+        "resourceIds": [
+          "aml-session-4-s4-classification-slides"
+        ],
+        "noteIds": [
+          "s4-classifier-picker"
+        ]
+      },
+      {
+        "label": "Write: AML_S4_classification_concepts.md + comparison-table skeleton",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "One short paragraph per classifier family (idea, when to use, key hyperparameter) plus the confusion-matrix/precision/recall/F1 definitions, closed-book from what you just watched/read. Draft the comparison-table skeleton with one row per classifier and blank score columns for Lab 4 to fill."
+      },
+      {
+        "label": "Self-test: cold recall",
+        "kind": "test",
+        "minutes": 9,
+        "instruction": "Closed-book: which classifier needs no scaling? Which is a black box? State precision and recall from the confusion matrix without looking. Flag anything shaky for Lab 4."
+      }
+    ]
+  },
+  'card-020': {
+    "concepts": [
+      "Applying all four classifiers in Lab 4 and reading real scores",
+      "How C and gamma reshape the RBF SVM boundary at the four (γ, C) corners",
+      "Confusion matrix -> precision/recall/F1 computed from actual predictions"
+    ],
+    "steps": [
+      {
+        "label": "Run: Lab 4 end-to-end, clean",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Run every cell top to bottom without edits first. Where the grid-search cell runs, check its shape against the cheatsheet (search space, cv scheme, best_params_) — if it diverges, note why.",
+        "resourceIds": [
+          "aml-session-4-lab-4-classification-notebook"
+        ],
+        "noteIds": [
+          "s4-gridsearch-code"
+        ]
+      },
+      {
+        "label": "Do: vary SVM C and gamma, watch the boundary",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Re-run the RBF SVM cell manually at the four corners (γ ∈ {0.1, 5}, C ∈ {0.001, 1000}). For each, record whether the boundary is smooth or wiggly and match it to the cheatsheet's direction table.",
+        "resourceIds": [
+          "aml-session-4-lab-4-classification-notebook"
+        ],
+        "noteIds": [
+          "s4-svm-gamma-c"
+        ]
+      },
+      {
+        "label": "Write: fill the comparison table with real scores",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "One row per classifier (logistic, kNN, DT, SVM) with the actual accuracy from your Lab 4 run, plus the key hyperparameter you tuned and its type (integer/real/categorical).",
+        "resourceIds": [
+          "aml-session-4-lab-4-classification-notebook"
+        ],
+        "noteIds": [
+          "s4-hyperparameters-def"
+        ]
+      },
+      {
+        "label": "Write: metrics from the lab + save notebook",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Pull the confusion matrix and precision/recall/F1 for at least one classifier straight from your Lab 4 predictions (don't recompute from scratch — read the lab's own output). Save the executed notebook with all outputs intact as evidence.",
+        "resourceIds": [
+          "aml-session-4-lab-4-classification-notebook"
+        ]
+      }
+    ]
+  },
+  'card-022': {
+    "concepts": [
+      "Rebuilding classifier + evaluation code from memory under time pressure",
+      "Confusion matrix -> precision/recall/F1/ROC chain, recited cold",
+      "Naming personal gaps precisely enough to act on later"
+    ],
+    "steps": [
+      {
+        "label": "Timed: rebuild classifier + evaluation cells from blank",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Closed notebook, closed notes. Set a 35-minute timer and rebuild from a blank file: fit at least two classifiers (e.g. SVM + one other), run a small grid search, and produce predictions — no peeking at Lab 4."
+      },
+      {
+        "label": "Recite: confusion matrix -> precision/recall/F1/ROC",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Out loud or on paper, closed-book: define the confusion matrix cells, then derive precision, recall, F1, and describe what the ROC curve plots — no references."
+      },
+      {
+        "label": "Write: gap log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "List exactly which cell, formula, or definition you hesitated on or got wrong. This is the input to tomorrow's catch-up, not a general reflection."
+      }
+    ]
+  },
+
+  // AML — S5
+  'card-024': {
+    "concepts": [
+      "Why ensembles help: independent, better-than-random errors cancel out (No Free Lunch); four ways to diversify learners",
+      "Bagging vs boosting vs stacking: what each manipulates, how they combine predictions, and what each mainly reduces"
+    ],
+    "steps": [
+      {
+        "label": "Watch: ensembles motivation + gradient boosted trees",
+        "kind": "watch",
+        "minutes": 18,
+        "instruction": "Watch back to back. Just get the shape of the argument: why combining independent, better-than-random models cancels error, and how gradient boosted trees differ from a vote (they sum residual-fitting trees).",
+        "resourceIds": [
+          "aml-video-ubc-11-1-ensembles-motivation",
+          "aml-video-ubc-11-2-gradient-boosted-trees"
+        ]
+      },
+      {
+        "label": "Read: S5 slides + why combining helps",
+        "kind": "read",
+        "minutes": 32,
+        "instruction": "Skim the slides once for structure, then lean on the three notes for the actual argument: what an ensemble is, the two conditions (independent + better than random) that make combining work, and the four ways to manufacture diversity.",
+        "resourceIds": [
+          "aml-session-5-s5-ensemble-slides"
+        ],
+        "noteIds": [
+          "s5-what-is-ensemble",
+          "s5-no-free-lunch",
+          "s5-diversity"
+        ]
+      },
+      {
+        "label": "Watch: interpretation + feature importance",
+        "kind": "watch",
+        "minutes": 16,
+        "instruction": "Watch back to back. Note what feature importance actually measures (impurity reduction across trees) so you can name a misleading case next.",
+        "resourceIds": [
+          "aml-video-ubc-12-1-interpretation-motivation",
+          "aml-video-ubc-12-2-feature-importances"
+        ]
+      },
+      {
+        "label": "Write: bagging vs boosting vs stacking table",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Draft your own table first (data manipulation, training order, base-learner strength, combination rule, what's mainly reduced) from the four concept notes, then check it against s5-ensemble-comparison and fix any row you got wrong.",
+        "noteIds": [
+          "s5-bagging",
+          "s5-boosting",
+          "s5-gradient-boosting",
+          "s5-stacking",
+          "s5-ensemble-comparison"
+        ]
+      },
+      {
+        "label": "Write: feature importance + a misleading case",
+        "kind": "write",
+        "minutes": 19,
+        "instruction": "In your own words: state what feature_importances_ measures, then give one concrete case where it misleads (e.g. two correlated features split the credit so both look weaker than the single underlying signal really is). Save both pieces into AML_S5_ensembles_concepts.md."
+      }
+    ]
+  },
+  'card-026': {
+    "concepts": [
+      "Random forest = bagging + random feature subset per split; OOB gives a free validation estimate (~37% held out per tree)",
+      "RF votes/averages over independent trees; GBRT sums trees fit to the previous residual — different mechanisms, compare scores directly"
+    ],
+    "steps": [
+      {
+        "label": "Do: run Lab 5 end-to-end",
+        "kind": "do",
+        "minutes": 30,
+        "instruction": "Run every cell top to bottom without stopping to tinker. If a cell errors, check the matching code cheatsheet (voting classifier / bagging / random forest / AdaBoost & GBRT) before debugging from scratch.",
+        "resourceIds": [
+          "aml-session-5-lab-5-ensemble-notebook"
+        ],
+        "noteIds": [
+          "s5-voting-code",
+          "s5-bagging-code",
+          "s5-rf-code",
+          "s5-adaboost-code"
+        ]
+      },
+      {
+        "label": "Write: RF vs GBRT scores + OOB",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Pull the random forest and gradient-boosting test accuracies straight from the executed notebook. Record the OOB score next to the true test score and note how close they land — that gap (or lack of one) is the whole point of OOB.",
+        "noteIds": [
+          "s5-random-forest",
+          "s5-oob"
+        ]
+      },
+      {
+        "label": "Write: finalise ensemble table + save notebook",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Fold the RF/GBRT scores, OOB result, and top 2-3 feature importances into the bagging/boosting/stacking table from card-024. Save the executed notebook as your evidence file.",
+        "noteIds": [
+          "s5-rf-code"
+        ]
+      }
+    ]
+  },
+  'card-027': {
+    "concepts": [
+      "Reconstructing bagging/random-forest/boosting fit+evaluate code cold, under time pressure",
+      "Bagging vs boosting vs stacking distinctions, recalled without notes"
+    ],
+    "steps": [
+      {
+        "label": "Do: timed rebuild of fit+evaluate cells",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "Closed notebook, closed notes. From a blank file, rebuild the BaggingClassifier/RandomForestClassifier and AdaBoost-or-GBRT fit+evaluate cells and get them running end to end. Time yourself; note exactly where you stalled."
+      },
+      {
+        "label": "Self-test: recite bagging/boosting/stacking",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Closed-book: say or write the data-manipulation, training-order, base-learner-strength, and combination-rule differences for bagging, boosting, and stacking. Only check your own table afterward."
+      },
+      {
+        "label": "Write: gaps for Phase 1",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "List every stumble from the last two steps (a forgotten argument, a confused distinction, an OOB or feature-importance detail) as a dated Phase 1 revision entry. This closes out AML first pass S1-S5."
+      }
+    ]
+  },
+
+  // AML — Open-book pack build
+  'card-033': {
+    "concepts": [
+      "Full S1–S5 topic-to-location map: every method pinned to its exact sheet/lab/page",
+      "Open-book speed discipline: index before content, one-line answer templates"
+    ],
+    "steps": [
+      {
+        "label": "Read: exam-shape + method-picker overview",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Two fast re-reads only: what the exam actually tests, and the full cross-session method roster. This fixes the topic list before you start locating pages — don't take new notes.",
+        "noteIds": [
+          "s1-module-shape",
+          "s5-method-picker"
+        ]
+      },
+      {
+        "label": "Write: topic -> location index (S1–S5)",
+        "kind": "write",
+        "minutes": 55,
+        "instruction": "Build AML_openbook_index.md as a table: one row per method/topic across S1–S5, columns = topic | sheet/slide/page | lab/notebook | status. Work session by session from your own S1–S32 evidence — you're locating material, not re-deriving it."
+      },
+      {
+        "label": "Tab/colour the pack",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Apply physical or PDF-bookmark tabs by session/colour so every topic row in the index maps to a flip-to-it-in-seconds tab."
+      },
+      {
+        "label": "Write: 'how to answer' lines + flag gaps",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Add one line per topic: the opening sentence you'd write in an exam answer. Where you can't produce one yet, mark the row as a gap for a later pass instead of guessing."
+      }
+    ]
+  },
+  'card-036': {
+    "concepts": [
+      "Model-selection logic: matching model family to data/target shape across S3–S5",
+      "Evaluation logic: matching metric to task, class balance, and validation method"
+    ],
+    "steps": [
+      {
+        "label": "Read: model-selection cheatsheets (S3–S5)",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Cross-check your own model-selection instincts against these four cross-session pickers: the regression family, S4's three classifiers, the full method roster, and bagging/boosting/stacking.",
+        "noteIds": [
+          "s3-which-regression",
+          "s4-classifier-picker",
+          "s5-method-picker",
+          "s5-ensemble-comparison"
+        ]
+      },
+      {
+        "label": "Write: AML_model_selection.md",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Checklist: rows = data/target shape (continuous, binary, multi-class, high-dim, small-n, needs-interpretability), columns = recommended model(s) + one-line why."
+      },
+      {
+        "label": "Read: evaluation cheatsheets (S3, S5)",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Fast pass for metric -> use-case mapping plus the assessment methods (holdout/CV/OOB) — you already know this, you're compressing it onto one page, not relearning it.",
+        "noteIds": [
+          "s3-regression-metrics",
+          "s3-confusion-matrix",
+          "s3-precision-recall-f",
+          "s3-roc-auc",
+          "s3-assessment-methods",
+          "s5-oob"
+        ]
+      },
+      {
+        "label": "Write: AML_evaluation.md + decision tree",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Metric -> when-to-use table (regression, classification, imbalance), then a single decision-tree diagram: task type -> metric -> 'what do I do next' if the result looks bad."
+      },
+      {
+        "label": "Add both to the pack",
+        "kind": "do",
+        "minutes": 5,
+        "instruction": "File under Models/Evaluation tabs and cross-link both pages from the card-033 master index."
+      }
+    ]
+  },
+  'card-039': {
+    "concepts": [
+      "Tuning checklist: grid vs random search vs CV, what to tune per model family",
+      "The three recurring exam traps: leakage, scaling-before-split, wrong metric"
+    ],
+    "steps": [
+      {
+        "label": "Read: tuning cheatsheets (S4)",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Refresh parameters-vs-hyperparameters, grid vs random search, and reading gamma/C on an RBF SVM.",
+        "noteIds": [
+          "s4-hyperparameters-def",
+          "s4-grid-vs-random",
+          "s4-gridsearch-code",
+          "s4-svm-gamma-c"
+        ]
+      },
+      {
+        "label": "Write: AML_tuning.md",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Checklist: grid vs random vs CV decision rule up top, then one row per model family (kNN, SVM, tree, ensemble) for what to tune and typical ranges."
+      },
+      {
+        "label": "Read: trap notes across S1–S4",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Six short traps covering the three named failure modes twice each (leakage, scaling-before-split, wrong metric). Re-read fast, don't take fresh notes.",
+        "noteIds": [
+          "s1-trap-scale-before-split",
+          "s1-trap-fit-transform-test",
+          "s2-trap-encode-before-split",
+          "s3-trap-test-set-tuning",
+          "s1-trap-accuracy-imbalance",
+          "s3-trap-metric-choice"
+        ]
+      },
+      {
+        "label": "Write: AML_common_mistakes.md",
+        "kind": "write",
+        "minutes": 45,
+        "instruction": "Three sections — leakage, scaling-before-split, wrong metric — one line per trap: what it looks like in code/output + the fix. Pull from the six trap notes plus anything else you remember."
+      },
+      {
+        "label": "Add both to the pack",
+        "kind": "do",
+        "minutes": 10,
+        "instruction": "File under Tuning/Traps tabs. Cross-link the wrong-metric traps from AML_evaluation.md and the leakage traps from AML_model_selection.md's preprocessing-heavy rows."
+      }
+    ]
+  },
+  'card-041': {
+    "concepts": [
+      "Stress-testing the assembled open-book pack under time pressure on an unseen CSV"
+    ],
+    "steps": [
+      {
+        "label": "Dry-run: plan a fresh CSV from the pack only",
+        "kind": "do",
+        "minutes": 30,
+        "instruction": "Grab a dataset you haven't used before (an old lab CSV or a new UCI/Kaggle sample). Using ONLY the pack — no notes, no videos, no internet — write the full plan: EDA -> preprocessing -> model choice -> evaluation -> tuning."
+      },
+      {
+        "label": "Time every lookup",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "While planning, stopwatch each flip-to-the-pack moment. Log a two-column table: page/section, seconds taken."
+      },
+      {
+        "label": "Fix slow or missing pages",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Anything over roughly 20 seconds or not found at all: fix it now — re-tab, add a missing index row, or shorten a page. Note the fix in the dry-run log."
+      }
+    ]
+  },
+  'card-046': {
+    "concepts": [
+      "Assembling a single ordered, navigable open-book pack from every session's checklist"
+    ],
+    "steps": [
+      {
+        "label": "Assemble + order the pack",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Merge every page built across cards 033/036/039 into one physical/PDF stack in order: workflow -> preprocessing -> models -> evaluation -> tuning -> traps."
+      },
+      {
+        "label": "Master contents + final polish",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Write a one-page master contents: section -> tab colour -> page count. Remove duplicate rows and close out anything flagged in the card-041 dry-run log."
+      }
+    ]
+  },
+
+  // AML — Phase 1 mocks/reconstructions (early)
+  'card-051': {
+    "concepts": [
+      "Open-book exam technique: navigate your own pack fast, don't relearn material",
+      "Honest self-marking against worked solutions/lab outputs, not against intent"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit AML mock #1 cold, timed, open-book",
+        "kind": "do",
+        "minutes": 100,
+        "instruction": "Set a timer to your predetermined class-test length. Sit it cold: no rehearsal, no material beyond your own open-book pack (session summary sheets, index, checklists). No internet, no AI. The pack lookup speed is exactly what's being tested."
+      },
+      {
+        "label": "Mark: score against worked solutions",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every answer honestly against the lab notebooks' real outputs and your worked solutions, not against what you meant to write. If you're unsure whether partial credit applies, mark it wrong."
+      },
+      {
+        "label": "Write: log score + fumble list",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Log the raw score for mock #1. List every topic you fumbled, not only the worst ones — small slips matter, they show where the pack index is too slow to use under time pressure."
+      },
+      {
+        "label": "Write: repair card for the 3 worst fumbles",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Pick the 3 costliest fumbles by marks lost, not by embarrassment. Write each up as tomorrow's repair card: what went wrong, the correct approach, one drill question to retest it."
+      }
+    ]
+  },
+  'card-056': {
+    "concepts": [
+      "S3 regression pipeline from blank: split, fit, predict, score (train vs CV)",
+      "S4 classification pipeline from blank: fit, predict, confusion matrix, precision/recall/F1"
+    ],
+    "steps": [
+      {
+        "label": "Do: timed rebuild — Lab 3 train+evaluate",
+        "kind": "do",
+        "minutes": 65,
+        "instruction": "Blank editor, timer on. Rebuild the Lab 3 regression pipeline from memory: split, fit, predict, score (train vs cross-validation). Do not open the solved notebook until time is up."
+      },
+      {
+        "label": "Do: timed rebuild — Lab 4 classifier+metrics",
+        "kind": "do",
+        "minutes": 65,
+        "instruction": "Same rules, fresh timer. Rebuild the Lab 4 classification pipeline from memory: fit, predict, confusion matrix, precision/recall/F1. No peeking until time's up."
+      },
+      {
+        "label": "Write: repair list",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "For both labs, list every cell you couldn't reproduce cleanly — wrong import, blanked-on syntax, wrong argument order. Be specific ('forgot stratify=y on the split'), not 'metrics were hard' — this feeds the next repair card."
+      }
+    ]
+  },
+  'card-059': {
+    "concepts": [
+      "S5 ensemble pipeline from blank: bagging/random-forest fit, predict, OOB/CV score",
+      "Bagging vs boosting vs stacking: which to pick and why, justified from the problem"
+    ],
+    "steps": [
+      {
+        "label": "Do: timed rebuild — Lab 5 fit+evaluate",
+        "kind": "do",
+        "minutes": 70,
+        "instruction": "Blank editor, timer on. Rebuild the Lab 5 ensemble pipeline from memory: bagging/random forest fit, predict, OOB or cross-validation score. No peeking until time's up."
+      },
+      {
+        "label": "Test: 3 'which ensemble & why' exam Qs",
+        "kind": "test",
+        "minutes": 55,
+        "instruction": "Timed, closed-book: answer 3 exam-style 'which ensemble would you pick and why' questions. Justify from the data/problem — correlated base-learner errors, need for speed, need for interpretability — not just by naming an algorithm. Check your reasoning against the bagging/boosting/stacking comparison note only after answering.",
+        "noteIds": [
+          "s5-ensemble-comparison"
+        ]
+      },
+      {
+        "label": "Write: repair list update",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Merge today's gaps — the rebuild and the ensemble questions — into the running repair list: what broke, the fix, one retest question for each."
+      }
+    ]
+  },
+  'card-062': {
+    "concepts": [
+      "Metric choice by situation: imbalance -> precision/recall/F1/AUC, not accuracy",
+      "k-fold CV vs holdout vs leave-one-out, and why you report std alongside the mean",
+      "The default-scoring trap: cross_val_score/GridSearchCV optimise accuracy unless told otherwise"
+    ],
+    "steps": [
+      {
+        "label": "Watch: metrics + class imbalance",
+        "kind": "watch",
+        "minutes": 23,
+        "instruction": "Watch both back to back as a refresher, not first-learning: why metrics matter beyond accuracy (9.1), then how class imbalance breaks accuracy specifically (9.4).",
+        "resourceIds": [
+          "aml-video-ubc-9-1-metrics-motivation",
+          "aml-video-ubc-9-4-class-imbalance"
+        ]
+      },
+      {
+        "label": "Read: metric choice, CV, imbalance notes",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Fast skim, revision only: confusion matrix layout, precision/recall/F1 formulas, the 99.9%-accuracy imbalance example and its remedies, holdout/CV/leave-one-out, and the metric-choice-by-situation trap table. One line per note if you already know it cold.",
+        "noteIds": [
+          "s3-confusion-matrix",
+          "s3-precision-recall-f",
+          "s3-accuracy-limitation",
+          "s3-assessment-methods",
+          "s3-trap-metric-choice"
+        ]
+      },
+      {
+        "label": "Do: 8 timed exam Qs",
+        "kind": "test",
+        "minutes": 80,
+        "instruction": "Set a timer. Answer 8 exam-style questions covering metric choice by situation, CV setup/choice of k, and imbalance handling, closed-book, from memory. Write full justifications, not just the metric name."
+      },
+      {
+        "label": "Mark against checklist",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Mark each answer against the correct reasoning, not just the right metric name: did you justify from the situation, name the CV method correctly, state the imbalance remedy?"
+      },
+      {
+        "label": "Write: rewrite shaky reasoning clean",
+        "kind": "write",
+        "minutes": 22,
+        "instruction": "For every answer that was wrong, or right by luck, rewrite the justification cleanly in your own words — this is what should come out under real exam pressure."
+      }
+    ]
+  },
+  'card-065': {
+    "concepts": [
+      "Open-book exam technique under repeat conditions: is the pack actually faster this time",
+      "Comparing mock #2's fumbles against mock #1's to tell real gaps from bad luck"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit AML mock #2 cold, timed, open-book",
+        "kind": "do",
+        "minutes": 100,
+        "instruction": "Same conditions as mock #1: set a timer to your predetermined class-test length, sit it cold, open-book pack only, no internet, no AI."
+      },
+      {
+        "label": "Mark: score against worked solutions",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every answer honestly against the lab notebooks' real outputs and your worked solutions, not against what you meant to write."
+      },
+      {
+        "label": "Write: score + fumble list vs mock #1",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Log the score for mock #2. List every fumble, then check it against mock #1's fumble list — flag any topic that fumbled twice; that's a real gap, not bad luck."
+      },
+      {
+        "label": "Write: repair card for the 3 worst fumbles",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Pick the 3 costliest fumbles from this mock. If a topic repeats from mock #1's repair card, treat it as priority one — the earlier repair didn't stick."
+      }
+    ]
+  },
+
+  // AML — Phase 1 mocks/drills (late)
+  'card-073': {
+    "concepts": [
+      "All major pack sections exercised by at least one rapid-fire prompt (traps, formulas/code recipes, metrics, workflow)",
+      "Every lookup timed and logged as it happens, not estimated afterward",
+      "Every lookup over ~20s re-tabbed so a repeat prompt resolves fast",
+      "Any genuinely missing quick-reference entry added to the pack"
+    ],
+    "steps": [
+      {
+        "label": "Draft: 30 rapid-fire lookup prompts",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Write 30 short prompts spanning every pack section — traps, formulas/code recipes, metrics, workflow steps — so the stress test actually covers the whole pack instead of the parts you already know well. One line each, phrased the way a rushed exam question would ask it."
+      },
+      {
+        "label": "Drill: race the pack, timing every lookup",
+        "kind": "test",
+        "minutes": 55,
+        "instruction": "Work through all 30 prompts back to back, stopwatch running, and write down the seconds for each lookup as you go. The raw timing log is the evidence — don't reconstruct it from memory after the fact."
+      },
+      {
+        "label": "Re-tab: fix everything slower than ~20s",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "For every prompt that came in over ~20s, fix the access path itself — retitle a tab, move a section, add a header — rather than just noting it was slow. The bar is that the SAME prompt would resolve fast on a re-run, not that you now remember where it is."
+      },
+      {
+        "label": "Write: add missing quick-reference entries",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "For anything the stress test showed wasn't in the pack at all (not just slow to find), write the quick-reference entry now while the gap is fresh. Log it alongside the re-tab list — together they're the 'pack tweaks' this card asks for."
+      }
+    ]
+  },
+  'card-076': {
+    "concepts": [
+      "Three trap families drilled: leakage (fitting before splitting), scaling (wrong thing scaled or omitted), and CV/tuning leakage (selecting on the test set / overfitting the validation set)",
+      "A one-line fix articulated for each of the 10 spotted errors",
+      "UBC 8.2: why repeated validation-set tuning overfits it even though it is never the test set",
+      "Any newly found trap variant logged to the traps page"
+    ],
+    "steps": [
+      {
+        "label": "Watch: UBC 8.2 — Overfitting of the validation error",
+        "kind": "watch",
+        "minutes": 13,
+        "instruction": "Watch for the mechanism only: how repeatedly tuning against the same validation split lets you overfit it, even though it is never the test set. This is the CV trap the drill below targets.",
+        "resourceIds": [
+          "aml-video-ubc-8-2-validation-overfitting"
+        ]
+      },
+      {
+        "label": "Read: leakage, scaling, and CV traps",
+        "kind": "read",
+        "minutes": 35,
+        "instruction": "Read all five short trap notes back to back: two leakage variants (scale-before-split, fit_transform on the test set), two scaling variants (encode-before-split, scaling the wrong things), and the CV/tuning trap (selecting on the test set) the video just showed happens to the validation set too. Deliberately do NOT rewatch UBC 5.3 (pipelines) — that's card-008's video; revise leakage from these notes instead.",
+        "noteIds": [
+          "s1-trap-scale-before-split",
+          "s1-trap-fit-transform-test",
+          "s2-trap-encode-before-split",
+          "s2-trap-scaling-choice",
+          "s3-trap-test-set-tuning"
+        ]
+      },
+      {
+        "label": "Drill: 10 spot-the-error questions",
+        "kind": "do",
+        "minutes": 60,
+        "instruction": "Write 10 short code/setup snippets, each containing exactly one of the three trap types (leakage, scaling, CV), spot the error in each, and write the one-line fix. Do this closed-book; use the five notes only afterward, as your answer key."
+      },
+      {
+        "label": "Self-check + log any new trap",
+        "kind": "test",
+        "minutes": 27,
+        "instruction": "Mark your 10 one-line fixes against the notes. If the drill surfaced any trap variant not already covered by the five notes, add it to your traps page now — that's the 'add any new trap to the page' checklist item, not an optional extra."
+      }
+    ]
+  },
+  'card-080': {
+    "concepts": [
+      "Mock #3 sat cold under the real class-test format: 1.5h timed + 30min upload, open-book, no internet, no AI",
+      "Every answer marked against worked solutions / lab outputs, not self-graded from memory",
+      "Score logged and every fumbled topic named, including near-misses",
+      "The 3 worst fumbles converted into concrete, resource-specific repair actions for the next day"
+    ],
+    "steps": [
+      {
+        "label": "Set up + sit Mock #3 cold",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "Set a timer to the real format — 1.5h timed plus 30min upload, per s1-module-shape — and sit it cold: open-book using your pack only, no internet, no AI. Treat the upload window as part of the timed block, not slack time.",
+        "noteIds": [
+          "s1-module-shape"
+        ]
+      },
+      {
+        "label": "Mark honestly against worked solutions / lab outputs",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every question against your own worked solutions and lab outputs, not from memory of what you meant to write. Give partial credit only where you would genuinely get it."
+      },
+      {
+        "label": "Log the score + list every fumbled topic",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Record the mock #3 score, then list every topic you fumbled — not just the ones that cost the most marks. A topic you scraped through on a lucky guess belongs on the list too."
+      },
+      {
+        "label": "Convert the 3 worst fumbles into tomorrow's repair card",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Rank the fumbled list, take the worst 3, and write each as a concrete next-day repair action (what to re-drill, from which specific resource) rather than a vague topic name. This is what feeds directly into the repair card."
+      }
+    ]
+  },
+
+  // AML — Phase 2 mocks/repairs
+  'card-088': {
+    "concepts": [
+      "Sit mock #4 to the real CMT307 class-test format: 90 min computer-based + 30 min upload, open-book, no internet, no AI",
+      "A mock's value is the ranked fumble list it produces, not the raw score"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit mock #4 cold, open-book only",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "Set a timer to 90 minutes for the questions plus a 30 minute upload buffer — the exact CMT307 class-test format (s1-module-shape). Sit it cold: pack open throughout for navigation, but no notes read beforehand, no internet, no AI. Work s1-exam-strategy's rules as you go — run code before reading it, change one thing at a time, print shapes at boundaries, prefer the smallest fix — and keep the 30 min buffer for uploading only, never for one more idea.",
+        "noteIds": [
+          "s1-module-shape",
+          "s1-exam-strategy"
+        ]
+      },
+      {
+        "label": "Mark: score against worked solutions / lab outputs",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every question against your own worked solutions and lab notebook outputs, not from memory or gut feel. Be strict — an answer that's directionally right but code-broken still counts wrong; that's the mistake the real test punishes hardest."
+      },
+      {
+        "label": "Log: score + full fumble list",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Record mock #4's score. List every topic you fumbled — not just the ones that stick in memory — and rank the list by marks lost, worst first."
+      },
+      {
+        "label": "Write: hand off the 3 worst fumbles",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Take the top 3 from the ranked list and write them as the opening line of tomorrow's repair card (card-091) — name the specific method or concept each one tests, not a vague topic area — so repair starts on diagnosis, not on re-reading the whole script."
+      }
+    ]
+  },
+  'card-091': {
+    "concepts": [
+      "Weak-topic repair is a 4-step loop — diagnose from the error log, re-derive/re-run, closed-book re-test, then close — not general re-reading",
+      "A topic only counts as fixed once it passes cold, closed-book; making sense open-book does not clear the error log"
+    ],
+    "steps": [
+      {
+        "label": "Diagnose: name the 3 weakest topics from mock #4",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Open the mock #4 script and error log side by side. For every wrong or blank answer, name the SPECIFIC method it tested (e.g. \"k-NN needs scaling\", not just \"classification\"). Rank by marks lost and pick the worst 3 — these are the only 3 this card touches."
+      },
+      {
+        "label": "Repair: re-derive or re-run each of the 3",
+        "kind": "do",
+        "minutes": 60,
+        "instruction": "For each of the 3, go straight to the matching page or lab cell in your pack. Either re-derive the method by hand (formula, worked numbers) or re-run the actual lab notebook cell until the output makes sense again. Budget 20 min each — if one still isn't clicking at 20 min, flag it and move on rather than burning the whole block on one topic."
+      },
+      {
+        "label": "Re-test: closed-book, just these 3",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Close every resource — pack, notebook, slides. Answer one mock-style question per topic from memory only, then mark yourself against the pack afterward. No peeking mid-answer."
+      },
+      {
+        "label": "Close: update the error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Tick a topic off the error log ONLY if it passed the closed-book re-test clean. Anything still shaky stays open and carries into the next repair pass — don't sweep it under to make the log look clean."
+      }
+    ]
+  },
+  'card-094': {
+    "concepts": [
+      "A fast open-book pack has its 3 most-opened pages at the very front, not buried in session order",
+      "\"Final\" means every gap flagged back in Phase 3 now visibly has a fix in the pack — not just fewer gaps"
+    ],
+    "steps": [
+      {
+        "label": "Read: final pass over the master contents/index",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Read the pack's own contents/index page end to end, one last time. For every entry, confirm it still points to the right page after everything added or moved this campaign — fix any stale page number immediately, don't just note it for later."
+      },
+      {
+        "label": "Reorder: move the 3 most-used pages to the front",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Name the 3 pages you've actually opened most across every mock so far (likely a formula sheet, a classifier/method picker, and the leakage/traps page) and physically re-tab or move them to the very front of the pack, ahead of the session-by-session order."
+      },
+      {
+        "label": "Verify: close every Phase-3 gap",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Pull whatever gap list you made back in Phase 3 and check it item by item against the current pack. Anything still missing gets written into the pack right now — this is the last card with room to add new pages before the schedule turns to pure mocks and repair."
+      }
+    ]
+  },
+  'card-098': {
+    "concepts": [
+      "Mock #5 runs to the exact same 90+30 min format as every AML mock — consistency is what makes scores across mocks comparable",
+      "Fumbles get ranked and handed off; a score alone doesn't choose tomorrow's work"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit mock #5 cold, open-book only",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "Set a timer to 90 minutes plus a 30 minute upload buffer — the real CMT307 class-test format (s1-module-shape). Sit it cold: pack open for navigation only, no notes read beforehand, no internet, no AI. Keep s1-exam-strategy's rules running while you work — run code before reading it, change one thing at a time, print shapes at boundaries — and use the 30 min buffer strictly for uploading.",
+        "noteIds": [
+          "s1-module-shape",
+          "s1-exam-strategy"
+        ]
+      },
+      {
+        "label": "Mark: score against worked solutions / lab outputs",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every question against your own worked solutions and lab notebook outputs, not from memory. Be strict — directionally-right-but-broken code still counts wrong."
+      },
+      {
+        "label": "Log: score + full fumble list",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Record mock #5's score. List every topic you fumbled, ranked by marks lost, worst first — not just the ones you remember without checking."
+      },
+      {
+        "label": "Write: hand off the 3 worst fumbles",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Take the top 3 from the ranked list and fold them into card-101's repair pass (the next AML card) — name the specific method or concept each one tests so that card starts on diagnosis, not re-reading this script."
+      }
+    ]
+  },
+  'card-101': {
+    "concepts": [
+      "Navigation speed is measured with a stopwatch, not assumed from familiarity with the pack",
+      "Zero open items on the error log is the actual finish line for this stage, not a rough target"
+    ],
+    "steps": [
+      {
+        "label": "Drill: race 20 lookups against the clock",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Write 20 realistic exam-style lookup prompts spanning all 5 sessions (a formula, a code recipe, a specific trap). Stopwatch each one from reading the prompt to landing on the right page. Flag anything over roughly 20 seconds."
+      },
+      {
+        "label": "Fix: rework every slow page",
+        "kind": "do",
+        "minutes": 20,
+        "instruction": "For each page flagged slow, fix the actual cause — bigger heading, better tab, moved earlier, shorter entry — then re-time just that one lookup to confirm it's genuinely faster now."
+      },
+      {
+        "label": "Repair: close out remaining weak topics",
+        "kind": "do",
+        "minutes": 70,
+        "instruction": "Pull whatever is still open on the error log, including anything mock #5 added. For each, use the same loop as the dedicated repair cards: re-derive or re-run, then test yourself closed-book. Don't reopen anything already ticked clean."
+      },
+      {
+        "label": "Close: confirm zero open items",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Walk the whole error log top to bottom. Every AML line needs either a passed closed-book re-test date or an explicit \"accepted, out of scope\" note — nothing ambiguous survives this card."
+      }
+    ]
+  },
+  'card-106': {
+    "concepts": [
+      "Mock #6 runs to the same 90+30 min format as every mock so far — no shortcuts this close to the exam",
+      "The value of a mock is entirely in what gets fixed afterward, not the number itself"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit mock #6 cold, open-book only",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "Set a timer to 90 minutes plus a 30 minute upload buffer — the real CMT307 class-test format (s1-module-shape). Sit it cold: pack open for navigation only, no notes read beforehand, no internet, no AI. Keep s1-exam-strategy's rules running — run code before reading it, change one thing at a time, print shapes at boundaries — and save the 30 min buffer strictly for uploading.",
+        "noteIds": [
+          "s1-module-shape",
+          "s1-exam-strategy"
+        ]
+      },
+      {
+        "label": "Mark: score against worked solutions / lab outputs",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every question against your own worked solutions and lab notebook outputs, not from memory. Be strict — directionally-right-but-broken code still counts wrong."
+      },
+      {
+        "label": "Log: score + full fumble list",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Record mock #6's score. List every topic you fumbled, ranked by marks lost, worst first."
+      },
+      {
+        "label": "Write: hand off the 3 worst fumbles",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Take the top 3 from the ranked list and write them as the opening line of tomorrow's repair card (card-109) — name the specific method or concept each one tests, not a vague topic area."
+      }
+    ]
+  },
+  'card-109': {
+    "concepts": [
+      "Same 4-step repair loop as repair #4 — diagnose, re-derive/re-run, closed-book re-test, close",
+      "No broad re-reading: only the 3 topics the error log actually names get touched"
+    ],
+    "steps": [
+      {
+        "label": "Diagnose: name the 3 weakest topics from mock #6",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Open the mock #6 script and error log side by side. For every wrong or blank answer, name the SPECIFIC method it tested. Rank by marks lost and pick the worst 3 — these are the only 3 this card touches."
+      },
+      {
+        "label": "Repair: re-derive or re-run each of the 3",
+        "kind": "do",
+        "minutes": 60,
+        "instruction": "For each of the 3, go straight to the matching page or lab cell in your pack. Either re-derive the method by hand or re-run the actual lab notebook cell until the output makes sense again. Budget 20 min each — if one still isn't clicking at 20 min, flag it and move on."
+      },
+      {
+        "label": "Re-test: closed-book, just these 3",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Close every resource. Answer one mock-style question per topic from memory only, then mark yourself against the pack afterward. No peeking mid-answer."
+      },
+      {
+        "label": "Close: update the error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Tick a topic off the error log ONLY if it passed the closed-book re-test clean. Anything still shaky stays open and carries into the next repair pass."
+      }
+    ]
+  },
+  'card-115': {
+    "concepts": [
+      "This is the last dedicated repair pass — anything still open here rides into the exam if it doesn't close now",
+      "Lookup speed under a stopwatch is a separate skill from topic knowledge and needs its own drill, not an assumption"
+    ],
+    "steps": [
+      {
+        "label": "Diagnose: name the last 2-3 weak topics",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Open the error log, plus mock #6's script if anything from it is still unresolved. Name the 2-3 weakest remaining topics specifically, not a vague area — this is the last scheduled chance to catch them before the final mock."
+      },
+      {
+        "label": "Repair: re-derive or re-run each",
+        "kind": "do",
+        "minutes": 45,
+        "instruction": "Same method as every repair pass: go to the matching page or lab cell for each of the 2-3 topics and either re-derive it by hand or re-run the lab cell until it's clean. Roughly 15-20 min each."
+      },
+      {
+        "label": "Re-test: closed-book on just these",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Close every resource and answer one question per topic from memory. Mark against the pack afterward — no peeking mid-answer."
+      },
+      {
+        "label": "Drill: race 30 lookups under a stopwatch",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "Write 30 realistic lookup prompts spanning all 5 sessions, including anything added to the pack in card-094 or card-101. Stopwatch every one; flag and immediately fix any page that's still slow to find."
+      },
+      {
+        "label": "Close: confirm zero open items",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Final walk of the error log. Every AML line must show a passed closed-book re-test date. Whatever is still open is the single most important thing to fix before the mocks run out — not tomorrow's problem."
+      }
+    ]
+  },
+  'card-117': {
+    "concepts": [
+      "The final mock runs to the exact same 90+30 min format as every mock before it — nothing changes this late",
+      "With no dedicated AML card left after this one, any fumble found here gets patched immediately, not deferred"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit mock #8 cold, open-book only",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "Set a timer to 90 minutes plus a 30 minute upload buffer — the real CMT307 class-test format (s1-module-shape), same as every mock so far. Sit it cold: pack open for navigation only, no notes read beforehand, no internet, no AI. Keep s1-exam-strategy's rules running — run code before reading it, change one thing at a time, print shapes at boundaries — right through to the real exam.",
+        "noteIds": [
+          "s1-module-shape",
+          "s1-exam-strategy"
+        ]
+      },
+      {
+        "label": "Mark: score against worked solutions / lab outputs",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Mark every question against your own worked solutions and lab notebook outputs, not from memory. Be strict — this is the last honest read you'll get on where things stand."
+      },
+      {
+        "label": "Log: score + full fumble list",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Record mock #8's score. List every topic you fumbled, ranked by marks lost, worst first."
+      },
+      {
+        "label": "Write: patch the worst fumble now",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "There is no dedicated AML repair card left after this one, so don't defer: pick the single costliest fumble and write the exact fix — the one line, formula, or rule you got wrong — directly into the pack right now. Log the other two on the error log for card-120's light recall pass before the exam."
+      }
+    ]
+  },
+
+  // Time Series — Pack B
+  'card-009': {
+    "concepts": [
+      "Strict (n-order) stationarity vs wide-sense (WSS) stationarity, and why higher-order stationarity implies lower-order",
+      "Proof that strict stationarity + finite second moment implies WSS (constant mean, then covariance via the shift s = -t2)",
+      "The five R(t)/rho(t) properties: R(0)=Var(x_t), rho(0)=1, |R(t)|<=R(0), |rho(t)|<=1, R(-t)=R(t)"
+    ],
+    "steps": [
+      {
+        "label": "Read: L3 + L4 lecture notes",
+        "kind": "read",
+        "minutes": 35,
+        "instruction": "Read the L3 (Learning Materials) and L4 (Complete notes) PDFs once through, no note-taking. Redo the one worked example on checking stationarity by hand instead of just reading the solution.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-lecture-3-learning-material-notes",
+          "timeSeries-lecture-notes-complete-lecture-4-notes"
+        ],
+        "noteIds": [
+          "ts-continuous-discrete",
+          "ts-stochastic-process"
+        ]
+      },
+      {
+        "label": "Compare: strict vs WSS definitions side by side",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Draw a two-column table: n-order/strict stationarity (all n) on the left, WSS's two conditions (constant mean, lag-only covariance) on the right. Underline the direction of Lemma 3 and that the converse is false.",
+        "noteIds": [
+          "ts-strict-stationarity",
+          "ts-wss"
+        ]
+      },
+      {
+        "label": "Write: the full WSS argument",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book, write the full proof that strict stationarity + finite 2nd moment implies WSS: the constant-mean step, then the covariance step using the shift s = -t2, stating explicitly where E x_t^2 < infinity is used. Only check against ts-wss-proof after your attempt is done.",
+        "noteIds": [
+          "ts-wss-proof"
+        ]
+      },
+      {
+        "label": "Self-test: autocovariance/autocorrelation properties",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "From memory, state and justify all five R/rho properties (R(0)=Var, rho(0)=1, |R(t)|<=R(0), |rho(t)|<=1, R(-t)=R(t)). Flag any you can't derive on the spot and re-check against ts-wss."
+      }
+    ]
+  },
+  'card-010': {
+    "concepts": [
+      "Covariance functions for white noise, random walk, Wiener process, Brownian bridge, and Poisson process",
+      "Short memory (white noise decorrelates instantly) vs long memory (random walk/Wiener variance grows unboundedly; bridge tied down at both ends; Poisson as a counting process)"
+    ],
+    "steps": [
+      {
+        "label": "Read: the five named-process notes",
+        "kind": "read",
+        "minutes": 30,
+        "instruction": "Read all five notes once, focusing only on the definition box and the covariance formula in each. Skip the R code blocks this pass.",
+        "noteIds": [
+          "ts-white-noise",
+          "ts-random-walk",
+          "ts-wiener",
+          "ts-brownian-bridge",
+          "ts-poisson"
+        ]
+      },
+      {
+        "label": "Write: covariance + memory line for each process",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book, write the covariance function for each of the five processes, then one line per process: short memory (white noise, R=0 beyond lag 0) vs long memory (random walk/Wiener, R(t,s)=min(t,s) unbounded; bridge tied to 0 at both ends; Poisson as a counting process).",
+        "noteIds": [
+          "ts-white-noise",
+          "ts-random-walk",
+          "ts-wiener",
+          "ts-brownian-bridge",
+          "ts-poisson"
+        ]
+      },
+      {
+        "label": "Assemble: TS_PackB_definitions.md",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Consolidate the five covariances and memory lines into the one-page evidence file. Check every formula against the notes once before closing the card."
+      }
+    ]
+  },
+  'card-012': {
+    "concepts": [
+      "Applying the WSS test, named-process covariance formulas, and short/long-memory classification to worked exam-style problems",
+      "Closed-book reproduction of two named covariances and the full WSS argument under time pressure"
+    ],
+    "steps": [
+      {
+        "label": "Do: 3 worked examples",
+        "kind": "do",
+        "minutes": 45,
+        "instruction": "Pick 3 problems from the L3/L4 exam-like exercises spanning: (a) decide WSS or not, (b) compute a named covariance, (c) classify short vs long memory. Write full workings by hand, no peeking at notes.",
+        "resourceIds": [
+          "timeSeries-exam-like-exercises-exam-like-exercises-l3",
+          "timeSeries-exam-like-exercises-exam-like-exercises-l4"
+        ]
+      },
+      {
+        "label": "Check: against L3/L4 solutions",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Mark your 3 write-ups against the official solutions. Note every slip in reasoning, not just wrong final answers.",
+        "resourceIds": [
+          "timeSeries-exam-like-solutions-exam-like-solutions-l3",
+          "timeSeries-exam-like-solutions-exam-like-solutions-l4"
+        ]
+      },
+      {
+        "label": "Self-test: closed-book reproduction",
+        "kind": "test",
+        "minutes": 30,
+        "instruction": "Closed book: reproduce 2 named covariances (pick your two weakest) and the full 'strict + finite 2nd moments => WSS' argument from memory, no notes. Time yourself."
+      },
+      {
+        "label": "Flag: shaky spots",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "List everything you got wrong or hesitated on across the 3 examples and the self-test. This list becomes your last pre-mock review before Pack B is marked done."
+      }
+    ]
+  },
+
+  // Time Series — Pack C
+  'card-015': {
+    "concepts": [
+      "Bochner–Khinchin spectral representation: R(t) = ∫e^{itλ}f(λ)dλ, continuous vs discrete limits of integration",
+      "Mercer expands the covariance function R(t,s); Karhunen–Loève expands the process x_t itself, same λ_j and φ_j",
+      "Periodogram and filtering interpretation, redone by hand from the L5–L7 gap sheets"
+    ],
+    "steps": [
+      {
+        "label": "Read + redo: L5 spectral density, covariance relation, Mercer/KL",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "Work the L5 gap sheet's spectral-density and covariance-relation examples by hand before checking the fill-ins; cross-check against Pack C where the gap sheet is thin. Then read ts-mercer-kl's two-sentence theorem once and answer its 3 check-yourself prompts cold — Mercer expands R(t,s), Karhunen–Loève expands x_t.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-with-gaps-lecture-5-active-recall-notes",
+          "timeSeries-study-packs-pack-c-l5-l7-spectral-and-prediction"
+        ],
+        "noteIds": [
+          "ts-mercer-kl"
+        ]
+      },
+      {
+        "label": "Read + redo: L6–L7 periodogram, filtering, BLUP/estimation setup",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "From the L6–L7 gap sheets, redo one periodogram-interpretation example and one filtering example by hand — write the spectrum as deltas, check which frequencies survive the filter interval, before checking the fill-ins. Only skim the BLUP and estimation setup; card-021 does the closed-book worked examples on those, not this pass.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-with-gaps-lecture-6-active-recall-notes",
+          "timeSeries-lecture-notes-with-gaps-lecture-7-active-recall-notes"
+        ]
+      },
+      {
+        "label": "Flag shaky steps",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Write down the 2–3 worked examples from L5–L7 that took longest or felt most guessed — spectral-density↔covariance, periodogram, filtering, or the BLUP/estimation setup. This list is exactly what card-018's sheet and card-021's self-test should target first."
+      }
+    ]
+  },
+  'card-018': {
+    "concepts": [
+      "Spectral density formula and the covariance ↔ spectrum relation (cosine-transform recovery)",
+      "Spectrum of a sinusoid/sum: amplitudes enter squared, spectra of sums add",
+      "Filtering: spectrum of filtered series = product of filter and base spectra",
+      "Short-range vs long-range dependence: Σ|R(k)| test, via |k|^{-α}, α>1"
+    ],
+    "steps": [
+      {
+        "label": "Read/consolidate: the 5 spectral notes",
+        "kind": "read",
+        "minutes": 30,
+        "instruction": "Second pass, fast: pull one killer line from each — Bochner–Khinchin's two integral forms (mind the [-π,π] vs (-∞,∞) limits), the cosine-transform recovery (R(0)=6π, R(±1)=π for f(λ)=3+cos λ), the squared-amplitude sinusoid rule, the 'multiply the spectra' filtering rule, and the |k|^{-α}, α>1 short/long-range test.",
+        "noteIds": [
+          "ts-bochner-khinchin",
+          "ts-spectrum-covariance",
+          "ts-sinusoid-spectrum",
+          "ts-filtering",
+          "ts-short-long-range"
+        ]
+      },
+      {
+        "label": "Write: TS_PackC_spectral_sheet.md, one page",
+        "kind": "write",
+        "minutes": 50,
+        "instruction": "Closed-book, one page: (1) Bochner–Khinchin, discrete case with limits stated explicitly, (2) the covariance-recovery cosine transform with one worked R(k) example, (3) the sinusoid and filtering spectrum rules side by side since they share the same delta-function language, (4) the short/long-range exponent test. Define every symbol inline. Spend your last 5 minutes cross-checking against the master formula sheet for anything missing.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ]
+      },
+      {
+        "label": "Self-check against the notes' prompts",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Cover the sheet and answer the check-yourself questions from all 5 notes cold. Anything missed gets added back to the sheet now, not discovered at the mock."
+      }
+    ]
+  },
+  'card-021': {
+    "concepts": [
+      "BLUP: matrix solution λ_h=Σ^{-1}b_h, x̂_{n+h}=μ̂+λ_h^T Y, and the prediction-MSE formula",
+      "Sample mean/covariance estimators: X̄_n unbiased, R̂(k) vs R̃(k) bias/MSE trade-off",
+      "Closed-book reproduction of both, with shaky points named — completes TS Pack C"
+    ],
+    "steps": [
+      {
+        "label": "BLUP: derivation + 3-observation worked example",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Read ts-blup-derivation once for the matrix result (λ_h=Σ^{-1}b_h, MSE=R(0)-b_h^TΣ^{-1}b_h), then close it and redo ts-blup-worked's 3-observation example (x_1=62, x_2=67, x_3=63, R(k)=2/√(1+k²)) by hand: build Σ and b_1, solve, predict x̂_4, and give the normal prediction bounds. Check b_h's ordering (furthest lag first) against your own attempt.",
+        "noteIds": [
+          "ts-blup-derivation",
+          "ts-blup-worked"
+        ]
+      },
+      {
+        "label": "Estimation: mean + covariance worked example",
+        "kind": "do",
+        "minutes": 30,
+        "instruction": "Reproduce the nVar(X̄_n)→2πf(0) counting argument (each lag k appears n-|k| times) from ts-estimation-mean, then redo ts-estimate-covariance's worked correlogram on the series 4,1,4,5,1 by hand — centre to 1,-2,1,2,-2, compute R̂(0) through R̂(4) dividing always by n=5, and state the R̂ vs R̃ bias/MSE trade-off.",
+        "noteIds": [
+          "ts-estimation-mean",
+          "ts-estimate-covariance"
+        ]
+      },
+      {
+        "label": "Closed-book self-test; flag shaky",
+        "kind": "test",
+        "minutes": 40,
+        "instruction": "Closed-book: state the BLUP matrix solution and redo the 3-observation prediction from memory; state the mean estimator's variance limit and redo the correlogram table from memory. Mark against your own work above. Name anything still shaky — this closes TS Pack C, so a named gap here is exactly what the Pack C past-paper templates should target next."
+      }
+    ]
+  },
+
+  // Time Series — Pack D
+  'card-025': {
+    "concepts": [
+      "ARMA(p,q) definition: the equation, sign convention (AR terms minus, MA terms plus), and the three side-conditions (stationarity, a_p/b_q nonzero, no common roots)",
+      "Backshift operator: Bx_t = x_{t-1}, and writing the ARMA equation as a(B)x_t = b(B)ε_t",
+      "When a stationary solution exists (no roots of a(z) ON the unit circle) vs when it is causal (no roots inside or on it) — the two-sided vs one-sided sum distinction",
+      "First-pass shape of the causality/invertibility root test (the procedure itself is card-028's job)"
+    ],
+    "steps": [
+      {
+        "label": "Read: Pack D (L8–L10 ARMA definitions), single skim",
+        "kind": "read",
+        "minutes": 35,
+        "instruction": "One pass, cover to cover — this is the synthesized L8–L10 read covering ARMA definition, backshift, causality/invertibility, and stationary existence together. Read for the SHAPE only, don't work any example yet; that's the next step.",
+        "resourceIds": [
+          "timeSeries-study-packs-pack-d-l8-l10-arma-definitions"
+        ]
+      },
+      {
+        "label": "Redo by hand: ARMA definition + backshift worked examples",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Cold-work the 'Check yourself' items in both notes on paper first (the three side-conditions; writing a(z)/b(z) for a given equation). Then pull one worked example each for the ARMA definition and the backshift/operator-form algebra straight from the Complete lecture 8 notes and redo those by hand. Together these ARE the hand-redone L8–L10 worked-example sheet this card asks for.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-complete-lecture-8-notes"
+        ],
+        "noteIds": [
+          "ts-arma-definition",
+          "ts-backshift"
+        ]
+      },
+      {
+        "label": "Read: when stationarity exists + first look at causality/invertibility",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Read the three-row table distinguishing 'no roots ON the circle' (unique stationary solution, two-sided sum) from 'no roots inside or on' (causal, one-sided sum) from 'a root ON the circle' (non-stationary) — this exact distinction is the trap card-028's root-check drills assume you already have. Skim Pack D's causality/invertibility section once more for the shape of the test only; don't drill the procedure yet.",
+        "noteIds": [
+          "ts-stationary-existence"
+        ]
+      },
+      {
+        "label": "Self-check: flag shaky steps",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Closed-book: recite the ARMA definition's three side-conditions and the backshift equation form (a(B)x_t = b(B)ε_t) from memory. Write down anything you couldn't produce cold, plus any causality/invertibility confusion — carry that list straight into card-028."
+      }
+    ]
+  },
+  'card-028': {
+    "concepts": [
+      "Causality root test: a(z) has all roots strictly outside the unit circle",
+      "Invertibility root test: b(z) has all roots strictly outside the unit circle; the causal/invertible symmetry table",
+      "Factor-and-solve method for finding parameter values that make a process non-stationary or not causal",
+      "AR/ARMA covariance R(k) computed from the MA-representation coefficients c_j"
+    ],
+    "steps": [
+      {
+        "label": "Read: causality + invertibility root-check procedure",
+        "kind": "read",
+        "minutes": 35,
+        "instruction": "Read both notes' 'practical test — three steps' boxes and their worked examples (including the counter-intuitive direction: roots must be OUTSIDE the unit circle). As you go, copy the causal/invertible symmetry table (a(z) for causal, b(z) for invertible, same test) onto your template sheet — that table is one of the two clean templates the evidence file needs.",
+        "noteIds": [
+          "ts-causality",
+          "ts-invertibility"
+        ]
+      },
+      {
+        "label": "Work: parametrized root-finding (find c making a process non-stationary)",
+        "kind": "do",
+        "minutes": 20,
+        "instruction": "Work the mock's 'find at least two values of c' example by hand — move everything to the left, read off a(z), factor by grouping, then set |root| = 1 — before checking against the note. This factor-and-solve pattern is the recurring exam slot (vii); note the wording trap between 'non-stationary' (root ON the circle) and 'not causal' (root INSIDE it).",
+        "noteIds": [
+          "ts-stationarity-parameter"
+        ]
+      },
+      {
+        "label": "Work: AR/ARMA covariance via the MA-representation coefficients",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work the c_j recursion (c_0=1, c_j = a_1c_{j-1}+…+a_pc_{j-p}) for the mock's causal AR(3) by hand, then redo the ARMA(1,1) example's covariance step R(k) = σ²Σ c_sc_{s+k}. This is your AR-covariance template — for AR(1)/AR(2) it's the same recipe with the higher-order a_i set to zero.",
+        "noteIds": [
+          "ts-ma-representation",
+          "ts-arma-to-ma-worked"
+        ]
+      },
+      {
+        "label": "Write: one clean template for each",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Write TS_PackD_ARMA_templates.md with three fill-in-the-blanks blocks you could apply cold to a new process: (1) causality/invertibility root-test steps + symmetry table, (2) the factor-and-solve method for parametrized roots, (3) the covariance-via-MA-coefficients recipe."
+      }
+    ]
+  },
+  'card-031': {
+    "concepts": [
+      "MA(q) covariance cutoff: R(k) = 0 for |k| > q, because c_j = 0 beyond j = q",
+      "ACF signature: AR decays slowly, MA(q) cuts off sharply after lag q",
+      "PACF signature: AR(p) cuts off after lag p, MA decays — the mirror image of ACF",
+      "Closed-book self-test covering all of Pack D (L8–L10), with shaky items flagged"
+    ],
+    "steps": [
+      {
+        "label": "Work: MA(q) covariance cutoff",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "No note is tagged to this card, so build the general result from the two closest ones: redo the MA(1) case from ts-ma1-estimation by hand (R(0), R(1), and R(k)=0 for |k|≥2), then use ts-arma-to-ma-worked's general R(k)=σ²Σ c_sc_{s+k} formula to see why an MA(q) forces R(k)=0 once |k|>q. Cross-check against the Complete lecture 9 notes if they state the general-q cutoff directly.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-complete-lecture-9-notes"
+        ],
+        "noteIds": [
+          "ts-ma1-estimation",
+          "ts-arma-to-ma-worked"
+        ]
+      },
+      {
+        "label": "Read: ACF vs PACF signatures for AR/MA/ARMA",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "ts-real-data-workflow only gives you the ACF side (AR = slowly decaying correlogram, MA(q) = cuts off exactly at lag q) — no knowledge note in this module covers PACF at all, so get the PACF mirror-image rule (AR(p) cuts off after lag p, MA decays) directly from the Complete lecture 9–10 notes. Build one small AR/MA/ARMA × ACF/PACF table as you read; that table is exactly what this card needs reproduced closed-book.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-complete-lecture-9-notes",
+          "timeSeries-lecture-notes-complete-lecture-10-notes"
+        ],
+        "noteIds": [
+          "ts-real-data-workflow"
+        ]
+      },
+      {
+        "label": "Timed self-test: Exam-like exercises L9",
+        "kind": "test",
+        "minutes": 30,
+        "instruction": "Closed-book, timed: work through the L9 (ARMA properties) exam-like exercises cold. This is the closest real drill set to today's cutoff/ACF/PACF content, and doubles as the self-test the card's evidence requirement asks for.",
+        "resourceIds": [
+          "timeSeries-exam-like-exercises-exam-like-exercises-l9"
+        ]
+      },
+      {
+        "label": "Mark, flag shaky, and close Pack D",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Mark your L9 answers against the solution set, then recite the ACF/PACF table from the previous step from memory. Name anything still shaky — from today or carried over from card-025/card-028 — explicitly in writing; Pack D closes here, so nothing shaky should go forward unnamed.",
+        "resourceIds": [
+          "timeSeries-exam-like-solutions-exam-like-solutions-l9"
+        ]
+      }
+    ]
+  },
+
+  // Time Series — Pack E
+  'card-034': {
+    "concepts": [
+      "Mean of an ARMA process with an intercept: μ = δ / a(1), the AR polynomial at z=1",
+      "How Yule-Walker estimation, MA(1) moment estimation, AR forecasting, and ARIMA/SARIMA structure fit together across L11-L13"
+    ],
+    "steps": [
+      {
+        "label": "Read: L11-L13 complete lecture notes",
+        "kind": "read",
+        "minutes": 40,
+        "instruction": "First pass only, across all three lectures: L11 fitting + mean formula, L12 Yule-Walker/MA(1) estimation, L13 forecasting + ARIMA/SARIMA. Mark where each worked example appears so you can redo it next; don't solve anything yet.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-complete-lecture-11-notes",
+          "timeSeries-lecture-notes-complete-lecture-12-notes",
+          "timeSeries-lecture-notes-complete-lecture-13-notes"
+        ],
+        "noteIds": [
+          "ts-arma-mean"
+        ]
+      },
+      {
+        "label": "Write: redo the L11-L13 worked examples",
+        "kind": "write",
+        "minutes": 45,
+        "instruction": "By hand, redo one worked example per topic: the ARMA mean with an intercept, a Yule-Walker setup, the MA(1) moment equations, one AR forecast + prediction interval, and a sketched ARIMA(p,d,q)/SARIMA(P,D,Q)_s structure from a stated model. Use the formula sheet only to check structure, not to copy steps -- this sheet is your evidence.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ]
+      },
+      {
+        "label": "Self-check: flag shaky steps",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Reread your redone sheet cold. Circle any line you couldn't reproduce without looking, and name the exact gap next to it (e.g. 'sign flip', 'which root', 'recursion bound'). This list becomes the priority order for card-037 and card-040."
+      }
+    ]
+  },
+  'card-037': {
+    "concepts": [
+      "Yule-Walker: estimate the mean, then correlations, then solve â = Ĉ⁻¹v̂; σ̂² = R̂(0)(1 - Σâᵢρ̂(i))",
+      "MA(1) estimation: ρ(1) = b1/(1+b1²) gives a quadratic in b1 -- keep the root with |b1| < 1"
+    ],
+    "steps": [
+      {
+        "label": "Read: Yule-Walker theory + AR(2) worked example",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Read the three-step Yule-Walker method, then the full AR(2) worked example. Pay attention to the correlation-vs-covariance matrix distinction the note flags -- it's a common mark-loss.",
+        "noteIds": [
+          "ts-yule-walker",
+          "ts-yule-walker-worked"
+        ]
+      },
+      {
+        "label": "Write: Yule-Walker template, solved",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book, solve an AR(2) Yule-Walker system from scratch. Then write a reusable one-page template: the three steps, the matrix form â = Ĉ⁻¹v̂, and the noise-variance formula. This is the first half of TS_PackE_estimation_templates.md."
+      },
+      {
+        "label": "Read: MA(1) estimation worked example",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Read the MA(1) moment equations and the mock's worked example, especially the quadratic-root selection step -- why the invertible root is the one kept.",
+        "noteIds": [
+          "ts-ma1-estimation"
+        ]
+      },
+      {
+        "label": "Write: MA(1) template, solved",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book, solve the MA(1) quadratic for b1 and σ². Then write the second template: ρ(1)=b1/(1+b1²), the quadratic, the |b1|<1 root-selection rule, and the σ² formula. Save both templates together as TS_PackE_estimation_templates.md."
+      }
+    ]
+  },
+  'card-040': {
+    "concepts": [
+      "AR(1) forecast x̂_{n+h} = μ + aʰ(x_n - μ), with MSE → σ²/(1-a²) as h→∞",
+      "AR(p) forecasting by recursive substitution; ARIMA(p,d,q) is differencing + ARMA, SARIMA adds seasonal (P,D,Q)_s"
+    ],
+    "steps": [
+      {
+        "label": "Read: AR(1) and AR(p) forecasting",
+        "kind": "read",
+        "minutes": 30,
+        "instruction": "Read the AR(1) closed-form forecast + MSE, then the AR(p) recursive-substitution method. Note why centring before recursing matters -- it's the most common error the note flags.",
+        "noteIds": [
+          "ts-forecast-ar1",
+          "ts-forecast-arp"
+        ]
+      },
+      {
+        "label": "Write: AR forecast + prediction interval, worked",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Closed-book, reproduce one AR(1) forecast with a mean plus its prediction interval, and one AR(p) multi-step forecast by recursive substitution with the MSE built from the MA coefficients."
+      },
+      {
+        "label": "Write: ARIMA/SARIMA identification example",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "No knowledge note covers this -- pull the differencing/seasonal structure straight from L13. Take one non-stationary series description, state its ARIMA(p,d,q) order, then extend it to a SARIMA(P,D,Q)_s by adding a seasonal period, in the style of the airline-passenger example.",
+        "resourceIds": [
+          "timeSeries-lecture-notes-complete-lecture-13-notes"
+        ]
+      },
+      {
+        "label": "Self-test: closed-book forecasting + ARIMA/SARIMA",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Closed-book: redo both worked items from the previous two steps from memory. Flag anything wrong or hesitant -- this closes out Pack E."
+      }
+    ]
+  },
+
+  // Time Series — Pack F + all-packs recall
+  'card-044': {
+    "concepts": [
+      "The four-step real-data workflow: plot -> transform (log/diff) -> correlogram -> periodogram",
+      "AIC-based model-order choice",
+      "SSA's four stages: embedding, SVD, grouping, diagonal averaging"
+    ],
+    "steps": [
+      {
+        "label": "Read: Pack F — L14 real-data workflow",
+        "kind": "read",
+        "minutes": 40,
+        "instruction": "Read the L14 section only: the four-step workflow (plot -> transform -> correlogram -> periodogram) and the AIC-based order-choice discussion. Redo the airline-passenger log+diff worked example by hand on paper, line by line.",
+        "resourceIds": [
+          "timeSeries-study-packs-pack-f-l14-l15-real-data-workflow"
+        ],
+        "noteIds": [
+          "ts-real-data-workflow"
+        ]
+      },
+      {
+        "label": "Read: Pack F — L15 SSA skeleton",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Read the L15 SSA section only. Note the four stages (embedding, SVD, grouping, diagonal averaging) and the Rssa function names used in the worked example.",
+        "resourceIds": [
+          "timeSeries-study-packs-pack-f-l14-l15-real-data-workflow"
+        ],
+        "noteIds": [
+          "ts-ssa"
+        ]
+      },
+      {
+        "label": "Write: hand-redone L14–15 sheet",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book, on one page: the 4-step workflow, the log-vs-diff transformation rule, one line on AIC model choice, and the 4-stage SSA skeleton. This page is the evidence for this card.",
+        "noteIds": [
+          "ts-real-data-workflow",
+          "ts-ssa"
+        ]
+      },
+      {
+        "label": "Flag shaky steps",
+        "kind": "do",
+        "minutes": 10,
+        "instruction": "Mark any line on the sheet you had to check back against the pack instead of writing from recall. Star it — card-047's self-test targets these first."
+      }
+    ]
+  },
+  'card-047': {
+    "concepts": [
+      "AIC comparison between candidate ARMA orders",
+      "Reproducing the real-data workflow and its R skeleton from memory",
+      "SSA algorithm skeleton (Rssa embed/decompose/group/reconstruct shape)"
+    ],
+    "steps": [
+      {
+        "label": "Do: AIC comparison worked example",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Closed-book: pick two candidate ARMA orders for a series, write the AIC formula, and state which order you'd choose and why. Check against the Pack F pack only if you get stuck.",
+        "resourceIds": [
+          "timeSeries-study-packs-pack-f-l14-l15-real-data-workflow"
+        ]
+      },
+      {
+        "label": "Write: forecasting workflow + R skeleton",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "From memory, write the four-step workflow and the R skeleton (read.csv -> plot -> diff(log()) -> acf -> arima()). Check line-by-line against the note only after you've written it.",
+        "noteIds": [
+          "ts-real-data-workflow"
+        ]
+      },
+      {
+        "label": "Write: SSA algorithm skeleton",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "From memory, write the four SSA stages and a one-line skeleton (choose window L, embed, decompose, group, reconstruct). Check against the note only after.",
+        "noteIds": [
+          "ts-ssa"
+        ]
+      },
+      {
+        "label": "Self-test: closed-book Pack F recall",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Timed, no notes: redo one AIC comparison, the forecasting workflow skeleton, and the SSA skeleton from scratch. Mark anything you blanked on. This closes the TS Packs A–F first pass."
+      }
+    ]
+  },
+  'card-048': {
+    "concepts": [
+      "Collapsing six pack formula sheets into one recall page, grouped by template",
+      "The seven-slot exam template and which formulas serve each slot",
+      "A daily 10-minute closed-book recall habit"
+    ],
+    "steps": [
+      {
+        "label": "Read: Master formula sheet + exam-shape map",
+        "kind": "read",
+        "minutes": 30,
+        "instruction": "Skim the master formula/R sheet and the question bank once to refresh full A–F coverage, then read the two notes for the compressed formula list and the seven-slot exam map that will decide which formula goes under which group.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet",
+          "timeSeries-quick-reference-master-exam-question-bank"
+        ],
+        "noteIds": [
+          "ts-formula-sheet",
+          "ts-exam-shape"
+        ]
+      },
+      {
+        "label": "Read: the three drill one-pagers",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Read all three drills straight through. These ARE the recall content to consolidate, not new material to re-derive.",
+        "noteIds": [
+          "ts-calculation-drill",
+          "ts-definitions-drill",
+          "ts-exam-strategy"
+        ]
+      },
+      {
+        "label": "Write: TS_all_formula_recall.md",
+        "kind": "write",
+        "minutes": 75,
+        "instruction": "One line per high-yield formula across Packs A–F, grouped under five templates: stationarity, ARMA, estimation, forecasting, spectral. Pull directly from the five notes above rather than re-opening the original six packs.",
+        "noteIds": [
+          "ts-formula-sheet",
+          "ts-calculation-drill",
+          "ts-definitions-drill",
+          "ts-exam-strategy",
+          "ts-exam-shape"
+        ]
+      },
+      {
+        "label": "Store + first daily recall pass",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Save/print the sheet, then immediately run the first 10-minute closed-book recall pass against it and mark any group that's still shaky."
+      }
+    ]
+  },
+
+  // Time Series — Phase 1 drills/papers (early)
+  'card-052': {
+    "concepts": [
+      "Smoothing/decomposition formulas: SMA, CMA, WMA, SES",
+      "WSS definition and the five covariance properties (R(0), |R(t)|<=R(0), symmetry)",
+      "Named-process covariance formulas (random walk, Wiener, Brownian bridge)",
+      "Timed, closed-book template discipline (Pass 2 behaviour, not re-learning)"
+    ],
+    "steps": [
+      {
+        "label": "Read: pick 4 templates (recall pass only)",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "This is drilling, not re-learning: use the question bank (organised by template) to pick exactly one exam-style question each for smoothing, decomposition, WSS, and one named-process covariance. Spend under 4 minutes per note just to refresh the formula, not to re-study the pack.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank"
+        ],
+        "noteIds": [
+          "ts-smoothing",
+          "ts-wss",
+          "ts-formula-sheet"
+        ]
+      },
+      {
+        "label": "Do: sit all 4 to time, closed-book",
+        "kind": "do",
+        "minutes": 65,
+        "instruction": "No notes, no formula sheet. Budget ~16 minutes per template and write down the actual clock time you finish each one — that per-template timing is the evidence this card needs, not just correctness."
+      },
+      {
+        "label": "Write: mark, rewrite broken, log timing",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Mark all 4 against the master formula/R-code sheet. For any template that broke, rewrite it clean from a blank page (not copied from the sheet). Log the per-template timing and pass/fail into the TS error log.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ]
+      }
+    ]
+  },
+  'card-055': {
+    "concepts": [
+      "Spectral density -> covariance recovery via the cosine transform",
+      "BLUP derivation: Sigma^-1 * b and the prediction-variance formula",
+      "Causality root test on a(z) (roots strictly outside the unit circle)",
+      "AR model -> covariance/variance, forward direction (given coefficients, find R(k))"
+    ],
+    "steps": [
+      {
+        "label": "Read: pick 4 templates (recall pass only)",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Quick formula-recall pass only, ~3 minutes per note — pick one question per template (spectral->covariance, BLUP, causality root-check, AR->covariance) from the question bank, then close the notes before sitting.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank"
+        ],
+        "noteIds": [
+          "ts-spectrum-covariance",
+          "ts-blup-worked",
+          "ts-causality",
+          "ts-yule-walker-worked"
+        ]
+      },
+      {
+        "label": "Do: sit all 4 to time, closed-book",
+        "kind": "do",
+        "minutes": 70,
+        "instruction": "No notes. Treat each as a ~17-minute exam sub-part; write the actual time spent per template as you finish it, not afterward from memory."
+      },
+      {
+        "label": "Write: mark, rewrite broken, log timing",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Mark every attempt against the master formula/R-code sheet. Rewrite any broken template clean from scratch, and log the 4 per-template timings into the TS error log.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ]
+      }
+    ]
+  },
+  'card-058': {
+    "concepts": [
+      "Full timed paper attempt under real exam conditions (closed book, 3-question format)",
+      "Self-marking against templates when no year-specific solution key exists",
+      "Seeding the first TS error-log entries from a live paper"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the 2015 paper (paper #1), timed",
+        "kind": "do",
+        "minutes": 90,
+        "instruction": "Attempt the full 2015 paper — the earliest year available, used here as 'paper #1' in the 7-attempt sequence across cards 058/068/081/089/095/113/118 (which will need to stretch across only 6 real years plus the mock, so a later attempt will have to reuse a paper or fall back to the mock — flagged here, not hidden). Closed book, calculator only. Compressed to ~90 minutes rather than a real 2-hour sitting so marking fits this card's budget: move faster than exam pace but still attempt all 3 required questions in full.",
+        "resourceIds": [
+          "timeSeries-past-papers-2015-past-exam-paper"
+        ]
+      },
+      {
+        "label": "Test: mark and tag every sub-part",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "There is no dedicated worked-solution file for the 2015 paper in this kit (only the mock has one) — self-mark against the master formula/R-code sheet, and use the past-paper/mock mapping audit to see which template each question maps to. Tag every sub-part right / partial / blank.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet",
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      },
+      {
+        "label": "Write: record score + broken templates",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Record the total score and list every broken template by name. Push all of them into the TS error log for card-063 to mine next."
+      }
+    ]
+  },
+  'card-063': {
+    "concepts": [
+      "Re-deriving dropped marks from a blank page rather than reading solutions passively",
+      "Classifying mistakes as knowledge vs technique vs time",
+      "Feeding gaps into the TS error log and formula recall sheet"
+    ],
+    "steps": [
+      {
+        "label": "Do: rework every dropped mark",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "Re-derive every question from paper #1 where you dropped a mark, fully from a blank page. Use these three consolidated drill sheets to jump straight to the right method or formula rather than re-reading full lecture notes.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ],
+        "noteIds": [
+          "ts-calculation-drill",
+          "ts-proof-drill",
+          "ts-definitions-drill"
+        ]
+      },
+      {
+        "label": "Write: tag + update error log",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Tag each reworked question as knowledge / technique / time. Push unresolved knowledge gaps into the TS error log and any missed formula onto your recall sheet, cross-checking the mapping audit for which template each question actually was.",
+        "resourceIds": [
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      },
+      {
+        "label": "Self-test: cold re-derive the hardest one",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Closed book, no drill sheets: re-derive the single hardest reworked question again from memory only, to confirm the fix actually stuck rather than just having been copied once."
+      }
+    ]
+  },
+  'card-066': {
+    "concepts": [
+      "Yule-Walker estimation (data -> AR parameters and noise variance)",
+      "AR forecasting with prediction intervals",
+      "ARIMA identification via correlogram shape (slow decay = AR, sharp cutoff = MA)",
+      "AIC-based order selection (thinly covered in this kit — flagged gap)"
+    ],
+    "steps": [
+      {
+        "label": "Read: pick 4 templates (recall pass only)",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Quick recall pass; pick one question per template — Yule-Walker estimation, AR forecast+PI, ARIMA identification. AIC has no dedicated note in this kit yet, so for that one template lean on the master formula/R-code sheet and Pack F only, and treat it as the weakest-covered of the four going in.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank"
+        ],
+        "noteIds": [
+          "ts-yule-walker",
+          "ts-forecast-ar1",
+          "ts-real-data-workflow"
+        ]
+      },
+      {
+        "label": "Do: sit all 4 to time, closed-book",
+        "kind": "do",
+        "minutes": 75,
+        "instruction": "No notes. Budget ~18-19 minutes per template closed-book."
+      },
+      {
+        "label": "Write: mark and rewrite broken templates",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Mark against the master formula/R-code sheet. Rewrite any broken template clean from a blank page — if AIC broke, note that separately since it wasn't backed by a dedicated recall note going in.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ]
+      }
+    ]
+  },
+
+  // Time Series — Phase 1 papers/proofs/R (late)
+  'card-068': {
+    "concepts": [
+      "Full past-paper exam conditions: 3 questions of 25 marks, 75 total, closed-book, calculator only",
+      "Tagging every part right/partial/blank so the error log drives future repair, not just a raw score"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the 2016 paper, timed",
+        "kind": "do",
+        "minutes": 95,
+        "instruction": "This is paper #2, the next one in sequence after the 2015 paper you sat for card-058. Closed-book, calculator only, no notes. Answer 3 questions in full, self-timeboxing to roughly 30 min/question so marking still fits inside this slot.",
+        "resourceIds": [
+          "timeSeries-past-papers-2016-past-exam-paper"
+        ]
+      },
+      {
+        "label": "Test: mark vs solutions + log",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "There's no official answer key for the raw 2016 paper, so mark against the mapping audit's template list plus your own formula/proof/R-code drill pages. Tag every part right/partial/blank, record the paper #2 score, and add every broken template to the TS error log.",
+        "resourceIds": [
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      }
+    ]
+  },
+  'card-071': {
+    "concepts": [
+      "Mining a marked paper for the exact broken template, not just the general topic",
+      "The full TS formula sheet as one closed-book recall unit"
+    ],
+    "steps": [
+      {
+        "label": "Write: rework every dropped mark from paper #2",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Pull the 2016 paper and your card-068 marking. For every part tagged partial or blank, redo it in full — write the corrected working, don't just read the fix. Use the calculation-drill and proof-drill pages as your answer key.",
+        "resourceIds": [
+          "timeSeries-past-papers-2016-past-exam-paper"
+        ],
+        "noteIds": [
+          "ts-calculation-drill",
+          "ts-proof-drill"
+        ]
+      },
+      {
+        "label": "Write: update the TS error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Log the broken templates by slot (i)-(vii) so later repair cards target the same weak spots instead of re-reading broadly."
+      },
+      {
+        "label": "Test: closed-book formula recall pass",
+        "kind": "test",
+        "minutes": 30,
+        "instruction": "Set a timer for 10 minutes and write the entire TS formula sheet from memory, closed book. Then open ts-formula-sheet (and the master sheet for anything it doesn't cover) and mark every gap or error in red — these become today's highest-priority repairs.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet"
+        ],
+        "noteIds": [
+          "ts-formula-sheet"
+        ]
+      }
+    ]
+  },
+  'card-074': {
+    "concepts": [
+      "Strict stationarity + finite 2nd moment implies WSS, via the shift s = -t2 trick",
+      "AR(2) causality as the root test on a(z), argued through the coefficient triangle",
+      "Yule-Walker: correlation recursion to matrix solve to the noise-variance formula"
+    ],
+    "steps": [
+      {
+        "label": "Read: the 3 source proofs + the proof-drill page",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Skim ts-proof-drill's one-line ideas for WSS, causality, and Yule-Walker first — that's the compressed exam version. Then check whichever full source note (ts-wss-proof, ts-causality, ts-yule-walker) you don't already recall cold.",
+        "noteIds": [
+          "ts-proof-drill",
+          "ts-wss-proof",
+          "ts-causality",
+          "ts-yule-walker"
+        ]
+      },
+      {
+        "label": "Write: the 3 proof skeletons",
+        "kind": "write",
+        "minutes": 50,
+        "instruction": "Into TS_proof_skeletons.md, write out full skeletons from memory plus what you just read: (1) strict stationarity + finite 2nd moment implies WSS, (2) the AR(2) causality root argument, (3) the Yule-Walker derivation (correlation recursion + noise-variance formula). One clearly labelled step per line."
+      },
+      {
+        "label": "Test: timed closed-book reproduction",
+        "kind": "test",
+        "minutes": 40,
+        "instruction": "Close every note. Reproduce all 3 skeletons from scratch, roughly 13 minutes each. Compare against your written version line by line and flag any skeleton you couldn't finish for tomorrow's repair pass."
+      }
+    ]
+  },
+  'card-077': {
+    "concepts": [
+      "The 5 R templates covering ~10 marks/paper: Gaussian/ARMA simulation, BLUP forecast+CI, correlogram/periodogram",
+      "arima() fitting plus correlogram-based order diagnostics (slow decay = AR, sharp cutoff = MA)",
+      "Mechanical traps: rnorm's sd argument, the AR sign-flip on rearrangement, t(chol(S))"
+    ],
+    "steps": [
+      {
+        "label": "Read: the R-code drill sheet",
+        "kind": "read",
+        "minutes": 10,
+        "instruction": "Read the 5-template table and the 5 recurring traps once. This one page is the entire R portion of the paper — about 10 marks.",
+        "noteIds": [
+          "ts-r-code-drill"
+        ]
+      },
+      {
+        "label": "Write: R skeletons — fit/diagnostics, simulate, forecast",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Into TS_R_skeletons.md, write all three cold: the arima(y, order=c(p,d,q)) fit plus the correlogram-decay diagnostic, the ARMA simulation loop, and the BLUP forecast-with-CI code. Only reach for the cheat sheet for residual-diagnostic syntax the notes don't cover.",
+        "resourceIds": [
+          "timeSeries-quick-reference-r-comprehensive-cheat-sheet"
+        ],
+        "noteIds": [
+          "ts-real-data-workflow",
+          "ts-arma-sim-r",
+          "ts-forecast-r-code"
+        ]
+      },
+      {
+        "label": "Do: 5 mixed questions spanning packs",
+        "kind": "do",
+        "minutes": 20,
+        "instruction": "Pull 5 questions spanning different packs/templates (not just R) from the master question bank. Attempt all 5 closed-book.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank"
+        ]
+      },
+      {
+        "label": "Test: mark + log",
+        "kind": "test",
+        "minutes": 10,
+        "instruction": "Mark the 5 mixed questions and log the results, plus any newly-broken template, into the TS error log."
+      }
+    ]
+  },
+  'card-081': {
+    "concepts": [
+      "Full past-paper exam conditions, run exactly to real timing one paper before the actual exam",
+      "Converting a marked paper into a template-level error-log update"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the 2017 paper, timed",
+        "kind": "do",
+        "minutes": 115,
+        "instruction": "Paper #3 — the next one in sequence after 2015 (card-058) and 2016 (card-068). Run this one exactly to real exam conditions: 3 questions, ~40 min each, closed-book, calculator only. This is the last full past-paper sit before the exam.",
+        "resourceIds": [
+          "timeSeries-past-papers-2017-past-exam-paper"
+        ]
+      },
+      {
+        "label": "Test: mark vs solutions + log",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Mark against the mapping audit plus your formula/proof/R-code drills as before. Tag every part right/partial/blank, record the paper #3 score, and add every broken template to the error log — this is your last data point before the exam, so be honest about what's still shaky.",
+        "resourceIds": [
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      }
+    ]
+  },
+
+  // Time Series — Phase 2 mocks/repairs
+  'card-089': {
+    "concepts": [
+      "Sit a full closed-book Time Series paper (the 2018 real past paper) under genuine 2-hour timing",
+      "Mark strictly against the exam's seven-slot template ((i) definition … (vii) spectral/Yule-Walker), not a vague impression of how it went",
+      "Log every broken question-template by name in the TS error log, not just 'ARMA was hard'"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the 2018 past paper, closed-book, 2h",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "This is paper #4 of the 7-card TS past-paper run (058=2015 sat as #1, 068=2016 as #2, 081=2017 as #3; this is the 2018 paper as #4; 095/113/118 later in this batch cover 2019, 2020, and the mock exam). No notes, no calculator aids beyond what the real exam allows. Answer three questions, 25 marks each, exactly as the rubric states. Time-box each question to ~40 minutes and move on if a part is stuck rather than losing the whole paper to it.",
+        "resourceIds": [
+          "timeSeries-past-papers-2018-past-exam-paper"
+        ]
+      },
+      {
+        "label": "Test: mark, tag right/partial/blank, record score",
+        "kind": "test",
+        "minutes": 30,
+        "instruction": "The 2015-2020 real papers have no official solution PDF (only the mock exam does), so mark yourself against the question bank (organised by template) and the past-paper/mock mapping audit to identify which recurring template each part was. Tag every part right / partial / blank, then write down the paper #4 score as a single number so trend across papers #1-#4 is visible later.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank",
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      },
+      {
+        "label": "Write: update the TS error log",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "For every part tagged partial or blank, add the specific template name (e.g. 'MA(1) parameter estimation', 'BLUP with bounds') to the error log, not the general topic. This is the list card-092 repairs from next."
+      }
+    ]
+  },
+  'card-092': {
+    "concepts": [
+      "Identify the true 3 weakest templates from the mock #4 error log — not a general re-read of the module",
+      "Re-derive or recompute each from the bare method name, closed-book, before checking any note",
+      "Confirm each is clean with a second closed-book pass before ticking it off the error log"
+    ],
+    "steps": [
+      {
+        "label": "Do: re-derive the 3 weakest templates cold",
+        "kind": "do",
+        "minutes": 55,
+        "instruction": "Pull exactly the 3 templates card-089's error log flagged as broken. For each, attempt it cold on paper from the method name alone first, THEN check against whichever of these four drill notes matches it (proof drill for derivations, calculation drill for computations, R-code drill for the R parts, definitions drill for a slot-(i) recall miss) — don't read all four, only the ones matching your actual 3 gaps.",
+        "noteIds": [
+          "ts-proof-drill",
+          "ts-calculation-drill",
+          "ts-r-code-drill",
+          "ts-definitions-drill"
+        ]
+      },
+      {
+        "label": "Test: closed-book re-test on just those 3",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Cover everything and redo all 3 templates a second time from scratch, no peeking. Compare against your first attempt: is the method now automatic, or did you still need to think it through?"
+      },
+      {
+        "label": "Write: tick the error log clean",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Only tick off a template if the second cold pass was clean. Anything still shaky stays open and rolls forward rather than being marked done."
+      }
+    ]
+  },
+  'card-095': {
+    "concepts": [
+      "Sit a full closed-book Time Series paper (the 2019 real past paper) under genuine 2-hour timing",
+      "Mark strictly against the exam's seven-slot template, not a vague impression of how it went",
+      "Log every broken question-template by name in the TS error log"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the 2019 past paper, closed-book, 2h",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "This is paper #5 of the 7-card run (2015→#1, 2016→#2, 2017→#3, 2018→#4 already sat; this is 2019 as #5; the 2020 paper and the mock exam are still to come as #6/#7 in cards 113 and 118). Closed-book, three questions, 25 marks each, 2 hours total — treat it exactly like the real thing.",
+        "resourceIds": [
+          "timeSeries-past-papers-2019-past-exam-paper"
+        ]
+      },
+      {
+        "label": "Test: mark, tag right/partial/blank, record score",
+        "kind": "test",
+        "minutes": 30,
+        "instruction": "No official solution exists for the 2019 paper, so self-mark using the question bank and the mapping audit to place each part against its recurring template. Tag right / partial / blank per part and record the paper #5 score.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank",
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      },
+      {
+        "label": "Write: update the TS error log",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Log every broken template by its specific name. card-099 repairs the top 3 from this list next."
+      }
+    ]
+  },
+  'card-099': {
+    "concepts": [
+      "Repair exactly 3 named weak templates from mock #5's error log — not a broad re-read",
+      "Reproduce the full formula sheet cold in a strict 10-minute window and mark every gap honestly",
+      "Only tick the error log once both the repair and the recall gap are closed"
+    ],
+    "steps": [
+      {
+        "label": "Do: repair the 3 weakest TS templates",
+        "kind": "do",
+        "minutes": 55,
+        "instruction": "Take the 3 templates card-095's error log flagged as still broken. Attempt each cold first, then check against whichever drill note matches (proof / calculation / R-code / definitions) — only the ones your 3 gaps actually need.",
+        "noteIds": [
+          "ts-proof-drill",
+          "ts-calculation-drill",
+          "ts-r-code-drill",
+          "ts-definitions-drill"
+        ]
+      },
+      {
+        "label": "Test: 10-min full formula recall, closed-book",
+        "kind": "test",
+        "minutes": 10,
+        "instruction": "Set a 10-minute timer. Write out, from memory only, every formula block: stationarity/moments, the named-process covariances, the spectral identities, the ARMA polynomials and causality/invertibility tests, forecasting (BLUP + AR(1)), and Yule-Walker estimation. Do not check anything until the timer stops."
+      },
+      {
+        "label": "Read: mark the recall against ts-formula-sheet",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Line up your 10-minute page against ts-formula-sheet and circle every formula you missed or got wrong. This is a real gap list, not a formality — anything circled needs a second look before the exam.",
+        "noteIds": [
+          "ts-formula-sheet"
+        ]
+      },
+      {
+        "label": "Write: tick the error log clean",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Tick the 3 repaired templates off only if today's cold attempt was clean, and add any formula circled in the recall as a new, separate error-log line so it doesn't get lost before the exam-eve sheet (card-116)."
+      }
+    ]
+  },
+  'card-102': {
+    "concepts": [
+      "Reproduce 3 banked proof skeletons cold (e.g. positive semidefiniteness, AR(2) causality triangle, BLUP derivation), no peeking first",
+      "Reproduce the Gaussian-process/ARMA-simulation and BLUP-forecast R skeletons cold",
+      "Any skeleton that wobbles gets rewritten until it is automatic, not just reviewed"
+    ],
+    "steps": [
+      {
+        "label": "Test: reproduce 3 proof skeletons closed-book",
+        "kind": "test",
+        "minutes": 45,
+        "instruction": "Pick 3 proofs from ts-proof-drill's table (the PSD-positive-semidefinite proof, the AR(2) causality triangle, and the BLUP derivation cover the highest exam value). Write each out cold from the one-line idea alone, then check line-by-line against the note. This intentionally reuses the same note card-074 built its proof drill around — the content doesn't change, only the closed-book standard you're holding yourself to now.",
+        "noteIds": [
+          "ts-proof-drill"
+        ]
+      },
+      {
+        "label": "Do: reproduce ARMA/forecast R skeletons closed-book",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "From memory, write the Gaussian-process Cholesky simulation, the ARMA `for`-loop simulation, and the BLUP forecast-with-CI code (`solve(Sigma, b)`). Then check against ts-r-code-drill line by line, specifically for the five recurring traps it lists (sd vs variance in rnorm, t(chol()), loop bounds at p+1, etc). Same note card-077's R-code drill uses — this is the final cold pass, not new material.",
+        "noteIds": [
+          "ts-r-code-drill"
+        ]
+      },
+      {
+        "label": "Write: fix anything that wobbled",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "For any proof or R skeleton that needed a peek or a correction, rewrite it a second time from scratch, no notes, until it comes out clean in one pass."
+      }
+    ]
+  },
+  'card-113': {
+    "concepts": [
+      "Sit a full closed-book Time Series paper (the 2020 real past paper — the last of the 6 real years) under genuine 2-hour timing",
+      "Mark strictly against the exam's seven-slot template, not a vague impression of how it went",
+      "Log every broken question-template by name in the TS error log"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the 2020 past paper, closed-book, 2h",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "This is the 2020 paper — the 6th and final of the 6 real past-year papers in the plan (2015-2019 already sat across cards 058/068/081/089/095). The card's own title labels it '#7', but it is the 6th real-year paper; only the mock exam (card-118) remains after this, as the 7th and last item in the 7-card past-paper run. Note that many of your knowledge notes (ts-arma.md, ts-spectral.md) directly quote and work through 2020 paper questions — that's expected overlap, not a leak, since you're sitting it closed-book now regardless. Closed-book, three questions, 25 marks each, 2 hours.",
+        "resourceIds": [
+          "timeSeries-past-papers-2020-past-exam-paper"
+        ]
+      },
+      {
+        "label": "Test: mark, tag right/partial/blank, record score",
+        "kind": "test",
+        "minutes": 30,
+        "instruction": "No separate solution PDF exists for the 2020 paper, but several of your own knowledge notes (e.g. ts-blup-derivation, ts-ma-representation, ts-yule-walker-worked) already work through specific 2020 questions in full — use those plus the question bank and mapping audit to mark accurately. Tag each part and record the score.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-exam-question-bank",
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      },
+      {
+        "label": "Write: update the TS error log",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Log every broken template by name. This is the last full-paper error log before the final recall pass (card-116) and the mock (card-118)."
+      }
+    ]
+  },
+  'card-116': {
+    "concepts": [
+      "Full closed-book, timed recall of every formula on ts-formula-sheet",
+      "Any proof skeleton still shaky after card-102 gets one more cold reproduction",
+      "Compress everything still needed into a single exam-eve page — no filler, no restating what's already solid"
+    ],
+    "steps": [
+      {
+        "label": "Test: full formula recall, closed-book",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "From memory only, write out every formula block on one page: stationarity/moments, named-process covariances, spectral identities, ARMA polynomials and the causality/invertibility tests, BLUP + AR(1) forecasting, Yule-Walker. Time yourself but don't stop early even if it's slow — completeness matters more than speed here."
+      },
+      {
+        "label": "Read: mark against ts-formula-sheet",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Circle every formula missed or wrong. Anything circled twice across this campaign (also flagged in card-099) is a priority for the exam-eve sheet below.",
+        "noteIds": [
+          "ts-formula-sheet"
+        ]
+      },
+      {
+        "label": "Do: reproduce any still-shaky proof skeleton",
+        "kind": "do",
+        "minutes": 30,
+        "instruction": "From card-102's final drill, take only the proof(s) that still wobbled and reproduce them cold once more against ts-proof-drill. If everything from card-102 was already clean, spend this time instead on whichever formula was circled twice in the previous step.",
+        "noteIds": [
+          "ts-proof-drill"
+        ]
+      },
+      {
+        "label": "Write: the 1-page exam-eve sheet",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Condense today's circled formulas and any still-shaky proof into a single page — cross-check coverage against the master formula/R sheet and the paper/template mapping audit so nothing high-frequency is missing, but do not copy either wholesale. This sheet is for your own last-look use, not for the (closed-book) exam itself.",
+        "resourceIds": [
+          "timeSeries-quick-reference-master-formula-and-r-code-sheet",
+          "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
+        ]
+      }
+    ]
+  },
+  'card-118': {
+    "concepts": [
+      "Sit the mock exam — the closest full dry run to the real exam format — closed-book and timed",
+      "Mark against the official mock solution, part by part",
+      "This is the last timed sit before the real exam: log honestly, there is no further TS repair slot after this"
+    ],
+    "steps": [
+      {
+        "label": "Do: sit the mock exam, closed-book, 2h",
+        "kind": "do",
+        "minutes": 120,
+        "instruction": "This is the mock exam paper — the 7th and last item in the 7-card past-paper run (2015-2020 sat as papers #1-#6 across cards 058/068/081/089/095/113; the card checklist labels this '#8' by a running-count slip, but it is the 7th and final paper). Unlike the 6 real-year papers, this one has an official worked solution, so treat this sit as the closest possible rehearsal of the real thing. Closed-book, three questions, 25 marks each, 2 hours.",
+        "resourceIds": [
+          "timeSeries-past-papers-mock-exam"
+        ]
+      },
+      {
+        "label": "Test: mark against the official mock solution",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Mark line by line against the real worked solution this time — no guessing at templates. Tag every part right / partial / blank and record the final score.",
+        "resourceIds": [
+          "timeSeries-past-papers-mock-exam-solution"
+        ]
+      },
+      {
+        "label": "Write: final TS error-log update",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Log anything still broken. This is the last scheduled TS past-paper card — whatever's left open here needs a personal fix in whatever spare time remains before the real exam, since no further repair card follows it."
+      }
+    ]
+  },
+
+  // MAT700 — Foundation reset + L1-L4
+  'mat700-foundation-reset': {
+    "concepts": [
+      "MAT700 exam structure: 2-hour written paper, answer 3 of 4 questions, one A4 crib sheet (both sides) allowed",
+      "What 'ready' means here: dashboard of all 7 lectures/3 tutorials indexed, an empty error log, and a written pass rule"
+    ],
+    "steps": [
+      {
+        "label": "Read: exam shape and scope",
+        "kind": "read",
+        "minutes": 8,
+        "instruction": "Read the exam-shape note once. Note the format (2h, 4 questions, answer 3), the marks (75 total), and what you're allowed to bring in. Write one line: your working target score/grade.",
+        "noteIds": [
+          "m7-exam-shape"
+        ]
+      },
+      {
+        "label": "Inventory: lectures, tutorials, solutions, question banks",
+        "kind": "do",
+        "minutes": 8,
+        "instruction": "Open the MAT700 module in the dashboard and confirm Lectures 1-7 (slides + notes), Tutorials 1-3 (+ solutions), and all 7 question banks resolve and open. Flag anything missing now, not mid-rebuild."
+      },
+      {
+        "label": "Create the MAT700 error log",
+        "kind": "write",
+        "minutes": 6,
+        "instruction": "Make one blank log (any note/doc) with columns: lecture, question/prompt, what you got wrong, the correct version, date. This is the single log every rebuild-L1..L4 card feeds into."
+      },
+      {
+        "label": "Write the pass rule",
+        "kind": "write",
+        "minutes": 8,
+        "instruction": "Write one short paragraph and pin it: tutorials/question banks come before rereading slides, every attempt is timed and self-marked strictly against the solutions, and every miss goes straight into the error log."
+      }
+    ]
+  },
+  'mat700-rebuild-l1': {
+    "concepts": [
+      "Data mining vs statistics, and when machine learning is (and isn't) the right tool",
+      "Bonferroni's principle and the birthday-triples expected-count calculation",
+      "Labelled vs unlabelled data: classification/regression vs clustering/association"
+    ],
+    "steps": [
+      {
+        "label": "Skim: Lecture 1 notes + slides",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Skim the slides/notes once for structure only, then read the four linked notes closely — they carry the exact exam-tested wording for the definitions and the birthday-triples method.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-1-notes",
+          "mat700-lecture-slides-lecture-1-slides",
+          "mat700-lecture-slides-lecture-1-supplement"
+        ],
+        "noteIds": [
+          "m7-what-is-data-mining",
+          "m7-bonferroni",
+          "m7-birthday-triples",
+          "m7-labelled-unlabelled"
+        ]
+      },
+      {
+        "label": "Write: L1 one-page sheet from memory",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: write the data-mining-vs-statistics contrast, Bonferroni's informal statement, the birthday-triples formula worked for one K, and the labelled/unlabelled split with task examples. Check against the notes only after.",
+        "noteIds": [
+          "m7-what-is-data-mining",
+          "m7-bonferroni",
+          "m7-birthday-triples",
+          "m7-labelled-unlabelled"
+        ]
+      },
+      {
+        "label": "Test: Lecture 1 question bank, closed book",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Answer every prompt before looking at any solution. Mark yourself strictly against the question bank's own answers.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-1-question-bank"
+        ]
+      },
+      {
+        "label": "Log every miss",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Transfer every wrong or incomplete answer from the sheet and the question-bank attempt into the MAT700 error log, with the correct version alongside it."
+      }
+    ]
+  },
+  'mat700-rebuild-l2': {
+    "concepts": [
+      "The three-part mathematical framework for learning: sampled data, a loss functional over a hypothesis space, minimising expected loss",
+      "Instance-based vs model-based learning — an axis independent of supervised/unsupervised"
+    ],
+    "steps": [
+      {
+        "label": "Skim: Lecture 2 notes + slides",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Skim the slides/notes once, then read both linked notes closely for the exact three-part framework wording and the instance-based/model-based contrast.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-2-notes",
+          "mat700-lecture-slides-lecture-2-slides"
+        ],
+        "noteIds": [
+          "m7-learning-framework",
+          "m7-instance-vs-model"
+        ]
+      },
+      {
+        "label": "Write: L2 one-page sheet from memory",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: write the three framework components, the regression vs classification loss table, and the instance-based vs model-based distinction with one example of each (kNN; Naive Bayes/k-means).",
+        "noteIds": [
+          "m7-learning-framework",
+          "m7-instance-vs-model"
+        ]
+      },
+      {
+        "label": "Test: Lecture 2 question bank, closed book",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Answer every prompt before checking. Mark strictly against the question bank's own answers.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank"
+        ]
+      },
+      {
+        "label": "Log every miss",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Add every wrong or incomplete answer to the MAT700 error log with the correct version."
+      }
+    ]
+  },
+  'mat700-rebuild-l3': {
+    "concepts": [
+      "k-shingling: representing a document as a set of length-k substrings, and how to choose k",
+      "Minhashing: characteristic matrix, minhash signatures, and why signature agreement estimates Jaccard similarity"
+    ],
+    "steps": [
+      {
+        "label": "Skim: Lecture 3 notes + slides",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Skim the slides/notes once, then read both linked notes closely for the shingle-set definition, the choosing-k rule, and the minhash-of-a-column definition.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-3-notes",
+          "mat700-lecture-slides-lecture-3-slides"
+        ],
+        "noteIds": [
+          "m7-shingling",
+          "m7-minhash"
+        ]
+      },
+      {
+        "label": "Write: L3 one-page sheet from memory",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: define a k-shingle and work the 2-shingles of one short string; define minhash of a column and describe how a signature matrix is built from n permutations.",
+        "noteIds": [
+          "m7-shingling",
+          "m7-minhash"
+        ]
+      },
+      {
+        "label": "Test: Lecture 3 question bank, closed book",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Answer every prompt before checking. Mark strictly against the question bank's own answers.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-3-question-bank"
+        ]
+      },
+      {
+        "label": "Log every miss",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Add every wrong or incomplete answer to the MAT700 error log with the correct version."
+      }
+    ]
+  },
+  'mat700-rebuild-l4': {
+    "concepts": [
+      "Basic and weighted kNN classification, and how k is chosen",
+      "Generalization error vs training error, and why 1-NN's zero training error is not good news"
+    ],
+    "steps": [
+      {
+        "label": "Skim: Lecture 4 notes + slides",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Skim the slides/notes once, then read both linked notes closely for the two-step kNN definition, the distance-weight formula, and the generalization-error definition.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-4-notes",
+          "mat700-lecture-slides-lecture-4-slides"
+        ],
+        "noteIds": [
+          "m7-knn-definition",
+          "m7-generalization-error"
+        ]
+      },
+      {
+        "label": "Write: L4 one-page sheet from memory",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: write basic kNN's two steps, the weighted-vote formula, why weighting reduces sensitivity to k, the generalization-error definition, and the 60/20/20 split.",
+        "noteIds": [
+          "m7-knn-definition",
+          "m7-generalization-error"
+        ]
+      },
+      {
+        "label": "Test: Lecture 4 question bank, closed book",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Answer every prompt before checking. Mark strictly against the question bank's own answers.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-4-question-bank"
+        ]
+      },
+      {
+        "label": "Log every miss",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Add every wrong or incomplete answer to the MAT700 error log with the correct version."
+      }
+    ]
+  },
+
+  // MAT700 — L5-L7 + Tutorials 1-3
+  'mat700-rebuild-l5': {
+    "concepts": [
+      "PageRank: the transition matrix M, with column = source page and row = destination page",
+      "Idealized PageRank as the principal eigenvector (eigenvalue 1); needs a strongly connected graph to converge",
+      "Dead ends and spider traps, and their fixes: replace zero columns with e/n; add taxation/teleportation",
+      "The taxed PageRank formula v' = (1-beta)e/n + beta*M*v, and running one hand iteration"
+    ],
+    "steps": [
+      {
+        "label": "Read: L5 notes + PageRank definition, convergence, dead ends/traps",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Skim the lecture-5 notes once for overall shape, then work the three linked notes properly: what M means and which index is source vs destination, why idealized PageRank converges (and when it doesn't), and the dead-end/spider-trap fixes.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-5-notes"
+        ],
+        "noteIds": [
+          "m7-pagerank-idea",
+          "m7-pagerank-idealized",
+          "m7-pagerank-deadends-traps"
+        ]
+      },
+      {
+        "label": "Write: taxed PageRank formula + one hand iteration",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: write the full formula v' = (1-beta)e/n + beta*M*v, state beta=0.85 (Google) vs the lecture's worked beta=0.8 case, then hand-run one iteration of PageRank on a small 3-4 node graph you make up, from memory.",
+        "noteIds": [
+          "m7-pagerank-formula"
+        ]
+      },
+      {
+        "label": "Test: L5 question bank",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Answer every linked question-bank prompt closed-book before checking the answers on the page. Mark right/wrong honestly.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-5-question-bank"
+        ]
+      },
+      {
+        "label": "Log: MAT700 error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Add every wrong sign, misread index, or dropped fix (dead end vs spider trap) from steps 2-3 into the MAT700 error log — that sheet is what you re-read before the exam, not the whole lecture."
+      }
+    ]
+  },
+  'mat700-rebuild-l6': {
+    "concepts": [
+      "Two clustering strategies: hierarchical/agglomerative (start separate, merge) vs point assignment (assign to best-fitting cluster)",
+      "Euclidean vs non-Euclidean clustering: a centroid only exists in Euclidean space",
+      "Hierarchical clustering's three decisions: representation, merge rule, stopping rule",
+      "Centroid vs clustroid, and the three common clustroid choices (min sum, min max, min sum-of-squares distance)"
+    ],
+    "steps": [
+      {
+        "label": "Read: L6 notes + clustering strategies and hierarchical clustering",
+        "kind": "read",
+        "minutes": 25,
+        "instruction": "Skim the lecture-6 notes once, then read both linked notes properly: the two strategies and their starting points, then the hierarchical merge loop and the centroid-vs-clustroid distinction.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-6-notes"
+        ],
+        "noteIds": [
+          "m7-clustering-strategies",
+          "m7-hierarchical"
+        ]
+      },
+      {
+        "label": "Write: strategies + hierarchical algorithm from memory",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: name both clustering strategies with one line each, write the three decisions that define a hierarchical algorithm, and state centroid vs clustroid with one example distance choice for each."
+      },
+      {
+        "label": "Test: L6 question bank",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Answer every linked question-bank prompt closed-book before checking the answers on the page.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-6-question-bank"
+        ]
+      },
+      {
+        "label": "Log: MAT700 error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Record every mixed-up term (especially centroid vs clustroid, or the wrong merge criterion) from steps 2-3 into the MAT700 error log."
+      }
+    ]
+  },
+  'mat700-rebuild-l7': {
+    "concepts": [
+      "Meta-algorithms (algorithms operating on algorithms) and the 5-stage online learning round",
+      "The halving algorithm: the consistent-set update C_{t+1}, and majority-vote prediction",
+      "The weighted majority algorithm: initial weight 1, and the (1-eta) update on a wrong prediction",
+      "Why halving needs a consistent expert and weighted majority does not"
+    ],
+    "steps": [
+      {
+        "label": "Read: L7 notes + meta-algorithms, halving, weighted majority",
+        "kind": "read",
+        "minutes": 30,
+        "instruction": "Skim the lecture-7 notes once, then read all three linked notes: the meta-algorithm definition and the 5-stage online-learning round, then the halving algorithm's consistent-set update, then the weighted-majority weight update — note why L7 needs the second algorithm at all.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-7-notes"
+        ],
+        "noteIds": [
+          "m7-meta-algorithm",
+          "m7-halving-algorithm",
+          "m7-weighted-majority"
+        ]
+      },
+      {
+        "label": "Write: both algorithms' update rules side by side",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Closed-book: write the halving algorithm's C_{t+1} update and majority-vote prediction, then the weighted-majority initialization (w_i=1) and (1-eta) update, side by side. One line each on why halving requires a consistent expert and weighted majority doesn't."
+      },
+      {
+        "label": "Test: L7 question bank",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Answer every linked question-bank prompt closed-book before checking the answers on the page.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-7-question-bank"
+        ]
+      },
+      {
+        "label": "Log: MAT700 error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Record every dropped condition (e.g. forgetting the consistent-expert assumption) from steps 2-3 into the MAT700 error log."
+      }
+    ]
+  },
+  'mat700-tutorial-1': {
+    "concepts": [
+      "Tutorial 1's core questions solved correctly, closed-book",
+      "Every line of working checked against the worked solution, not just the final answer",
+      "At least one previously-wrong question redone correctly from a blank page",
+      "2-3 recall prompts capturing the question types, plus one error-log entry"
+    ],
+    "steps": [
+      {
+        "label": "Do: attempt Tutorial 1 core questions closed-book",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work the core questions from the Tutorial 1 sheet with the solutions closed. If stuck past ~4 minutes on one part, mark it and move on rather than forcing it.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-beamer"
+        ]
+      },
+      {
+        "label": "Check: mark against Tutorial 1 solutions",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Check every line of your working against the worked solutions, not just the final numbers. Circle exactly where each mistake happened.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-solutions"
+        ]
+      },
+      {
+        "label": "Redo: incorrect questions from a blank page",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Immediately redo any question you got wrong, from a fresh blank page, without looking at your first attempt."
+      },
+      {
+        "label": "Write: recall prompts + error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Write 2-3 recall prompts covering the question types you just practiced, and add one entry to the MAT700 error log for the mistake that cost the most time."
+      }
+    ]
+  },
+  'mat700-tutorial-2': {
+    "concepts": [
+      "Tutorial 2's core questions solved correctly, closed-book",
+      "Every line of working checked against the worked solution, not just the final answer",
+      "At least one previously-wrong question redone correctly from a blank page",
+      "2-3 recall prompts capturing the question types, plus one error-log entry"
+    ],
+    "steps": [
+      {
+        "label": "Do: attempt Tutorial 2 core questions closed-book",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work the core questions from the Tutorial 2 sheet with the solutions closed. If stuck past ~4 minutes on one part, mark it and move on rather than forcing it.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-2-beamer"
+        ]
+      },
+      {
+        "label": "Check: mark against Tutorial 2 solutions",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Check every line of your working against the worked solutions, not just the final numbers. Circle exactly where each mistake happened.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-2-solutions"
+        ]
+      },
+      {
+        "label": "Redo: incorrect questions from a blank page",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Immediately redo any question you got wrong, from a fresh blank page, without looking at your first attempt."
+      },
+      {
+        "label": "Write: recall prompts + error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Write 2-3 recall prompts covering the question types you just practiced, and add one entry to the MAT700 error log for the mistake that cost the most time."
+      }
+    ]
+  },
+  'mat700-tutorial-3': {
+    "concepts": [
+      "Tutorial 3's core questions solved correctly, closed-book",
+      "Every line of working checked against the worked solution, not just the final answer",
+      "At least one previously-wrong question redone correctly from a blank page",
+      "2-3 recall prompts capturing the question types, plus one error-log entry"
+    ],
+    "steps": [
+      {
+        "label": "Do: attempt Tutorial 3 core questions closed-book",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work the core questions from the Tutorial 3 sheet with the solutions closed. If stuck past ~4 minutes on one part, mark it and move on rather than forcing it.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-3-beamer"
+        ]
+      },
+      {
+        "label": "Check: mark against Tutorial 3 solutions",
+        "kind": "test",
+        "minutes": 15,
+        "instruction": "Check every line of your working against the worked solutions, not just the final numbers. Circle exactly where each mistake happened.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-3-solutions"
+        ]
+      },
+      {
+        "label": "Redo: incorrect questions from a blank page",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Immediately redo any question you got wrong, from a fresh blank page, without looking at your first attempt."
+      },
+      {
+        "label": "Write: recall prompts + error log",
+        "kind": "write",
+        "minutes": 10,
+        "instruction": "Write 2-3 recall prompts covering the question types you just practiced, and add one entry to the MAT700 error log for the mistake that cost the most time."
+      }
+    ]
+  },
+
+  // MAT700 — Tutorial repeats + synthesis
+  'mat700-tutorial-4': {
+    "concepts": [
+      "Tutorial 1's core question types and solution steps, recalled closed-book after a delay",
+      "The specific errors from the first Tutorial 1 attempt, now targeted for correction under no-solution conditions"
+    ],
+    "steps": [
+      {
+        "label": "Do: Tutorial 1 closed-book attempt",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work through the Tutorial 1 beamer questions from a blank page. No solutions open — if a method won't come back, write '?' and move on rather than guessing forever. Timebox to ~30-35 min even if some questions are left unfinished.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-beamer"
+        ]
+      },
+      {
+        "label": "Read: check against worked solution",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Go line-by-line against the Tutorial 1 solutions. Mark every step that's wrong, not only the final answers — that's where the real error pattern shows up.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-solutions"
+        ]
+      },
+      {
+        "label": "Write: blank-page redo of every wrong question",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Close the solutions again. Redo every question you got wrong, from a fresh blank page, using only what you just corrected — no peeking."
+      },
+      {
+        "label": "Self-test: recall prompts + error log",
+        "kind": "test",
+        "minutes": 5,
+        "instruction": "Write 2-3 short recall-prompt questions covering what tripped you up, and add one entry to the MAT700 error log naming the specific mistake pattern (not just 'got it wrong')."
+      }
+    ]
+  },
+  'mat700-tutorial-5': {
+    "concepts": [
+      "Tutorial 2's core question types and solution steps, recalled closed-book after a delay",
+      "The specific errors from the first Tutorial 2 attempt, now targeted for correction under no-solution conditions"
+    ],
+    "steps": [
+      {
+        "label": "Do: Tutorial 2 closed-book attempt",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work through the Tutorial 2 beamer questions from a blank page. No solutions open — if a method won't come back, write '?' and move on rather than guessing forever. Timebox to ~30-35 min even if some questions are left unfinished.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-2-beamer"
+        ]
+      },
+      {
+        "label": "Read: check against worked solution",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Go line-by-line against the Tutorial 2 solutions. Mark every step that's wrong, not only the final answers — that's where the real error pattern shows up.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-2-solutions"
+        ]
+      },
+      {
+        "label": "Write: blank-page redo of every wrong question",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Close the solutions again. Redo every question you got wrong, from a fresh blank page, using only what you just corrected — no peeking."
+      },
+      {
+        "label": "Self-test: recall prompts + error log",
+        "kind": "test",
+        "minutes": 5,
+        "instruction": "Write 2-3 short recall-prompt questions covering what tripped you up, and add one entry to the MAT700 error log naming the specific mistake pattern (not just 'got it wrong')."
+      }
+    ]
+  },
+  'mat700-tutorial-6': {
+    "concepts": [
+      "Tutorial 3's core question types and solution steps, recalled closed-book after a delay",
+      "The specific errors from the first Tutorial 3 attempt, now targeted for correction under no-solution conditions"
+    ],
+    "steps": [
+      {
+        "label": "Do: Tutorial 3 closed-book attempt",
+        "kind": "do",
+        "minutes": 35,
+        "instruction": "Work through the Tutorial 3 beamer questions from a blank page. No solutions open — if a method won't come back, write '?' and move on rather than guessing forever. Timebox to ~30-35 min even if some questions are left unfinished.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-3-beamer"
+        ]
+      },
+      {
+        "label": "Read: check against worked solution",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Go line-by-line against the Tutorial 3 solutions. Mark every step that's wrong, not only the final answers — that's where the real error pattern shows up.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-3-solutions"
+        ]
+      },
+      {
+        "label": "Write: blank-page redo of every wrong question",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Close the solutions again. Redo every question you got wrong, from a fresh blank page, using only what you just corrected — no peeking."
+      },
+      {
+        "label": "Self-test: recall prompts + error log",
+        "kind": "test",
+        "minutes": 5,
+        "instruction": "Write 2-3 short recall-prompt questions covering what tripped you up, and add one entry to the MAT700 error log naming the specific mistake pattern (not just 'got it wrong')."
+      }
+    ]
+  },
+  'mat700-tutorial-7': {
+    "concepts": [
+      "Recognising which of the three tutorials' methods a mixed question needs, fast and under time pressure",
+      "The single most persistent error pattern across Tutorials 1-3, isolated and drilled once more"
+    ],
+    "steps": [
+      {
+        "label": "Do: timed mixed-question sprint (T1-T3)",
+        "kind": "do",
+        "minutes": 12,
+        "instruction": "Pick one question from each of Tutorial 1, 2 and 3 — mix the topics, don't just redo favourites. Closed-book, one continuous ~10-12 min clock for all three; move on the moment time is up even if unfinished.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-beamer",
+          "mat700-tutorials-tutorial-2-beamer",
+          "mat700-tutorials-tutorial-3-beamer"
+        ]
+      },
+      {
+        "label": "Read: rapid check against all three solutions",
+        "kind": "read",
+        "minutes": 10,
+        "instruction": "Mark each of the three answers right/wrong against the solutions. Don't re-derive anything yet — just identify which one broke down and where.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-solutions",
+          "mat700-tutorials-tutorial-2-solutions",
+          "mat700-tutorials-tutorial-3-solutions"
+        ]
+      },
+      {
+        "label": "Write: redo the worst one + one-line error log",
+        "kind": "write",
+        "minutes": 8,
+        "instruction": "From a blank page, redo only the question that broke down. Then add one error-log line naming the pattern that keeps recurring across Tutorials 1-3."
+      }
+    ]
+  },
+
+  // MAT700 — Timed templates A-D
+  'mat700-template-a': {
+    "concepts": [
+      "TF-IDF: TF_ij, IDF_i = log2(N/n_i), and the combined weight formula",
+      "Constructing a term-document vector from raw counts before weighting",
+      "Jaccard similarity for sets vs. for bags (multisets)"
+    ],
+    "steps": [
+      {
+        "label": "Write: TF-IDF and Jaccard formulas from memory",
+        "kind": "write",
+        "minutes": 20,
+        "instruction": "Closed-book. Write TF_ij, IDF_i = log2(N/n_i), the combined TF-IDF weight, and Jaccard similarity for sets and for bags. Don't check yet — get everything you have onto the page first.",
+        "noteIds": [
+          "m7-tfidf-definition",
+          "m7-jaccard-sets",
+          "m7-jaccard-bags"
+        ]
+      },
+      {
+        "label": "Read: check against the cheat sheet and worked numeric example",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Compare your recall against the master cheat sheet and the numeric worked example. Circle every formula you got wrong or fudged and rewrite it correctly once.",
+        "resourceIds": [
+          "mat700-formula-sheets-master-formula-cheat-sheet"
+        ],
+        "noteIds": [
+          "m7-tfidf-bound",
+          "m7-tfidf-numeric"
+        ]
+      },
+      {
+        "label": "Do: two timed questions (TF-IDF + Jaccard)",
+        "kind": "do",
+        "minutes": 100,
+        "instruction": "Set a timer at ~40 min each. Pick one TF-IDF question from the Lecture 2 bank and one Jaccard (sets or bags) question from the Lecture 3 bank. Full working, closed notes.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank",
+          "mat700-question-banks-lecture-3-question-bank"
+        ]
+      },
+      {
+        "label": "Test: mark strictly against the bank's solutions",
+        "kind": "test",
+        "minutes": 40,
+        "instruction": "Mark line-by-line against the answer prompts. Award marks only for steps actually shown, not steps you 'would have' written.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank",
+          "mat700-question-banks-lecture-3-question-bank"
+        ]
+      },
+      {
+        "label": "Write: repair the weaker answer + update error log",
+        "kind": "write",
+        "minutes": 45,
+        "instruction": "Rewrite the lower-scoring of the two answers from scratch, closed-book, until it's clean. Log the exact mistake and its fix in your running error log."
+      }
+    ]
+  },
+  'mat700-template-b': {
+    "concepts": [
+      "Graph theory basics: adjacency matrices and the degree-sum proof (sum of deg(v) = 2|E|)",
+      "The four distance axioms, applied to prove edit distance and Jaccard distance are metrics",
+      "Minhash collision probability = Jaccard similarity, and the bag-Jaccard ≤ 1/2 bound",
+      "kNN worked numerically on a 1-D dataset"
+    ],
+    "steps": [
+      {
+        "label": "Write: graphs, distance axioms, and proofs from memory",
+        "kind": "write",
+        "minutes": 45,
+        "instruction": "Closed-book. Write: graph/adjacency definitions plus the degree-sum proof; the four distance axioms; the edit-distance and Jaccard-distance metric proofs; the bag-Jaccard ≤ 1/2 bound; and the minhash-collision-probability proof. This is the heaviest recall block — go slowly and completely before checking anything.",
+        "noteIds": [
+          "m7-graph-basics",
+          "m7-adjacency-matrix",
+          "m7-degree-sum-proof",
+          "m7-distance-axioms",
+          "m7-edit-distance-proof",
+          "m7-jaccard-distance-proof",
+          "m7-jaccard-bags-bound",
+          "m7-minhash-theorem"
+        ]
+      },
+      {
+        "label": "Read: check against the one-page proof drill + kNN worked example",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Line up your proofs against the one-page drill and fix any dropped step. Then read the kNN worked example once so the numeric pattern is fresh.",
+        "noteIds": [
+          "m7-proof-drill",
+          "m7-knn-worked"
+        ]
+      },
+      {
+        "label": "Do: two timed questions (graph/proof + kNN)",
+        "kind": "do",
+        "minutes": 90,
+        "instruction": "Timer ~45 min each. One graph or distance-proof question from the Lecture 2 bank, one kNN question from the Lecture 4 bank.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank",
+          "mat700-question-banks-lecture-4-question-bank"
+        ]
+      },
+      {
+        "label": "Test: mark strictly against the bank's solutions",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Mark against the answer prompts proof step by proof step — a missing axiom name or a skipped inequality line loses the mark even if the conclusion is right.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank",
+          "mat700-question-banks-lecture-4-question-bank"
+        ]
+      },
+      {
+        "label": "Write: repair the weakest proof + update error log",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Identify whichever single proof felt shakiest under time and rewrite it twice, cold. Add it to the error log."
+      }
+    ]
+  },
+  'mat700-template-c': {
+    "concepts": [
+      "Naive Bayes with pseudo-count correction, applied to a worked classification example",
+      "PageRank: the iteration formula and hand-computation over a small graph",
+      "k-means: the algorithm and the proof that it converges"
+    ],
+    "steps": [
+      {
+        "label": "Write: Naive Bayes, PageRank, and k-means from memory",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Closed-book. Write: Bayes' theorem plus the Naive Bayes method with pseudo-count correction; the PageRank iteration v' = (1-beta)e/n + beta*M*v and the out-link proof; the k-means algorithm and its convergence argument.",
+        "noteIds": [
+          "m7-bayes-theorem",
+          "m7-naive-bayes-method",
+          "m7-pagerank-worked",
+          "m7-pagerank-outlinks-proof",
+          "m7-kmeans-algorithm",
+          "m7-kmeans-convergence"
+        ]
+      },
+      {
+        "label": "Read: check against the Naive Bayes worked example",
+        "kind": "read",
+        "minutes": 15,
+        "instruction": "Walk through the weather-data worked example once and confirm your pseudo-count handling matches it exactly.",
+        "noteIds": [
+          "m7-naive-bayes-worked"
+        ]
+      },
+      {
+        "label": "Do: two timed questions (classifier/PageRank + clustering)",
+        "kind": "do",
+        "minutes": 100,
+        "instruction": "Timer ~50 min each. Pick one Naive Bayes or PageRank question (Lecture 4 or 5 bank) and one k-means/clustering question (Lecture 6 bank).",
+        "resourceIds": [
+          "mat700-question-banks-lecture-4-question-bank",
+          "mat700-question-banks-lecture-5-question-bank",
+          "mat700-question-banks-lecture-6-question-bank"
+        ]
+      },
+      {
+        "label": "Test: mark strictly against the bank's solutions",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Mark each iteration/assignment step separately — partial-credit steps in PageRank and k-means are where marks are usually lost.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-4-question-bank",
+          "mat700-question-banks-lecture-5-question-bank",
+          "mat700-question-banks-lecture-6-question-bank"
+        ]
+      },
+      {
+        "label": "Write: repair the weakest template + update error log",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Redo the algorithm you fumbled, from a blank page, until the steps run in the right order without hesitation. Log the miss."
+      }
+    ]
+  },
+  'mat700-template-d': {
+    "concepts": [
+      "Softmax and cross-entropy definitions",
+      "Precision, recall, F-measure, and the F ≤ (p+r)/2 proof",
+      "Halving and weighted-majority mistake bounds (the boosting/meta-algorithm family)"
+    ],
+    "steps": [
+      {
+        "label": "Write: softmax, cross-entropy, precision/recall, and mistake bounds from memory",
+        "kind": "write",
+        "minutes": 45,
+        "instruction": "Closed-book. Write the softmax and cross-entropy formulas; precision/recall/F-measure plus the F ≤ (p+r)/2 proof; and the halving and weighted-majority mistake bounds.",
+        "noteIds": [
+          "m7-softmax",
+          "m7-cross-entropy",
+          "m7-precision-recall",
+          "m7-f-measure-proof",
+          "m7-halving-proof",
+          "m7-weighted-majority-bound"
+        ]
+      },
+      {
+        "label": "Read: boosting/meta-algorithm refresher",
+        "kind": "read",
+        "minutes": 10,
+        "instruction": "Skim the Lecture 7 notes for how boosting extends the halving/weighted-majority idea — there's no separate flashcard for this part, so this is the one source to lean on.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-7-notes"
+        ]
+      },
+      {
+        "label": "Do: two timed questions (softmax/metrics + experts)",
+        "kind": "do",
+        "minutes": 95,
+        "instruction": "Timer ~45-50 min each. One softmax/cross-entropy or precision-recall question (Lecture 2 or 4 bank), one halving/weighted-majority/boosting question (Lecture 7 bank).",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank",
+          "mat700-question-banks-lecture-4-question-bank",
+          "mat700-question-banks-lecture-7-question-bank"
+        ]
+      },
+      {
+        "label": "Test: mark strictly against the bank's solutions",
+        "kind": "test",
+        "minutes": 35,
+        "instruction": "Mark the proofs on structure, not just the final bound — each inequality step is worth marks on its own.",
+        "resourceIds": [
+          "mat700-question-banks-lecture-2-question-bank",
+          "mat700-question-banks-lecture-4-question-bank",
+          "mat700-question-banks-lecture-7-question-bank"
+        ]
+      },
+      {
+        "label": "Write: repair the weakest template + update error log",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Rebuild the weakest proof or metric derivation from scratch, cold, and log exactly which line you dropped."
+      }
+    ]
+  },
+
+  // MAT700 — Papers, repairs, final recall
+  'mat700-paper-a': {
+    "concepts": [
+      "The recurring MAT700 exam core across the 2023/2024 papers: TF-IDF, Bonferroni, PageRank, halving/weighted majority, kNN, Naive Bayes, k-means",
+      "Strict, topic-tagged marking that converts one timed score into a ranked, actionable repair list"
+    ],
+    "steps": [
+      {
+        "label": "Read: exam shape + recurring-topic map",
+        "kind": "read",
+        "minutes": 10,
+        "instruction": "Skim the 2023-vs-2024 topic table once, cold. Use it to decide which topics your mixed set must cover so nothing recurring gets skipped.",
+        "noteIds": [
+          "m7-exam-shape"
+        ]
+      },
+      {
+        "label": "Do: assemble the mixed timed set",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "Take the 2023 paper as the backbone and answer all 4 questions (not just 3) for full coverage. Pull 2-3 extra questions from each tutorial, plus the lecture 3 (similarity) question bank — 2023 doesn't test Jaccard/similarity, so this fills that real gap. Pack it into one closed-book set.",
+        "resourceIds": [
+          "mat700-past-papers-2023-past-paper",
+          "mat700-tutorials-tutorial-1-beamer",
+          "mat700-tutorials-tutorial-2-beamer",
+          "mat700-tutorials-tutorial-3-beamer",
+          "mat700-question-banks-lecture-3-question-bank"
+        ]
+      },
+      {
+        "label": "Test: two-hour timed closed-book attempt",
+        "kind": "test",
+        "minutes": 120,
+        "instruction": "No notes, no formula sheet, phone away. Stop at 120 minutes even if unfinished — an honest score matters more than a complete one."
+      },
+      {
+        "label": "Write: mark strictly + score by topic",
+        "kind": "write",
+        "minutes": 35,
+        "instruction": "Mark every question against the real solutions and the master cheat sheet, no benefit of the doubt. Tally correct/incorrect per topic (TF-IDF, similarity, PageRank, clustering, boosting, evaluation).",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-solutions",
+          "mat700-tutorials-tutorial-2-solutions",
+          "mat700-tutorials-tutorial-3-solutions",
+          "mat700-formula-sheets-master-formula-cheat-sheet"
+        ]
+      },
+      {
+        "label": "Write: rank the top three repair needs",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "From the topic tally, rank the three worst-scoring topics. Write them as the opening line of the repair-a error log — that's the only input that card needs."
+      }
+    ]
+  },
+  'mat700-repair-a': {
+    "concepts": [
+      "Targeted repair: redo only the failed templates from set A, from one matching source, not a full reread",
+      "Blank-page repetition as the actual test of whether a repair closed the gap"
+    ],
+    "steps": [
+      {
+        "label": "Write: redo every failed question from set A",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Work strictly from the paper-a error list, worst topic first. Redo each failed question fully with working — no peeking at solutions yet."
+      },
+      {
+        "label": "Read: one targeted source for your worst topic",
+        "kind": "read",
+        "minutes": 35,
+        "instruction": "Open only the ONE lecture-notes file or tutorial-solutions file that matches your top-ranked repair topic. Read it once, for the specific gap only — do not browse the others.",
+        "resourceIds": [
+          "mat700-lecture-notes-lecture-1-notes",
+          "mat700-lecture-notes-lecture-2-notes",
+          "mat700-lecture-notes-lecture-3-notes",
+          "mat700-lecture-notes-lecture-4-notes",
+          "mat700-lecture-notes-lecture-5-notes",
+          "mat700-lecture-notes-lecture-6-notes",
+          "mat700-lecture-notes-lecture-7-notes",
+          "mat700-tutorials-tutorial-1-solutions",
+          "mat700-tutorials-tutorial-2-solutions",
+          "mat700-tutorials-tutorial-3-solutions"
+        ]
+      },
+      {
+        "label": "Do: repeat from blank page",
+        "kind": "do",
+        "minutes": 30,
+        "instruction": "Close the source. Re-solve the same failed questions completely from memory (~5 min each). Compare against your own redo only at the end."
+      },
+      {
+        "label": "Write: update the formula sheet",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Add or correct any formula/procedure that caused a failure directly onto the two-hour exam cheat sheet. This feeds the final A4 sheet later, so word it the way you'll want it under time pressure.",
+        "resourceIds": [
+          "mat700-formula-sheets-two-hour-exam-cheat-sheet"
+        ]
+      }
+    ]
+  },
+  'mat700-paper-b': {
+    "concepts": [
+      "A second full timed simulation (2024 paper + fresh tutorial questions) testing whether set A's fixes actually held",
+      "Side-by-side topic comparison to separate one-off slips from genuinely repeated errors"
+    ],
+    "steps": [
+      {
+        "label": "Do: assemble the second mixed timed set",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "2024 paper as backbone, answer all 4. Swap in different tutorial questions than set A used, and add the lecture 6 (clustering) question bank as a second-pass check, so this is a genuinely new set, not a repeat.",
+        "resourceIds": [
+          "mat700-past-papers-2024-past-paper",
+          "mat700-tutorials-tutorial-1-beamer",
+          "mat700-tutorials-tutorial-2-beamer",
+          "mat700-tutorials-tutorial-3-beamer",
+          "mat700-question-banks-lecture-6-question-bank"
+        ]
+      },
+      {
+        "label": "Test: two-hour timed closed-book attempt",
+        "kind": "test",
+        "minutes": 120,
+        "instruction": "Same rules as set A: no notes, no formula sheet, stop at 120 minutes."
+      },
+      {
+        "label": "Write: mark strictly + score by topic",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Mark against the real solutions and your now-updated cheat sheet. Tally correct/incorrect per topic exactly as you did for set A.",
+        "resourceIds": [
+          "mat700-tutorials-tutorial-1-solutions",
+          "mat700-tutorials-tutorial-2-solutions",
+          "mat700-tutorials-tutorial-3-solutions",
+          "mat700-formula-sheets-two-hour-exam-cheat-sheet"
+        ]
+      },
+      {
+        "label": "Write: compare with set A + flag repeats",
+        "kind": "write",
+        "minutes": 30,
+        "instruction": "Put the two topic tallies side by side. Any topic that failed in both sets is a repeated error — name it explicitly; that name is the only input repair-b needs."
+      }
+    ]
+  },
+  'mat700-repair-b': {
+    "concepts": [
+      "Closing only confirmed repeat errors — deliberately not reopening the whole syllabus this late",
+      "Formula recall checked against your own compiled sheet, not new source material"
+    ],
+    "steps": [
+      {
+        "label": "Write: fix the repeated errors only",
+        "kind": "write",
+        "minutes": 40,
+        "instruction": "Take only the topics flagged as repeated across both mixed sets. Redo those specific questions fully with working, checking your cheat sheet only if stuck.",
+        "resourceIds": [
+          "mat700-formula-sheets-two-hour-exam-cheat-sheet"
+        ]
+      },
+      {
+        "label": "Do: one blank-page question per weak template",
+        "kind": "do",
+        "minutes": 40,
+        "instruction": "For every weak template from either mixed set (not just the exact repeats), solve one fresh question from blank memory, reusing a question you've already seen in tutorials or question banks. Do not open any new source."
+      },
+      {
+        "label": "Test: formula recall against your own sheet",
+        "kind": "test",
+        "minutes": 25,
+        "instruction": "Cover the cheat sheet. Write every formula on it from memory, then check. Circle only what's still wrong — that's the last thing to fix, nothing else.",
+        "resourceIds": [
+          "mat700-formula-sheets-two-hour-exam-cheat-sheet"
+        ]
+      },
+      {
+        "label": "Write: close the error log",
+        "kind": "write",
+        "minutes": 15,
+        "instruction": "Confirm every high-value error from both mixed sets now has a closed line in the error log. If anything remains open, decide explicitly to accept the risk rather than silently drop it — do not add new topics."
+      }
+    ]
+  },
+  'mat700-final-recall': {
+    "concepts": [
+      "Full closed-book recall of the seven calculations and eight proofs that carry most of the exam's marks",
+      "The two-sided A4 sheet: what's worth writing down versus what must already be memorized",
+      "Final logistics: only the still-open error-log lines, plus what's allowed in the room"
+    ],
+    "steps": [
+      {
+        "label": "Write: core formulas from memory",
+        "kind": "write",
+        "minutes": 25,
+        "instruction": "Blank page, no notes: write every formula from the seven-calculation drill and the A4-sheet plan (TF-IDF, PageRank, k-means objective, precision/recall/F, Naive Bayes, birthday-triples, weighted-majority/halving bounds). Check against the notes only after you finish.",
+        "noteIds": [
+          "m7-calculation-drill",
+          "m7-cheat-sheet-plan"
+        ]
+      },
+      {
+        "label": "Recite: procedure + proof triggers",
+        "kind": "test",
+        "minutes": 20,
+        "instruction": "Out loud or on paper, recite the trigger/skeleton for each of the eight proofs cold. Flag any proof you can't start within 15 seconds.",
+        "noteIds": [
+          "m7-proof-drill"
+        ]
+      },
+      {
+        "label": "Review: unresolved error-log lines only",
+        "kind": "read",
+        "minutes": 20,
+        "instruction": "Open the error log built across repair-a and repair-b. Read only the lines still marked open — skip everything already closed."
+      },
+      {
+        "label": "Do: prepare exam materials",
+        "kind": "do",
+        "minutes": 25,
+        "instruction": "Write the final one-sheet, two-sided A4 using the cheat-sheet plan. Pack your calculator and squared graph paper, and re-check what the exam-shape note says is actually allowed in the room.",
+        "noteIds": [
+          "m7-exam-shape"
+        ]
+      }
+    ]
+  },
+}
+
+function totalMinutes(steps) {
+  return (steps ?? []).reduce((sum, step) => sum + (Number(step.minutes) || 0), 0)
+}
+
+/**
+ * Attach the curated study sequence (and its rolled-up resource/note ids) to
+ * every card that has one. `studySequence` carries the ordered steps and the
+ * card's must-cover concepts; referenced resourceIds are also folded into
+ * card.resourceIds so "Resources for this card" always includes them,
+ * regardless of what the broader heuristic in cardResources.js would have
+ * picked on its own.
+ */
+export function applyCardStudySequences(cards) {
+  return cards.map((card) => {
+    const plan = CARD_STUDY_SEQUENCE[card.id]
+    if (!plan) return card
+
+    const stepResourceIds = plan.steps.flatMap((step) => step.resourceIds ?? [])
+    const resourceIds = [...new Set([...stepResourceIds, ...(card.resourceIds ?? [])])]
+
+    return {
+      ...card,
+      resourceIds,
+      studySequence: {
+        concepts: plan.concepts ?? [],
+        steps: plan.steps,
+        totalMinutes: totalMinutes(plan.steps),
+      },
+    }
+  })
+}

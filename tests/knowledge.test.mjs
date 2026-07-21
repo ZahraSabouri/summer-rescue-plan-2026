@@ -12,6 +12,7 @@ import {
   normaliseKnowledge,
   notesForCard,
   parseNoteBundle,
+  relatedNotesForCard,
   resolveModuleNotes,
   reviewStatus,
   searchNotes,
@@ -159,6 +160,37 @@ test('notesForCard filters by linked card id', () => {
   )
   assert.equal(notesForCard(notes, 'card-8').length, 0)
   assert.equal(notesForCard(notes, '').length, 0)
+})
+
+test('relatedNotesForCard joins notes to a card by session/lecture/pack key', () => {
+  const notes = resolve(
+    normaliseKnowledge({
+      notes: {
+        's2-why': { id: 's2-why', moduleId: 'aml', title: 'Why preprocessing', topic: 'S2 · Foundations', body: 'x' },
+        's2-encode': { id: 's2-encode', moduleId: 'aml', title: 'Encoding', topic: 'S2 · Inspection', body: 'x' },
+        's3-bias': { id: 's3-bias', moduleId: 'aml', title: 'Bias/variance', topic: 'S3 · Models', body: 'x' },
+        'kn-explicit': { id: 'kn-explicit', moduleId: 'aml', title: 'Pinned', topic: 'Foundations', body: 'x', cardIds: ['card-s2'] },
+      },
+      meta: {},
+    }),
+  )
+
+  // An S2 card pulls in every S2 note plus its explicitly pinned note, but not S3.
+  const s2Card = { id: 'card-s2', title: 'AML S2 — Run Lab 2 + preprocessing inventory' }
+  const s2Ids = relatedNotesForCard(notes, s2Card).map((note) => note.id).sort()
+  assert.deepEqual(s2Ids, ['kn-explicit', 's2-encode', 's2-why'])
+
+  // A card with no session key in its title falls back to explicit links only.
+  const metaCard = { id: 'card-s2', title: 'AML — Open-book master index (start)' }
+  assert.deepEqual(
+    relatedNotesForCard(notes, metaCard).map((note) => note.id),
+    ['kn-explicit'],
+  )
+
+  // A consolidation card spanning S1–S5 reaches every session in the range.
+  const consolidation = { id: 'card-030', title: 'AML — 5 session summary sheets (consolidate S1–S5)' }
+  const spanIds = relatedNotesForCard(notes, consolidation).map((note) => note.id).sort()
+  assert.deepEqual(spanIds, ['s2-encode', 's2-why', 's3-bias'])
 })
 
 test('parseNoteBundle splits a multi-note file and reads its metadata', () => {

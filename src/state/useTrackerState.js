@@ -631,10 +631,22 @@ export function useTrackerState(baseCards) {
         revision: revisionRef.current,
         writerId: writerIdRef.current,
       })
-      stateRef.current = persistedState
       serverFingerprintRef.current = fingerprint
       revisionRef.current = result.revision
-      setState((current) => (current === persistedState ? current : persistedState))
+      // Fold the snapshot we just persisted back into React state ONLY when the
+      // live state still matches it. If edits landed while the write was in
+      // flight — three checklist boxes ticked, or resource progress logged,
+      // during the round-trip — keep the newer state instead of rolling back to
+      // the start-of-save snapshot. That rollback was the "boxes check then
+      // uncheck themselves" bug, and because every mutation shares this save path
+      // it hit checklist, resource progress, notes and done-toggles alike.
+      // serverFingerprintRef points at the saved snapshot, so the debounce effect
+      // sees the delta and schedules a follow-up save for the newer edits.
+      // stateRef re-syncs to whichever state wins via the [state] effect.
+      setState((current) => {
+        if (current === persistedState) return current
+        return stateFingerprint(withCurrentSnapshot(current)) === fingerprint ? persistedState : current
+      })
       setLocalFile((current) => ({
         ...current,
         status: 'saved',

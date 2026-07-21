@@ -358,7 +358,7 @@ lines(tp, mt, col="red")
 2. Write the covariance line for $R(t,s) = e^{-3|t-s|^{1.5}}$. :: `CovMtp[i,j] = exp(-3*abs(tp[i]-tp[j])^1.5)`.
 3. What three parts of the template change between questions? :: The points `tp`, the mean function `mt`, and the covariance expression inside the loop.
 
-@@ id=ts-smoothing | title=Smoothing: SMA, CMA, WMA and SES | kind=cheatsheet | topic=TS · L2 Smoothing | tags=definition,exam | cards=card-002
+@@ id=ts-smoothing | title=Smoothing: SMA, CMA, WMA and SES | kind=cheatsheet | topic=TS · L2 Smoothing | tags=definition,exam | cards=card-002,card-006
 The model is **"signal + noise"**; the goal is to **suppress the noise** and estimate the underlying signal — decomposing the series into a **low-frequency "signal"** and a **high-frequency "noise"**.
 
 | Method | Formula | Note |
@@ -379,7 +379,7 @@ The model is **"signal + noise"**; the goal is to **suppress the noise** and est
 2. In SES, what does $\alpha$ close to 1 do? :: Makes the model react quickly to changes, with little smoothing.
 3. Prove that $\alpha = 1$ in SES returns the original series. :: $E_k = 1\cdot x_k + 0\cdot E_{k-1} = x_k$ for every $k$.
 
-@@ id=ts-holt-winters | title=Holt–Winters | kind=formula | topic=TS · L2 Smoothing | tags=exam,code,R | cards=card-002
+@@ id=ts-holt-winters | title=Holt–Winters | kind=formula | topic=TS · L2 Smoothing | tags=exam,code,R | cards=card-002,card-006
 Extends exponential smoothing to capture **trend and seasonality simultaneously** with three smoothing equations for level $L_t$, trend $b_t$ and season $s_t$:
 
 $$L_t = \alpha(x_t - s_{t-m}) + (1-\alpha)(L_{t-1} + b_{t-1})$$
