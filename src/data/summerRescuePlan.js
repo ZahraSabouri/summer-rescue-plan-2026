@@ -50,6 +50,16 @@ const PHASE_CAPACITY_HOURS = {
   MAT700: { 'Phase 0': 19, 'Phase 1': 15, 'Phase 2': 12 },
 }
 
+// Realism buffer. The capacity hours above are the optimistic protected-timetable
+// lanes, but real learning runs slower: a 30-minute video takes 45–60 min once you
+// pause, rewind and look things up, and most cards need roughly an extra half hour
+// end to end. This factor inflates every exam-card estimate so the numbers are
+// honest instead of quietly compressed — it lifts the ~6.7h/day study load toward
+// the intended ~8h/day. It is deliberately just a multiplier: the card sequence and
+// dates are unchanged, because those are assigned by hour-RATIO within each phase
+// window, which uniform scaling preserves. Tune this one number to taste.
+export const REALISM_FACTOR = 1.25
+
 function dateRange(start, end) {
   const values = []
   const cursor = new Date(`${start}T12:00:00`)
@@ -146,7 +156,7 @@ function fitExamCardsToTimetable(cards) {
     Object.entries(phases).flatMap(([phase, targetHours]) =>
       fitCardsToTotal(
         cards.filter((card) => card.moduleGroup === moduleGroup && card.phase === phase),
-        targetHours,
+        targetHours * REALISM_FACTOR,
       ),
     ),
   )
@@ -413,13 +423,28 @@ const projectCards = [
   }),
   datedCard({
     id: 'project-submit', number: 204, title: 'CMT501 finalisation and 20-minute team video — submit by 6 August', moduleGroup: 'Group Project', phase: 'Phase 1', startDate: '2026-08-03', dueDate: '2026-08-06', hours: 8, priority: 'Critical',
-    description: 'Only integration, QA, recording, coversheet, and submission work. The team video is nominally 20 minutes and worth 60%.', checklist: ['Freeze scope', 'Run integrated demo from main', 'Verify claims against working functionality', 'Record/review 20-minute video', 'Submit required files and preserve confirmation'],
+    description: 'Only integration, QA, recording, coversheet, and submission work. The team video is nominally 20 minutes and worth 60%.', checklist: ['Freeze scope', 'Run integrated demo from main', 'Verify claims against working functionality', 'Agree a per-segment script and do one timed run-through before recording', 'Record/review 20-minute video', 'Submit required files and preserve confirmation'],
     evidence: 'final video + coversheet + submission confirmation + contribution record', done: 'team submission is confirmed before the real deadline', tags: ['project', 'deadline', 'submission', 'fixed'], slotLabel: 'Mon/Wed protected blocks + Thu 10:00–14:00 class/submission window',
   }),
+  // The individual reflective report is 40% of the module and was previously buried
+  // in a single 3h "reserve". These three cards give it a real, staged lane —
+  // outline+evidence while the project is fresh, a full draft, then finalise+submit —
+  // so it cannot be crowded out by the team video and the exams. Dates target the
+  // post-presentation window; the first card confirms the real deadline to shift to.
   datedCard({
-    id: 'project-evidence-reserve', number: 205, title: 'CMT501 post-submit evidence/report reserve', moduleGroup: 'Group Project', phase: 'Phase 1', startDate: '2026-08-08', dueDate: '2026-08-12', hours: 3, priority: 'High',
-    description: 'Small protected reserve for contribution evidence and the individual 1,500-word report lane. Release unused time to the three exams.', checklist: ['Save issues/MRs/reviews/decisions/testing evidence', 'Update contribution log', 'Capture report points: 400/700/400 word structure', 'Record the official report deadline when confirmed'],
-    evidence: 'organised evidence folder + report outline/deadline note', done: 'evidence is safe and any remaining report action is explicit', tags: ['project', 'evidence', 'report', 'flex'], slotLabel: 'Sat 8 Aug 1.5h + Wed 12 Aug 1.5h; release if closed',
+    id: 'project-report-outline', number: 205, title: 'CMT501 reflective report — outline + evidence gather (start the 40%)', moduleGroup: 'Group Project', phase: 'Phase 1', startDate: '2026-08-07', dueDate: '2026-08-07', hours: 1.5, priority: 'High',
+    description: 'The individual reflective report is worth 40% and is easy to under-serve after the team video. Start it while the project is fresh: confirm the real deadline, gather your evidence, and outline the 400/700/400 structure.', checklist: ['Confirm the official report deadline and word limit from the brief — do not assume', 'Archive your contribution evidence: issues, MRs, reviews, decisions, testing', 'Outline the 400/700/400 structure with bullet points per section', 'Note your 2–3 strongest reflection points (what you led; what you would do differently)'],
+    evidence: 'report outline + organised contribution-evidence folder + confirmed deadline', done: 'the report is outlined against a confirmed deadline with evidence gathered', tags: ['project', 'report', 'evidence'], slotLabel: 'Fri 7 Aug 1.5h',
+  }),
+  datedCard({
+    id: 'project-report-draft', number: 206, title: 'CMT501 reflective report — full first draft (~1,500 words)', moduleGroup: 'Group Project', phase: 'Phase 1', startDate: '2026-08-09', dueDate: '2026-08-10', hours: 2, priority: 'High',
+    description: 'Get all ~1,500 words down from the outline. Draft first, polish later — a complete rough draft beats a perfect introduction.', checklist: ['Write the full draft to the 400/700/400 structure', 'Ground each claim in a specific piece of contribution evidence', 'Cover your role, the teamwork/process, what went well, and what you would change', 'Leave it to rest before the final polish'],
+    evidence: 'complete ~1,500-word first draft', done: 'a full-length draft exists covering every required section', tags: ['project', 'report'], slotLabel: 'Sat 9 Aug 1.5h + Sun 10 Aug 0.5h',
+  }),
+  datedCard({
+    id: 'project-report-submit', number: 207, title: 'CMT501 reflective report — finalise + SUBMIT (40%)', moduleGroup: 'Group Project', phase: 'Phase 2', startDate: '2026-08-11', dueDate: '2026-08-12', hours: 1.5, priority: 'Critical',
+    description: 'Polish against the marking criteria and word limit, then submit the individual report and preserve the confirmation. Shift this date if the confirmed deadline differs.', checklist: ['Edit for clarity and cut to the word limit', 'Check the draft against the marking criteria / rubric', 'Proofread; verify formatting and any required coversheet', 'Submit and save the confirmation'],
+    evidence: 'submitted report + submission confirmation', done: 'the 40% report is submitted and confirmed', tags: ['project', 'report', 'submission', 'deadline'], slotLabel: 'Mon 11 Aug 1h + Wed 12 Aug 0.5h',
   }),
 ]
 

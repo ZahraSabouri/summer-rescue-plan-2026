@@ -15,6 +15,7 @@ import { codeLanguage, isPlaceholderResourceUrl, isYouTube, youtubeEmbedUrl } fr
 import { averageResourceProgress } from '../utils/resourceProgress.js'
 import { CardSummary } from './CardSummary'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
+import { RichTextField } from './RichTextField'
 
 function percent(done, total) {
   if (!total) return 0
@@ -1000,10 +1001,10 @@ export function ModuleWorkspace({
                 <h2>Module notes</h2>
               </div>
             </div>
-            <textarea
+            <RichTextField
               className="module-note"
               value={moduleNote}
-              onChange={(event) => onModuleNoteChange(module.id, event.target.value)}
+              onChange={(next) => onModuleNoteChange(module.id, next)}
               placeholder="Fast lookup paths, formulas, traps, or the next repair target."
             />
           </section>

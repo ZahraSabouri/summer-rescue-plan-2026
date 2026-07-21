@@ -44,7 +44,9 @@ export function CardSummary({
   const overdue = Boolean(referenceDate && isOverdue(card, referenceDate))
 
   return (
-    <article className={`work-card ${compact ? 'compact' : ''} ${board ? 'board-card' : ''} ${card.done ? 'is-done' : ''}`}>
+    <article
+      className={`work-card ${compact ? 'compact' : ''} ${board ? 'board-card' : ''} ${card.done ? 'is-done' : ''} ${overdue ? 'is-overdue' : ''}`}
+    >
       <div className="work-card-main">
         <div className="work-card-head">
           <span className="card-number">{cardNumberLabel(card.number)}</span>

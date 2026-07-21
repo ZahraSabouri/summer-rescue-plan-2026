@@ -1,6 +1,11 @@
-// Generated from ../trello_import.csv by scripts/generateBaseCards.mjs.
-// This file contains sanitized planning data only. User progress lives in the local API state file,
-// with browser localStorage kept as a secondary fallback.
+// Live plan source cards — Applied ML + Time Series only.
+//
+// These are the cards summerRescuePlan.js selects (via AML_KEEP / TIME_SERIES_KEEP),
+// transforms and dates into the live rescueCards. Trimmed 2026-07-21: 57 superseded
+// cards were removed (the old MAT700 "insurance" lane, non-selected AML/TS alternates,
+// and the pre-20-July project/health/admin plan). MAT700, project, job and admin cards
+// are defined directly in summerRescuePlan.js, which is the authoritative live plan.
+// Sanitized planning data only; user progress lives in the local API state file.
 
 export const baseCards = [
   {
@@ -96,109 +101,6 @@ export const baseCards = [
     "doneCondition": "given a raw column you can state the leakage-safe missing → encode → scale plan",
     "trackerNotes": "",
     "tags": []
-  },
-  {
-    "id": "card-004",
-    "number": 4,
-    "sortOrder": 4,
-    "title": "PROJECT — Catch up missed 2 Jul CMT501 session",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "This Week",
-    "status": "This Week",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Sat 4 Jul 18:00–19:30 (1.5h)",
-    "startDate": "2026-07-04",
-    "dueDate": "2026-07-04",
-    "dueDateTime": "2026-07-04 19:30",
-    "estimatedHours": 1.5,
-    "description": "Missed Thu 2 Jul because of room move/classes. Use a focused catch-up to regain the Session 1 essentials: Git intro, agile/waterfall worksheets, deliverables, dates, and team/project open questions.",
-    "checklist": [
-      "Review Session 1 Git intro material and note any commands/workflow gaps",
-      "Review agile/waterfall worksheets and capture the key submission expectations",
-      "Extract deliverables, deadlines, compulsory dates, and team/project open questions",
-      "Update CMT501_project_plan.md or Open_Questions.md with what must be followed up"
-    ],
-    "evidenceRequirement": "CMT501_session1_catchup.md + updated project calendar/open questions",
-    "doneCondition": "missed session is summarised well enough to rejoin the next class",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "date-watch",
-      "fixed"
-    ]
-  },
-  {
-    "id": "card-126",
-    "number": 126,
-    "sortOrder": 4.1,
-    "title": "PROJECT — Message group chat: schedule practice-exercise meeting",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Today",
-    "status": "Today",
-    "priority": "Critical",
-    "slotType": "Flex",
-    "slotLabel": "Sat 4 Jul or Sun 5 Jul (15m)",
-    "startDate": "2026-07-04",
-    "dueDate": "2026-07-04",
-    "dueDateTime": "2026-07-04 21:00",
-    "estimatedHours": 0.25,
-    "description": "Send a short group-chat message to schedule the CMT501 GitLab e-voting practice exercise from the 2 Jul session. Keep it concrete: offer 2-3 slots, state the exercise goal, and ask which Tuesday GitLab repo the team will share.",
-    "checklist": [
-      "Propose 2-3 time slots for a short call/meet this week",
-      "State the goal: GitLab e-voting practice exercise from the 2 Jul session",
-      "Ask whose Tuesday GitLab repo the team will share"
-    ],
-    "evidenceRequirement": "screenshot or copied text of the group-chat message",
-    "doneCondition": "message sent with slots, goal, and repo-owner question",
-    "trackerNotes": "Sources: 2 Jul Student Futures and Teamwork with GitLab transcript around GitLab practice; 2 Jul Team and Project Selections transcript for assessment expectations.",
-    "tags": [
-      "project",
-      "gitlab",
-      "fixed"
-    ]
-  },
-  {
-    "id": "card-127",
-    "number": 127,
-    "sortOrder": 4.2,
-    "title": "PROJECT — Team meeting: plan e-voting GitLab practice",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "This Week",
-    "status": "This Week",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Week of 6 Jul: 1h meeting + up to 2h own issue",
-    "startDate": "2026-07-05",
-    "dueDate": "2026-07-10",
-    "dueDateTime": "2026-07-10 18:00",
-    "estimatedHours": 3,
-    "description": "Run a focused team meeting for the CMT501 e-voting GitLab practice. The aim is process evidence, not building the whole system alone: one shared repo, one small issue per person, branch, merge request, teammate review, and screenshots for report Section 2.",
-    "checklist": [
-      "Pick one member's repo; owner invites everyone",
-      "Create at least 4 issues + milestone \"iteration one\"",
-      "Use the simplest version: one constituency, parties only, capture votes, D'Hondt seat calculation, report",
-      "Assign one small issue per person",
-      "Each person: branch -> implement -> merge request -> teammate reviews/approves -> merge",
-      "Save screenshots of the board and merge requests as direct evidence for report Section 2"
-    ],
-    "evidenceRequirement": "meeting note + GitLab board/MR screenshots + your one small issue branch/MR",
-    "doneCondition": "team has a repo, milestone/issues, one small assignment each, and evidence saved",
-    "trackerNotes": "Sources: Lecture - 02.07.2026 (Student Futures and Teamwork with Gitlab).txt, around 33:00-46:00 and 1:23:00-1:26:00; Lecture - 02.07.2026 (Team and Project Selections).txt.",
-    "tags": [
-      "project",
-      "gitlab",
-      "evidence"
-    ]
   },
   {
     "id": "card-005",
@@ -309,15 +211,15 @@ export const baseCards = [
     "dueDate": "2026-07-06",
     "dueDateTime": "2026-07-06 16:30",
     "estimatedHours": 3,
-    "description": "Consolidate S2 after the lab: assemble the reusable leakage-safe playbook — scaling rules plus the top exam trap, leakage (fit on train only). Completes AML S2.",
+    "description": "Consolidate S2 into one exam-ready page. Using your S2 concept notes and the Lab 2 run, assemble the reusable leakage-safe preprocessing playbook and pressure-test it from memory. Completes AML S2.",
     "checklist": [
-      "Scaling rule + which models require it",
-      "Leakage rule + 2 ways it sneaks in",
-      "Assemble one-page playbook: missing->encode->scale->split->leakage",
-      "Dry-run it on crx in your head"
+      "Assemble the one-page playbook in order: missing → encode → scale → split, with leakage guarded (fit on train only)",
+      "From the Lab 2 run, add the two ways leakage actually sneaks in and the fix for each",
+      "Mark which models need scaling and which don't",
+      "Dry-run the playbook on a fresh column set (e.g. crx) from memory — no notes"
     ],
     "evidenceRequirement": "AML_S2_preprocessing_playbook.md",
-    "doneCondition": "given a raw CSV you can state the leakage-safe plan",
+    "doneCondition": "given a raw CSV you can state the leakage-safe plan from the playbook, unaided",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -444,39 +346,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-013",
-    "number": 13,
-    "sortOrder": 13,
-    "title": "MAT700 — L1–L2 reactivation (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~3h (suggest Sun eve if week on plan)",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 3,
-    "description": "INSURANCE (no fixed date — pending SIMS). Cluster: birthday/expected-count & Bonferroni, IDF/TF-IDF, document-term matrix / vector-space model. Tutorials are the centre; slides only support them. One solved problem = MAT700 alive.",
-    "checklist": [
-      "Targeted skim only to support the problems",
-      "Procedure/formula sheet for the cluster",
-      "Attempt 1–2 tutorial questions, check, correct",
-      "Error-log entry + 2–3 flashcards"
-    ],
-    "evidenceRequirement": "1 worked tutorial question + procedure sheet ('MAT700 alive')",
-    "doneCondition": "cluster touched with >=1 solved problem + error-log entry",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
     "id": "card-014",
     "number": 14,
     "sortOrder": 14,
@@ -505,39 +374,6 @@ export const baseCards = [
     "doneCondition": "Lab 3 runs; results explained with your S3 concepts",
     "trackerNotes": "",
     "tags": []
-  },
-  {
-    "id": "card-125",
-    "number": 125,
-    "sortOrder": 125,
-    "title": "PROJECT — Data Workshop for MSc Projects",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "This Week",
-    "status": "This Week",
-    "priority": "High",
-    "slotType": "Fixed",
-    "slotLabel": "Wed 8 Jul 11:00–12:00 Data Workshop, Abacws 2.35",
-    "startDate": "2026-07-08",
-    "dueDate": "2026-07-08",
-    "dueDateTime": "2026-07-08 12:00",
-    "estimatedHours": 1,
-    "description": "Fixed workshop for MSc students doing data analysis in projects/dissertations. Attend in person at Abacws 2.35 if possible, or online via the Teams invite. Capture directly useful methods/questions for the group project/dissertation workflow.",
-    "checklist": [
-      "Accept the invite and confirm in-person or virtual attendance",
-      "Attend 11:00–12:00 at Abacws 2.35 or via Teams invite",
-      "Note any data-analysis methods, support routes, or project/dissertation advice",
-      "Add useful follow-up actions/questions to CMT501_project_plan.md or Open_Questions.md"
-    ],
-    "evidenceRequirement": "short workshop notes + any follow-up questions/actions",
-    "doneCondition": "attended or watched online; notes/actions captured",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
-    ]
   },
   {
     "id": "card-015",
@@ -665,39 +501,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-019",
-    "number": 19,
-    "sortOrder": 19,
-    "title": "MAT700 — L3–L4 cluster (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~2.5h",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 2.5,
-    "description": "INSURANCE (no fixed date — pending SIMS). Cluster: graph basics (sum of degrees, adjacency matrix + powers), Jaccard similarity (sets & bags), distance axioms. Tutorials are the centre; slides only support them. One solved problem = MAT700 alive.",
-    "checklist": [
-      "Targeted skim only to support the problems",
-      "Procedure/formula sheet for the cluster",
-      "Attempt 1–2 tutorial questions, check, correct",
-      "Error-log entry + 2–3 flashcards"
-    ],
-    "evidenceRequirement": "1 worked tutorial question + procedure sheet ('MAT700 alive')",
-    "doneCondition": "cluster touched with >=1 solved problem + error-log entry",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
     "id": "card-020",
     "number": 20,
     "sortOrder": 20,
@@ -787,39 +590,6 @@ export const baseCards = [
     "trackerNotes": "",
     "tags": [
       "exam"
-    ]
-  },
-  {
-    "id": "card-023",
-    "number": 23,
-    "sortOrder": 23,
-    "title": "PROJECT — Paired Git + project pitches + team pitch prep",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "This Week",
-    "status": "This Week",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Thu 9 Jul 10:00–12:00 + 13:00–16:00 lectures",
-    "startDate": "2026-07-09",
-    "dueDate": "2026-07-09",
-    "dueDateTime": "2026-07-09 18:00",
-    "estimatedHours": 5,
-    "description": "Project lecture day. Paired Git work, hear project pitches, prep your team pitch.",
-    "checklist": [
-      "Attend/watch both lecture blocks",
-      "Complete paired Git exercise",
-      "Note candidate projects + your preferences",
-      "Contribute to team pitch prep; log your contribution"
-    ],
-    "evidenceRequirement": "paired-Git artefact + pitch notes + contribution log",
-    "doneCondition": "sessions done; pitch prep contributed",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
     ]
   },
   {
@@ -975,71 +745,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-029",
-    "number": 29,
-    "sortOrder": 29,
-    "title": "MAT700 — L5–L6 cluster (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~2.5h",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 2.5,
-    "description": "INSURANCE (no fixed date — pending SIMS). Cluster: distance axioms & proofs (L-infinity, edit distance, Jaccard distance), kNN and distances. Tutorials are the centre; slides only support them. One solved problem = MAT700 alive.",
-    "checklist": [
-      "Targeted skim only to support the problems",
-      "Procedure/formula sheet for the cluster",
-      "Attempt 1–2 tutorial questions, check, correct",
-      "Error-log entry + 2–3 flashcards"
-    ],
-    "evidenceRequirement": "1 worked tutorial question + procedure sheet ('MAT700 alive')",
-    "doneCondition": "cluster touched with >=1 solved problem + error-log entry",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
-    "id": "card-030",
-    "number": 30,
-    "sortOrder": 30,
-    "title": "AML — 5 session summary sheets (consolidate S1–S5)",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "AM",
-    "slotLabel": "Tue 14 Jul 13:30–16:30 (3h)",
-    "startDate": "2026-07-14",
-    "dueDate": "2026-07-14",
-    "dueDateTime": "2026-07-14 16:30",
-    "estimatedHours": 3,
-    "description": "Pull S1–S5 into 5 tight summary sheets — the backbone of the open-book pack.",
-    "checklist": [
-      "One summary sheet per session (S1–S5)",
-      "Each: key methods + the lab that proves it",
-      "Cross-link to checklists",
-      "Store together for open-book use"
-    ],
-    "evidenceRequirement": "5 AML session summary sheets",
-    "doneCondition": "all 5 sessions summarised on one page each",
-    "trackerNotes": "",
-    "tags": [
-      "date-watch"
-    ]
-  },
-  {
     "id": "card-031",
     "number": 31,
     "sortOrder": 31,
@@ -1067,39 +772,6 @@ export const baseCards = [
     "doneCondition": "ACF/PACF signatures reproduced closed-book",
     "trackerNotes": "",
     "tags": []
-  },
-  {
-    "id": "card-032",
-    "number": 32,
-    "sortOrder": 32,
-    "title": "Rescue / buffer — reconcile Weeks 1–2",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Wed 15 Jul 13:30–15:00 (1.5h)",
-    "startDate": "2026-07-15",
-    "dueDate": "2026-07-15",
-    "dueDateTime": "2026-07-15 15:00",
-    "estimatedHours": 1.5,
-    "description": "Buffer / rescue slot. Absorb anything that slipped this week; if nothing slipped, do light recall and rest. Protects the streak without forcing new load.",
-    "checklist": [
-      "Pull any unfinished card from the week into today",
-      "If clear: 30–45 min mixed recall across modules",
-      "Update the tracker Daily_Log + Weekly_Spine",
-      "Protect sleep — peak, don't grind"
-    ],
-    "evidenceRequirement": "tracker updated; slipped cards cleared or rescheduled",
-    "doneCondition": "week reconciled; nothing silently lost",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health"
-    ]
   },
   {
     "id": "card-033",
@@ -1164,39 +836,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-035",
-    "number": 35,
-    "sortOrder": 35,
-    "title": "MAT700 — L7 cluster (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Fri 17 Jul 08:30–11:00 (2.5h)",
-    "startDate": "2026-07-17",
-    "dueDate": "2026-07-17",
-    "dueDateTime": "2026-07-17 11:00",
-    "estimatedHours": 2.5,
-    "description": "INSURANCE (no fixed date — pending SIMS). Cluster: Naive Bayes, PageRank / link analysis, clustering & k-means, softmax & cross-entropy. Tutorials are the centre; slides only support them. One solved problem = MAT700 alive.",
-    "checklist": [
-      "Targeted skim only to support the problems",
-      "Procedure/formula sheet for the cluster",
-      "Attempt 1–2 tutorial questions, check, correct",
-      "Error-log entry + 2–3 flashcards"
-    ],
-    "evidenceRequirement": "1 worked tutorial question + procedure sheet ('MAT700 alive')",
-    "doneCondition": "cluster touched with >=1 solved problem + error-log entry",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
     "id": "card-036",
     "number": 36,
     "sortOrder": 36,
@@ -1255,39 +894,6 @@ export const baseCards = [
     "trackerNotes": "",
     "tags": [
       "exam"
-    ]
-  },
-  {
-    "id": "card-038",
-    "number": 38,
-    "sortOrder": 38,
-    "title": "MAT700 — Learning framework + precision/recall + experts (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Sat 18 Jul 08:30–10:30 (2h)",
-    "startDate": "2026-07-18",
-    "dueDate": "2026-07-18",
-    "dueDateTime": "2026-07-18 10:30",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date — pending SIMS). Cluster: learning framework, precision/recall/F-measure, halving & weighted-majority/expert algorithms (AdaBoost-style if in materials). Tutorials are the centre; slides only support them. One solved problem = MAT700 alive.",
-    "checklist": [
-      "Targeted skim only to support the problems",
-      "Procedure/formula sheet for the cluster",
-      "Attempt 1–2 tutorial questions, check, correct",
-      "Error-log entry + 2–3 flashcards"
-    ],
-    "evidenceRequirement": "1 worked tutorial question + procedure sheet ('MAT700 alive')",
-    "doneCondition": "cluster touched with >=1 solved problem + error-log entry",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
     ]
   },
   {
@@ -1380,70 +986,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-042",
-    "number": 42,
-    "sortOrder": 42,
-    "title": "PROJECT — Lego Workshop + project kickoff team meeting",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Thu 16 Jul 10:00–12:00 + 13:00–16:00 lectures",
-    "startDate": "2026-07-16",
-    "dueDate": "2026-07-16",
-    "dueDateTime": "2026-07-16 18:00",
-    "estimatedHours": 5,
-    "description": "Project lecture day. Lego Workshop + kickoff. Confirm project, roles, first sprint.",
-    "checklist": [
-      "Attend/watch both blocks + Lego Workshop",
-      "Confirm assigned project + team roles",
-      "Agree first deliverables + weekly meeting slot",
-      "Update CMT501_project_plan.md + Open_Questions.md"
-    ],
-    "evidenceRequirement": "kickoff notes + roles + plan update",
-    "doneCondition": "project + roles + first sprint agreed",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
-    ]
-  },
-  {
-    "id": "card-043",
-    "number": 43,
-    "sortOrder": 43,
-    "title": "AML — Closed-book full-syllabus recall sweep",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "AM",
-    "slotLabel": "Sun 19 Jul 13:30–16:00 (2.5h)",
-    "startDate": "2026-07-19",
-    "dueDate": "2026-07-19",
-    "dueDateTime": "2026-07-19 16:00",
-    "estimatedHours": 2.5,
-    "description": "Find what's actually shaky before exam-mode: rapid closed-book recall across S1–S5.",
-    "checklist": [
-      "20 closed-book prompts spanning S1–S5",
-      "Mark; rank topics by weakness",
-      "Feed weak list into Phase 3 mocks"
-    ],
-    "evidenceRequirement": "AML recall sweep + ranked weak list",
-    "doneCondition": "weak topics ranked for Phase 3",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
     "id": "card-044",
     "number": 44,
     "sortOrder": 44,
@@ -1472,40 +1014,6 @@ export const baseCards = [
     "doneCondition": "real-data workflow + SSA skeleton captured",
     "trackerNotes": "",
     "tags": []
-  },
-  {
-    "id": "card-045",
-    "number": 45,
-    "sortOrder": 45,
-    "title": "MAT700 — Timed mini-mock (4 tutorial Qs) + error log (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Mon 20 Jul 08:30–10:30 (2h)",
-    "startDate": "2026-07-20",
-    "dueDate": "2026-07-20",
-    "dueDateTime": "2026-07-20 10:30",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date — pending SIMS). First MAT700 exam-mode taste.",
-    "checklist": [
-      "Pick 4 tutorial Qs across covered clusters",
-      "Sit to time, closed-book",
-      "Mark, correct, log errors",
-      "2–3 flashcards on the misses"
-    ],
-    "evidenceRequirement": "timed 4-Q attempt + error-log update",
-    "doneCondition": "4 Qs sat to time, marked, errors logged",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch",
-      "exam"
-    ]
   },
   {
     "id": "card-046",
@@ -1596,72 +1104,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-049",
-    "number": 49,
-    "sortOrder": 49,
-    "title": "PHASE 2 CHECKPOINT — first pass complete review",
-    "module": "Admin",
-    "moduleGroup": "Admin",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "AM",
-    "slotLabel": "Tue 21 Jul 13:30–15:30 (2h)",
-    "startDate": "2026-07-21",
-    "dueDate": "2026-07-21",
-    "dueDateTime": "2026-07-21 15:30",
-    "estimatedHours": 2,
-    "description": "Confirm the Phase-2 exit condition: every module covered once with formula/procedure sheets + worked examples.",
-    "checklist": [
-      "Tick each unit: AML S1–S5, TS A–F, MAT700 clusters touched",
-      "Confirm each module has sheets + self-test evidence",
-      "Write the Phase-3 weak-topic target list",
-      "Update Modules_Map %Done + Weekly_Spine"
-    ],
-    "evidenceRequirement": "Phase-2 checkpoint note + weak-topic list",
-    "doneCondition": "all first-pass content covered with evidence",
-    "trackerNotes": "",
-    "tags": [
-      "admin",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-050",
-    "number": 50,
-    "sortOrder": 50,
-    "title": "Rescue / buffer — reconcile Week 3 + rest",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Tue 21 Jul 16:00–17:30 (1.5h)",
-    "startDate": "2026-07-21",
-    "dueDate": "2026-07-21",
-    "dueDateTime": "2026-07-21 17:30",
-    "estimatedHours": 1.5,
-    "description": "Buffer / rescue slot. Absorb anything that slipped this week; if nothing slipped, do light recall and rest. Protects the streak without forcing new load.",
-    "checklist": [
-      "Pull any unfinished card from the week into today",
-      "If clear: 30–45 min mixed recall across modules",
-      "Update the tracker Daily_Log + Weekly_Spine",
-      "Protect sleep — peak, don't grind"
-    ],
-    "evidenceRequirement": "tracker updated; slipped cards cleared or rescheduled",
-    "doneCondition": "week reconciled; nothing silently lost",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health"
-    ]
-  },
-  {
     "id": "card-051",
     "number": 51,
     "sortOrder": 51,
@@ -1720,71 +1162,6 @@ export const baseCards = [
     ],
     "evidenceRequirement": "timed A–B template drills + results",
     "doneCondition": "A–B templates done to time",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-053",
-    "number": 53,
-    "sortOrder": 53,
-    "title": "MAT700 — Templates: TF-IDF + graphs timed (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Wed 22 Jul 19:30–21:30 (2h)",
-    "startDate": "2026-07-22",
-    "dueDate": "2026-07-22",
-    "dueDateTime": "2026-07-22 21:30",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date). Exam-template drill on the highest-yield clusters.",
-    "checklist": [
-      "Timed: 1 TF-IDF/doc-term Q + 1 graph/adjacency Q",
-      "Mark, correct, log",
-      "Flashcards on misses"
-    ],
-    "evidenceRequirement": "timed 2-Q attempt + error log",
-    "doneCondition": "2 templates sat to time",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-054",
-    "number": 54,
-    "sortOrder": 54,
-    "title": "AML — Weak-topic repair #1",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Thu 23 Jul 16:30–18:00 (1.5h)",
-    "startDate": "2026-07-23",
-    "dueDate": "2026-07-23",
-    "dueDateTime": "2026-07-23 18:00",
-    "estimatedHours": 1.5,
-    "description": "Targeted repair on the weakest Applied ML topics from the last mock — re-derive, redo, re-test. No broad re-reading.",
-    "checklist": [
-      "Take the 3 weakest topics from the last mock/error log",
-      "Re-derive the method or re-run the lab cell for each",
-      "Re-test yourself closed-book on just those",
-      "Tick them off the error log only when clean"
-    ],
-    "evidenceRequirement": "Applied ML repair #1: before/after self-test on the 3 weak topics",
-    "doneCondition": "all 3 weak topics re-tested clean",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -1852,37 +1229,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-057",
-    "number": 57,
-    "sortOrder": 57,
-    "title": "PROJECT — Presentation outline draft",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Tue 21 Jul 19:30–21:00 (1.5h)",
-    "startDate": "2026-07-21",
-    "dueDate": "2026-07-21",
-    "dueDateTime": "2026-07-21 22:00",
-    "estimatedHours": 1.5,
-    "description": "Start the 60% recorded presentation: structure process + outcomes into a slide outline.",
-    "checklist": [
-      "Outline sections: problem, process, outcomes, reflection",
-      "Assign your slides/sections with the team",
-      "Note recording date target (~early Aug)"
-    ],
-    "evidenceRequirement": "presentation outline + section owners",
-    "doneCondition": "outline agreed; your sections assigned",
-    "trackerNotes": "",
-    "tags": [
-      "project"
-    ]
-  },
-  {
     "id": "card-058",
     "number": 58,
     "sortOrder": 58,
@@ -1946,71 +1292,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-060",
-    "number": 60,
-    "sortOrder": 60,
-    "title": "PROJECT — Delivery + teamwork session",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Thu 23 Jul 10:00–12:00 + 13:00–16:00",
-    "startDate": "2026-07-23",
-    "dueDate": "2026-07-23",
-    "dueDateTime": "2026-07-23 18:00",
-    "estimatedHours": 5,
-    "description": "Project working day: reviews, delivery, teamwork. Advance the build + presentation.",
-    "checklist": [
-      "Attend/watch session",
-      "Advance your project deliverable",
-      "Sync presentation progress with team",
-      "Log your contribution for the reflective report"
-    ],
-    "evidenceRequirement": "session output + contribution log",
-    "doneCondition": "deliverable advanced; contribution logged",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
-    ]
-  },
-  {
-    "id": "card-061",
-    "number": 61,
-    "sortOrder": 61,
-    "title": "MAT700 — Templates: distances/Jaccard proofs timed (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Sat 25 Jul 19:30–21:30 (2h)",
-    "startDate": "2026-07-25",
-    "dueDate": "2026-07-25",
-    "dueDateTime": "2026-07-25 21:30",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date). Drill the proof-style templates.",
-    "checklist": [
-      "Timed: 1 distance-axiom proof + 1 Jaccard Q",
-      "Mark, correct, log",
-      "Flashcards on misses"
-    ],
-    "evidenceRequirement": "timed 2-Q attempt + error log",
-    "doneCondition": "proof templates sat to time",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
     "id": "card-062",
     "number": 62,
     "sortOrder": 62,
@@ -2070,37 +1351,6 @@ export const baseCards = [
     "trackerNotes": "",
     "tags": [
       "exam"
-    ]
-  },
-  {
-    "id": "card-064",
-    "number": 64,
-    "sortOrder": 64,
-    "title": "PROJECT — Reflective report outline + contribution log",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Fri 24 Jul 19:30–21:00 (1.5h)",
-    "startDate": "2026-07-24",
-    "dueDate": "2026-07-24",
-    "dueDateTime": "2026-07-24 22:00",
-    "estimatedHours": 1.5,
-    "description": "Start the 40% individual reflective report (~1,500 words): outline + ongoing contribution log.",
-    "checklist": [
-      "Outline: contribution, team process, what you'd change",
-      "Back-fill contribution log from sessions so far",
-      "Set a ~500-word/week writing target"
-    ],
-    "evidenceRequirement": "report outline + contribution log",
-    "doneCondition": "outline + log started; weekly target set",
-    "trackerNotes": "",
-    "tags": [
-      "project"
     ]
   },
   {
@@ -2167,38 +1417,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-067",
-    "number": 67,
-    "sortOrder": 67,
-    "title": "MAT700 — Naive Bayes + PageRank + k-means timed (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Mon 27 Jul 13:30–15:30 (2h)",
-    "startDate": "2026-07-27",
-    "dueDate": "2026-07-27",
-    "dueDateTime": "2026-07-27 15:30",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date). Drill the algorithm-application templates.",
-    "checklist": [
-      "Timed: 1 Naive Bayes + 1 PageRank/k-means Q",
-      "Mark, correct, log",
-      "Flashcards on misses"
-    ],
-    "evidenceRequirement": "timed 2-Q attempt + error log",
-    "doneCondition": "algorithm templates sat to time",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
     "id": "card-068",
     "number": 68,
     "sortOrder": 68,
@@ -2225,71 +1443,6 @@ export const baseCards = [
     ],
     "evidenceRequirement": "TS past-paper #2 attempt + marked result + error-log update",
     "doneCondition": "paper sat to time, marked, weak templates logged",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-069",
-    "number": 69,
-    "sortOrder": 69,
-    "title": "Rescue / buffer — reconcile Week 4",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Tue 28 Jul 08:30–10:00 (1.5h)",
-    "startDate": "2026-07-28",
-    "dueDate": "2026-07-28",
-    "dueDateTime": "2026-07-28 10:00",
-    "estimatedHours": 1.5,
-    "description": "Buffer / rescue slot. Absorb anything that slipped this week; if nothing slipped, do light recall and rest. Protects the streak without forcing new load.",
-    "checklist": [
-      "Pull any unfinished card from the week into today",
-      "If clear: 30–45 min mixed recall across modules",
-      "Update the tracker Daily_Log + Weekly_Spine",
-      "Protect sleep — peak, don't grind"
-    ],
-    "evidenceRequirement": "tracker updated; slipped cards cleared or rescheduled",
-    "doneCondition": "week reconciled; nothing silently lost",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health"
-    ]
-  },
-  {
-    "id": "card-070",
-    "number": 70,
-    "sortOrder": 70,
-    "title": "AML — Weak-topic repair #2",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "AM",
-    "slotLabel": "Tue 28 Jul 13:30–15:00 (1.5h)",
-    "startDate": "2026-07-28",
-    "dueDate": "2026-07-28",
-    "dueDateTime": "2026-07-28 15:00",
-    "estimatedHours": 1.5,
-    "description": "Targeted repair on the weakest Applied ML topics from the last mock — re-derive, redo, re-test. No broad re-reading.",
-    "checklist": [
-      "Take the 3 weakest topics from the last mock/error log",
-      "Re-derive the method or re-run the lab cell for each",
-      "Re-test yourself closed-book on just those",
-      "Tick them off the error log only when clean"
-    ],
-    "evidenceRequirement": "Applied ML repair #2: before/after self-test on the 3 weak topics",
-    "doneCondition": "all 3 weak topics re-tested clean",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -2323,39 +1476,6 @@ export const baseCards = [
     "doneCondition": "dropped marks logged; formulas recalled",
     "trackerNotes": "",
     "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-072",
-    "number": 72,
-    "sortOrder": 72,
-    "title": "MAT700 — Timed mixed mini-mock + error log (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "Tue 28 Jul 16:00–18:00 (2h)",
-    "startDate": "2026-07-28",
-    "dueDate": "2026-07-28",
-    "dueDateTime": "2026-07-28 18:00",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date). Mixed timed set across clusters.",
-    "checklist": [
-      "Timed: 5 mixed Qs across all covered clusters",
-      "Mark, correct, log",
-      "Rank weakest clusters"
-    ],
-    "evidenceRequirement": "timed 5-Q mock + error log",
-    "doneCondition": "mixed mock sat; weak clusters ranked",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch",
       "exam"
     ]
   },
@@ -2418,37 +1538,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-075",
-    "number": 75,
-    "sortOrder": 75,
-    "title": "PROJECT — Presentation slides draft",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Tue 28 Jul 19:30–21:00 (1.5h)",
-    "startDate": "2026-07-28",
-    "dueDate": "2026-07-28",
-    "dueDateTime": "2026-07-28 22:00",
-    "estimatedHours": 1.5,
-    "description": "Turn the outline into draft slides for your sections.",
-    "checklist": [
-      "Build your assigned slides",
-      "Add process + outcome visuals",
-      "Sync with team on flow + timing (10–15 min)"
-    ],
-    "evidenceRequirement": "draft slides for your sections",
-    "doneCondition": "your slides drafted; flow synced",
-    "trackerNotes": "",
-    "tags": [
-      "project"
-    ]
-  },
-  {
     "id": "card-076",
     "number": 76,
     "sortOrder": 76,
@@ -2505,71 +1594,6 @@ export const baseCards = [
     "doneCondition": "R skeletons + mixed Qs done",
     "trackerNotes": "",
     "tags": []
-  },
-  {
-    "id": "card-078",
-    "number": 78,
-    "sortOrder": 78,
-    "title": "MAT700 — Precision/recall + expert algorithms timed (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~1.5h",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 1.5,
-    "description": "INSURANCE (no fixed date). Drill the remaining high-yield templates.",
-    "checklist": [
-      "Timed: 1 precision/recall + 1 halving/weighted-majority Q",
-      "Mark, correct, log",
-      "Flashcards"
-    ],
-    "evidenceRequirement": "timed 2-Q attempt + error log",
-    "doneCondition": "remaining templates sat to time",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
-    "id": "card-079",
-    "number": 79,
-    "sortOrder": 79,
-    "title": "PROJECT — Delivery + report drop-in prep",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Thu 30 Jul 10:00–12:00 + 13:00–16:00",
-    "startDate": "2026-07-30",
-    "dueDate": "2026-07-30",
-    "dueDateTime": "2026-07-30 18:00",
-    "estimatedHours": 5,
-    "description": "Project working day: delivery + report-writing session. Lock presentation; advance report.",
-    "checklist": [
-      "Attend/watch session",
-      "Finalise presentation content with team",
-      "Write ~500 words of the reflective report",
-      "Confirm recording + submission dates"
-    ],
-    "evidenceRequirement": "near-final presentation + report progress",
-    "doneCondition": "presentation locked; report advancing",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
-    ]
   },
   {
     "id": "card-080",
@@ -2633,199 +1657,6 @@ export const baseCards = [
     "trackerNotes": "",
     "tags": [
       "exam"
-    ]
-  },
-  {
-    "id": "card-082",
-    "number": 82,
-    "sortOrder": 82,
-    "title": "PROJECT — Reflective report first full draft",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Fri 31 Jul 19:30–21:00 (1.5h)",
-    "startDate": "2026-07-31",
-    "dueDate": "2026-07-31",
-    "dueDateTime": "2026-07-31 22:00",
-    "estimatedHours": 1.5,
-    "description": "Get the full ~1,500-word report to a complete first draft.",
-    "checklist": [
-      "Draft all sections to ~1,500 words",
-      "Ground claims in your contribution log",
-      "Leave a polish list for Phase 4"
-    ],
-    "evidenceRequirement": "complete first-draft report",
-    "doneCondition": "full draft written; polish list noted",
-    "trackerNotes": "",
-    "tags": [
-      "project"
-    ]
-  },
-  {
-    "id": "card-083",
-    "number": 83,
-    "sortOrder": 83,
-    "title": "AML — Weak-topic repair #3",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "AM",
-    "slotLabel": "Fri 31 Jul 13:30–15:00 (1.5h)",
-    "startDate": "2026-07-31",
-    "dueDate": "2026-07-31",
-    "dueDateTime": "2026-07-31 15:00",
-    "estimatedHours": 1.5,
-    "description": "Targeted repair on the weakest Applied ML topics from the last mock — re-derive, redo, re-test. No broad re-reading.",
-    "checklist": [
-      "Take the 3 weakest topics from the last mock/error log",
-      "Re-derive the method or re-run the lab cell for each",
-      "Re-test yourself closed-book on just those",
-      "Tick them off the error log only when clean"
-    ],
-    "evidenceRequirement": "Applied ML repair #3: before/after self-test on the 3 weak topics",
-    "doneCondition": "all 3 weak topics re-tested clean",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-084",
-    "number": 84,
-    "sortOrder": 84,
-    "title": "TS — Past-paper #3 review",
-    "module": "Time Series",
-    "moduleGroup": "Time Series",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "PM",
-    "slotLabel": "Fri 31 Jul 16:00–18:00 (2h)",
-    "startDate": "2026-07-31",
-    "dueDate": "2026-07-31",
-    "dueDateTime": "2026-07-31 18:00",
-    "estimatedHours": 2,
-    "description": "Mine paper #3 mistakes.",
-    "checklist": [
-      "Re-work every dropped mark",
-      "Tag knowledge vs technique vs time",
-      "Update error log + recall sheet"
-    ],
-    "evidenceRequirement": "marked paper #3 + error-log update",
-    "doneCondition": "dropped marks understood + logged",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-085",
-    "number": 85,
-    "sortOrder": 85,
-    "title": "MAT700 — Timed mini-mock (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Sat 1 Aug 08:30–10:00 (1.5h)",
-    "startDate": "2026-08-01",
-    "dueDate": "2026-08-01",
-    "dueDateTime": "2026-08-01 10:00",
-    "estimatedHours": 1.5,
-    "description": "INSURANCE (no fixed date). Keep MAT700 warm with a short timed set.",
-    "checklist": [
-      "Timed: 4 mixed Qs",
-      "Mark, correct, log",
-      "Note weakest cluster for Phase 4"
-    ],
-    "evidenceRequirement": "timed 4-Q attempt + error log",
-    "doneCondition": "mini-mock sat; weak cluster noted",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-086",
-    "number": 86,
-    "sortOrder": 86,
-    "title": "PHASE 3 CHECKPOINT — final drill list ready",
-    "module": "Admin",
-    "moduleGroup": "Admin",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "AM",
-    "slotLabel": "Sat 1 Aug 13:30–15:30 (2h)",
-    "startDate": "2026-08-01",
-    "dueDate": "2026-08-01",
-    "dueDateTime": "2026-08-01 15:30",
-    "estimatedHours": 2,
-    "description": "Confirm Phase-3 exit: knowledge converted to exam performance; weak topics identified for the final drill.",
-    "checklist": [
-      "Collate weak topics across AML mocks + TS papers (+MAT700 if active)",
-      "Write the Phase-4 final-drill list (ranked)",
-      "Confirm project on track to ship in window",
-      "Update Modules_Map + Weekly_Spine"
-    ],
-    "evidenceRequirement": "Phase-3 checkpoint + ranked final-drill list",
-    "doneCondition": "weak topics ranked; project shippable",
-    "trackerNotes": "",
-    "tags": [
-      "admin",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-087",
-    "number": 87,
-    "sortOrder": 87,
-    "title": "Rescue / buffer — reconcile Week 5 + rest",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 3",
-    "phaseId": "phase-3",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Sat 1 Aug 19:30–21:00 (1.5h)",
-    "startDate": "2026-08-01",
-    "dueDate": "2026-08-01",
-    "dueDateTime": "2026-08-01 21:00",
-    "estimatedHours": 1.5,
-    "description": "Buffer / rescue slot. Absorb anything that slipped this week; if nothing slipped, do light recall and rest. Protects the streak without forcing new load.",
-    "checklist": [
-      "Pull any unfinished card from the week into today",
-      "If clear: 30–45 min mixed recall across modules",
-      "Update the tracker Daily_Log + Weekly_Spine",
-      "Protect sleep — peak, don't grind"
-    ],
-    "evidenceRequirement": "tracker updated; slipped cards cleared or rescheduled",
-    "doneCondition": "week reconciled; nothing silently lost",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health"
     ]
   },
   {
@@ -2893,37 +1724,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-090",
-    "number": 90,
-    "sortOrder": 90,
-    "title": "PROJECT — Presentation script finalise",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Light/Eve",
-    "slotLabel": "Mon 3 Aug 19:30–21:00 (1.5h)",
-    "startDate": "2026-08-03",
-    "dueDate": "2026-08-03",
-    "dueDateTime": "2026-08-03 22:00",
-    "estimatedHours": 1.5,
-    "description": "Lock the talk track for your sections ahead of recording.",
-    "checklist": [
-      "Write/finalise your narration script",
-      "Rehearse to time with the team",
-      "Confirm recording slot this week"
-    ],
-    "evidenceRequirement": "final script + rehearsal note",
-    "doneCondition": "script locked; recording scheduled",
-    "trackerNotes": "",
-    "tags": [
-      "project"
-    ]
-  },
-  {
     "id": "card-091",
     "number": 91,
     "sortOrder": 91,
@@ -2988,39 +1788,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-093",
-    "number": 93,
-    "sortOrder": 93,
-    "title": "PROJECT — Record team presentation",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Tue 4 Aug evening (team) (~2h)",
-    "startDate": "2026-08-04",
-    "dueDate": "2026-08-04",
-    "dueDateTime": "2026-08-04 21:00",
-    "estimatedHours": 2,
-    "description": "Record the 10–15 min team presentation (60%). Coordinate with the team.",
-    "checklist": [
-      "Record your sections cleanly to time",
-      "Help assemble the full recording",
-      "Quality-check audio/video + timing",
-      "Hand to whoever submits"
-    ],
-    "evidenceRequirement": "recorded presentation file",
-    "doneCondition": "presentation recorded + ready to submit",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
-    ]
-  },
-  {
     "id": "card-094",
     "number": 94,
     "sortOrder": 94,
@@ -3079,70 +1846,6 @@ export const baseCards = [
     "trackerNotes": "",
     "tags": [
       "exam"
-    ]
-  },
-  {
-    "id": "card-096",
-    "number": 96,
-    "sortOrder": 96,
-    "title": "AML — Weak-topic repair (mock #5 prep) + metrics drill",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "AM",
-    "slotLabel": "Mon 3 Aug 13:30–15:30 (2h)",
-    "startDate": "2026-08-03",
-    "dueDate": "2026-08-03",
-    "dueDateTime": "2026-08-03 15:30",
-    "estimatedHours": 2,
-    "description": "Targeted AML repair + a fast metrics/evaluation drill.",
-    "checklist": [
-      "Repair the 3 weakest AML topics outstanding",
-      "8 rapid metrics/evaluation Qs",
-      "Tick the error log clean"
-    ],
-    "evidenceRequirement": "repair + metrics drill results",
-    "doneCondition": "weakest AML topics clean",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-097",
-    "number": 97,
-    "sortOrder": 97,
-    "title": "PROJECT — Final lecture + SUBMIT team presentation (60%)",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Thu 6 Aug 10:00–12:00 + 13:00–16:00; submit by deadline",
-    "startDate": "2026-08-06",
-    "dueDate": "2026-08-06",
-    "dueDateTime": "2026-08-06 18:00",
-    "estimatedHours": 5,
-    "description": "Project final session. Submit the recorded team presentation by the deadline.",
-    "checklist": [
-      "Attend/watch final session",
-      "Final QA of the recording",
-      "SUBMIT presentation via Learning Central",
-      "Complete peer-review forms if required"
-    ],
-    "evidenceRequirement": "submission confirmation",
-    "doneCondition": "presentation submitted on time",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "fixed"
     ]
   },
   {
@@ -3207,38 +1910,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-100",
-    "number": 100,
-    "sortOrder": 100,
-    "title": "PROJECT — Reflective report revise",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Fri 7 Aug 19:30–21:00 (1.5h)",
-    "startDate": "2026-08-07",
-    "dueDate": "2026-08-07",
-    "dueDateTime": "2026-08-07 22:00",
-    "estimatedHours": 1.5,
-    "description": "Second pass on the report: tighten reflection, evidence each claim, hit ~1,500 words.",
-    "checklist": [
-      "Revise against the polish list",
-      "Evidence each claim from the contribution log",
-      "Trim/expand to ~1,500 words"
-    ],
-    "evidenceRequirement": "revised report draft",
-    "doneCondition": "report revised; near final",
-    "trackerNotes": "",
-    "tags": [
-      "project",
-      "evidence"
-    ]
-  },
-  {
     "id": "card-101",
     "number": 101,
     "sortOrder": 101,
@@ -3297,105 +1968,6 @@ export const baseCards = [
     "tags": []
   },
   {
-    "id": "card-103",
-    "number": 103,
-    "sortOrder": 103,
-    "title": "PROJECT — Reflective report finalise + SUBMIT (40%)",
-    "module": "Group Project",
-    "moduleGroup": "Group Project",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Light/Eve",
-    "slotLabel": "Sat 8 Aug 19:00–21:00 (2h)",
-    "startDate": "2026-08-08",
-    "dueDate": "2026-08-08",
-    "dueDateTime": "2026-08-08 21:00",
-    "estimatedHours": 2,
-    "description": "Final proof + submit the individual reflective report (40%).",
-    "checklist": [
-      "Proofread; check word count + references",
-      "Confirm it answers the brief",
-      "SUBMIT via Learning Central",
-      "Save submission confirmation"
-    ],
-    "evidenceRequirement": "submitted report + confirmation",
-    "doneCondition": "report submitted on time — project DONE",
-    "trackerNotes": "",
-    "tags": [
-      "project"
-    ]
-  },
-  {
-    "id": "card-104",
-    "number": 104,
-    "sortOrder": 104,
-    "title": "PHASE 4 MID-CHECKPOINT — project shipped, exam-readiness review",
-    "module": "Admin",
-    "moduleGroup": "Admin",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "AM",
-    "slotLabel": "Wed 5 Aug 19:30–21:30 (2h)",
-    "startDate": "2026-08-05",
-    "dueDate": "2026-08-05",
-    "dueDateTime": "2026-08-05 21:30",
-    "estimatedHours": 2,
-    "description": "Confirm the project is fully shipped and reset focus to pure exam peaking.",
-    "checklist": [
-      "Confirm both project components submitted",
-      "Score-trend check: AML mocks + TS papers improving?",
-      "Rewrite the final weak-topic list (should be short)",
-      "Update tracker; free all project hours to exams"
-    ],
-    "evidenceRequirement": "mid-checkpoint note + short weak list",
-    "doneCondition": "project done; exam-only focus from here",
-    "trackerNotes": "",
-    "tags": [
-      "admin",
-      "project",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-105",
-    "number": 105,
-    "sortOrder": 105,
-    "title": "Rescue / buffer — reconcile Week 6 + protect sleep",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Wed 5 Aug 19:30–21:00 (1.5h)",
-    "startDate": "2026-08-05",
-    "dueDate": "2026-08-05",
-    "dueDateTime": "2026-08-05 21:00",
-    "estimatedHours": 1.5,
-    "description": "Buffer / rescue slot. Absorb anything that slipped this week; if nothing slipped, do light recall and rest. Protects the streak without forcing new load.",
-    "checklist": [
-      "Pull any unfinished card from the week into today",
-      "If clear: 30–45 min mixed recall across modules",
-      "Update the tracker Daily_Log + Weekly_Spine",
-      "Protect sleep — peak, don't grind"
-    ],
-    "evidenceRequirement": "tracker updated; slipped cards cleared or rescheduled",
-    "doneCondition": "week reconciled; nothing silently lost",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health"
-    ]
-  },
-  {
     "id": "card-106",
     "number": 106,
     "sortOrder": 106,
@@ -3424,71 +1996,6 @@ export const baseCards = [
     "doneCondition": "mock sat under time, scored, weak topics listed",
     "trackerNotes": "",
     "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-107",
-    "number": 107,
-    "sortOrder": 107,
-    "title": "TS — Full past-paper mock #6 (timed)",
-    "module": "Time Series",
-    "moduleGroup": "Time Series",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "PM",
-    "slotLabel": "Fri 7 Aug 08:30–11:30 (3h)",
-    "startDate": "2026-08-07",
-    "dueDate": "2026-08-07",
-    "dueDateTime": "2026-08-07 11:30",
-    "estimatedHours": 3,
-    "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
-    "checklist": [
-      "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
-      "Record paper #6 score and the question templates that broke",
-      "Add broken templates to the TS error log"
-    ],
-    "evidenceRequirement": "TS past-paper #6 attempt + marked result + error-log update",
-    "doneCondition": "paper sat to time, marked, weak templates logged",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-108",
-    "number": 108,
-    "sortOrder": 108,
-    "title": "MAT700 — Timed mock (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "High",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~2h",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 2,
-    "description": "INSURANCE (no fixed date). Near-exam timed mock if MAT700 still active.",
-    "checklist": [
-      "Timed: 6 mixed Qs to exam pace",
-      "Mark, correct, final error-log sweep",
-      "Rank last weak clusters"
-    ],
-    "evidenceRequirement": "timed 6-Q mock + error log",
-    "doneCondition": "mock sat; final weak clusters ranked",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch",
       "exam"
     ]
   },
@@ -3525,99 +2032,6 @@ export const baseCards = [
     ]
   },
   {
-    "id": "card-110",
-    "number": 110,
-    "sortOrder": 110,
-    "title": "TS — Weak-topic repair (mock #6)",
-    "module": "Time Series",
-    "moduleGroup": "Time Series",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "PM",
-    "slotLabel": "Fri 7 Aug 16:00–18:00 (2h)",
-    "startDate": "2026-08-07",
-    "dueDate": "2026-08-07",
-    "dueDateTime": "2026-08-07 18:00",
-    "estimatedHours": 2,
-    "description": "Targeted repair on the weakest Time Series topics from the last mock — re-derive, redo, re-test. No broad re-reading.",
-    "checklist": [
-      "Take the 3 weakest topics from the last mock/error log",
-      "Re-derive the method or re-run the lab cell for each",
-      "Re-test yourself closed-book on just those",
-      "Tick them off the error log only when clean"
-    ],
-    "evidenceRequirement": "Time Series repair #6: before/after self-test on the 3 weak topics",
-    "doneCondition": "all 3 weak topics re-tested clean",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
-    "id": "card-111",
-    "number": 111,
-    "sortOrder": 111,
-    "title": "ALL — Formula final recall (AML + TS, +MAT700)",
-    "module": "Time Series / Applied ML / MAT700",
-    "moduleGroup": "Cross-module",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "High",
-    "slotType": "Light/Eve",
-    "slotLabel": "Sat 8 Aug 08:30–10:00 (1.5h)",
-    "startDate": "2026-08-08",
-    "dueDate": "2026-08-08",
-    "dueDateTime": "2026-08-08 10:00",
-    "estimatedHours": 1.5,
-    "description": "Single cross-module recall pass; mark only what's still shaky.",
-    "checklist": [
-      "10-min AML recall + 10-min TS recall (+MAT700 if active)",
-      "Mark gaps only",
-      "Schedule gaps into the last drill days"
-    ],
-    "evidenceRequirement": "cross-module recall result",
-    "doneCondition": "only true gaps remain, scheduled",
-    "trackerNotes": "",
-    "tags": []
-  },
-  {
-    "id": "card-112",
-    "number": 112,
-    "sortOrder": 112,
-    "title": "AML — Mock #7 (exam conditions)",
-    "module": "Applied ML",
-    "moduleGroup": "Applied ML",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "AM",
-    "slotLabel": "Sat 8 Aug 13:30–16:30 (3h)",
-    "startDate": "2026-08-08",
-    "dueDate": "2026-08-08",
-    "dueDateTime": "2026-08-08 16:30",
-    "estimatedHours": 3,
-    "description": "Run a full timed AML class-test simulation under open-book, no-internet, no-AI rules. Use your open-book pack to navigate; the win is speed + correctness, not new learning.",
-    "checklist": [
-      "Set a timer to the test length; sit it cold, open-book only",
-      "Mark it honestly against worked solutions / lab outputs",
-      "Log score for mock #7 and list every topic you fumbled",
-      "Convert the 3 worst fumbles into next day's repair card"
-    ],
-    "evidenceRequirement": "AML mock #7 script/answers + scored result + fumble list",
-    "doneCondition": "mock sat under time, scored, weak topics listed",
-    "trackerNotes": "",
-    "tags": [
-      "exam"
-    ]
-  },
-  {
     "id": "card-113",
     "number": 113,
     "sortOrder": 113,
@@ -3647,38 +2061,6 @@ export const baseCards = [
     "trackerNotes": "",
     "tags": [
       "exam"
-    ]
-  },
-  {
-    "id": "card-114",
-    "number": 114,
-    "sortOrder": 114,
-    "title": "MAT700 — Error-log final sweep (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~1.5h",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 1.5,
-    "description": "INSURANCE (no fixed date). Clear the error log; re-test only the misses.",
-    "checklist": [
-      "Re-test every logged error closed-book",
-      "Correct any still wrong",
-      "Reduce to a 1-page 'watch list'"
-    ],
-    "evidenceRequirement": "cleared error log + 1-page watch list",
-    "doneCondition": "error log cleared to a watch list",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
     ]
   },
   {
@@ -3804,246 +2186,5 @@ export const baseCards = [
     "tags": [
       "exam"
     ]
-  },
-  {
-    "id": "card-119",
-    "number": 119,
-    "sortOrder": 119,
-    "title": "MAT700 — Final recall (insurance)",
-    "module": "MAT700",
-    "moduleGroup": "MAT700",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "do-when-unblocked, ~1h",
-    "startDate": "",
-    "dueDate": "",
-    "dueDateTime": "",
-    "estimatedHours": 1,
-    "description": "INSURANCE (no fixed date). Light final recall over the watch list.",
-    "checklist": [
-      "Recall the 1-page watch list",
-      "Re-test any remaining miss",
-      "Stop — peak, don't grind"
-    ],
-    "evidenceRequirement": "final recall over watch list",
-    "doneCondition": "watch list recalled",
-    "trackerNotes": "",
-    "tags": [
-      "insurance",
-      "date-watch"
-    ]
-  },
-  {
-    "id": "card-120",
-    "number": 120,
-    "sortOrder": 120,
-    "title": "ALL — Light recall day (peak, don't learn)",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Medium",
-    "slotType": "Light/Eve",
-    "slotLabel": "Sat 15 Aug light (~2h max)",
-    "startDate": "2026-08-15",
-    "dueDate": "2026-08-15",
-    "dueDateTime": "2026-08-15 20:00",
-    "estimatedHours": 2,
-    "description": "Deliberately light. Recall sheets only, protect sleep, no new material.",
-    "checklist": [
-      "Two short recall passes (AML, TS)",
-      "No new notes, no new mocks",
-      "Sort exam logistics (location, time, materials)",
-      "Early night"
-    ],
-    "evidenceRequirement": "recall passes + logistics checklist",
-    "doneCondition": "light recall done; rested",
-    "trackerNotes": "",
-    "tags": [
-      "health"
-    ]
-  },
-  {
-    "id": "card-121",
-    "number": 121,
-    "sortOrder": 121,
-    "title": "ALL — Final readiness review + exam logistics",
-    "module": "Admin",
-    "moduleGroup": "Admin",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "AM",
-    "slotLabel": "Sun 16 Aug 10:00–12:00 (2h)",
-    "startDate": "2026-08-16",
-    "dueDate": "2026-08-16",
-    "dueDateTime": "2026-08-16 12:00",
-    "estimatedHours": 2,
-    "description": "Lock logistics and shape the per-exam warm-ups now that the window (~17–28 Aug) is here.",
-    "checklist": [
-      "Confirm exact exam/class-test dates + times + locations",
-      "Pack the open-book materials (AML) ready to go",
-      "Write a per-exam 30-min warm-up plan",
-      "Confirm sleep/travel plan for each exam day"
-    ],
-    "evidenceRequirement": "readiness checklist + per-exam warm-up plans",
-    "doneCondition": "logistics locked; warm-ups planned",
-    "trackerNotes": "",
-    "tags": [
-      "admin",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-122",
-    "number": 122,
-    "sortOrder": 122,
-    "title": "Rescue / buffer — final reconcile + rest",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Medium",
-    "slotType": "Flex",
-    "slotLabel": "Sun 16 Aug flexible (~1h)",
-    "startDate": "2026-08-16",
-    "dueDate": "2026-08-16",
-    "dueDateTime": "2026-08-16 22:00",
-    "estimatedHours": 1,
-    "description": "Buffer / rescue slot. Absorb anything that slipped this week; if nothing slipped, do light recall and rest. Protects the streak without forcing new load.",
-    "checklist": [
-      "Pull any unfinished card from the week into today",
-      "If clear: 30–45 min mixed recall across modules",
-      "Update the tracker Daily_Log + Weekly_Spine",
-      "Protect sleep — peak, don't grind"
-    ],
-    "evidenceRequirement": "tracker updated; slipped cards cleared or rescheduled",
-    "doneCondition": "week reconciled; nothing silently lost",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health"
-    ]
-  },
-  {
-    "id": "card-123",
-    "number": 123,
-    "sortOrder": 123,
-    "title": "EXAM WINDOW — per-exam final warm-up (shaped to dates)",
-    "module": "Admin",
-    "moduleGroup": "Admin",
-    "phase": "Phase 4",
-    "phaseId": "phase-4",
-    "sourceList": "Backlog — This Phase",
-    "status": "Backlog",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "From Mon 17 Aug — per exam day (set when dates confirmed)",
-    "startDate": "2026-08-17",
-    "dueDate": "2026-08-17",
-    "dueDateTime": "2026-08-17 09:00",
-    "estimatedHours": 1.5,
-    "description": "Exam window opens ~17 Aug. On each exam morning: short targeted warm-up, then sit it. No new learning.",
-    "checklist": [
-      "30-min warm-up: that module's 1-page sheet only",
-      "Pack materials (open-book AML) the night before",
-      "Sit the exam; log how it went",
-      "Reset for the next one"
-    ],
-    "evidenceRequirement": "per-exam warm-up done + post-exam note",
-    "doneCondition": "each exam entered warm + equipped",
-    "trackerNotes": "",
-    "tags": [
-      "admin",
-      "date-watch",
-      "fixed",
-      "exam"
-    ]
-  },
-  {
-    "id": "card-124",
-    "number": 124,
-    "sortOrder": 124,
-    "title": "TRAVEL — Bath day occupied (no study load)",
-    "module": "Health",
-    "moduleGroup": "Health",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Rescue Lane",
-    "status": "Rescue Lane",
-    "priority": "Critical",
-    "slotType": "Fixed",
-    "slotLabel": "Sat 11 Jul occupied — Bath travel",
-    "startDate": "2026-07-11",
-    "dueDate": "2026-07-11",
-    "dueDateTime": "2026-07-11 22:00",
-    "estimatedHours": 0,
-    "description": "Bath travel day. Keep the plan deliberately clear: no fixed study cards, only optional light recall if travel leaves easy energy.",
-    "checklist": [
-      "Travel to Bath",
-      "Keep study cards off this day",
-      "Optional: 10–15 min light recall only if easy",
-      "Resume the plan on Sun 12 Jul"
-    ],
-    "evidenceRequirement": "none required; optional travel note",
-    "doneCondition": "day protected; no study debt added",
-    "trackerNotes": "",
-    "tags": [
-      "rescue",
-      "health",
-      "fixed"
-    ]
-  },
-  {
-    "id": "weekly-date-watch",
-    "number": "W",
-    "sortOrder": 999,
-    "title": "ADMIN — Weekly Monday check: August assessment dates + MAT700 result",
-    "module": "Admin",
-    "moduleGroup": "Admin",
-    "phase": "Phase 2",
-    "phaseId": "phase-2",
-    "sourceList": "Waiting / Blocked",
-    "status": "Waiting / Blocked",
-    "priority": "Critical",
-    "slotType": "Flex",
-    "slotLabel": "Every Monday 10:00–10:15 (first run Mon 6 Jul)",
-    "startDate": "2026-07-06",
-    "dueDate": "2026-07-06",
-    "dueDateTime": "2026-07-06 10:15",
-    "estimatedHours": 0.5,
-    "description": "Weekly sweep for the exact CMT307 class-test date, MAT508 exam date, and MAT700 SIMS result. Any release reshapes Phases 3–4 and the MAT700 decision.",
-    "checklist": [
-      "Learning Central announcements (CMT307 deferred test)",
-      "SIMS exam timetable (MAT508) + MAT700 result",
-      "Cardiff email / School of Maths notices",
-      "If a date/result appears: update Open_Questions.md + flag the plan"
-    ],
-    "evidenceRequirement": "a dated line in Open_Questions.md each week",
-    "doneCondition": "never fully closes — each weekly check is a tick",
-    "trackerNotes": "",
-    "tags": [
-      "admin",
-      "date-watch",
-      "exam"
-    ]
   }
 ]
-
-export const campaignMeta = {
-  title: 'Summer Rescue Campaign 2026',
-  runway: '2026-07-04 to 2026-08-18',
-  generatedFrom: 'trello_import.csv',
-  cardCount: 127,
-  includesWeeklyWatch: true,
-}

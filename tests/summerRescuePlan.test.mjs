@@ -5,6 +5,7 @@ import {
   CAMPAIGN_END,
   CAMPAIGN_START,
   READINESS_DEADLINE,
+  REALISM_FACTOR,
   rescueCards,
   scheduleExceptions,
   scheduleRules,
@@ -51,7 +52,13 @@ test('protected exam-module hours match the cards and the 40/35/25 priority', ()
   ]))
 
   assert.deepEqual(scheduleHours, { 'Applied ML': 75, 'Time Series': 66, MAT700: 46 })
-  assert.deepEqual(cardHours, scheduleHours)
+  // Card estimates carry a realism buffer (slower real learning pace) over the raw
+  // protected timetable, so they sit REALISM_FACTOR above the schedule hours while
+  // preserving the 40/35/25 module split.
+  assert.deepEqual(
+    cardHours,
+    Object.fromEntries(Object.entries(scheduleHours).map(([m, h]) => [m, h * REALISM_FACTOR])),
+  )
   const total = Object.values(scheduleHours).reduce((sum, hours) => sum + hours, 0)
   assert.ok(Math.abs(scheduleHours['Applied ML'] / total - 0.4) < 0.01)
   assert.ok(Math.abs(scheduleHours['Time Series'] / total - 0.35) < 0.01)
@@ -172,10 +179,14 @@ test('rebased cards are active, bounded, and stop new learning before the exam w
         .reduce((sum, card) => sum + Number(card.estimatedHours || 0), 0),
     ]),
   )
-  assert.deepEqual(hoursByModule, { 'Applied ML': 75, 'Time Series': 66, MAT700: 46 })
+  assert.deepEqual(hoursByModule, {
+    'Applied ML': 75 * REALISM_FACTOR,
+    'Time Series': 66 * REALISM_FACTOR,
+    MAT700: 46 * REALISM_FACTOR,
+  })
 
   const projectCards = rescueCards.filter((card) => card.moduleGroup === 'Group Project')
-  assert.equal(projectCards.length, 4)
+  assert.equal(projectCards.length, 6)
   assert.ok(projectCards.every((card) => !/e-voting|D'Hondt/i.test(`${card.title} ${card.description}`)))
   assert.ok(projectCards.some((card) => card.dueDate === '2026-08-02'))
   assert.ok(projectCards.some((card) => card.dueDate === '2026-08-06' && /20[- ]minute/.test(`${card.title} ${card.description}`)))

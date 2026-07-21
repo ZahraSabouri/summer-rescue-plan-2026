@@ -93,6 +93,15 @@
 
 .focus-room-main {
   padding-block: clamp(28px, 5vh, 64px);
+  display: flex;
+  flex-direction: column;
+}
+/* Reorder without touching JSX: "How to study" + "Knowledge" (DOM order,
+   default flex order:0) stay right after the timer grid; Notes + Evidence
+   move to the end of the page instead of sitting between the grid and them. */
+.focus-room-notes-full,
+.focus-room-evidence-full {
+  order: 1;
 }
 
 .focus-room-task {
@@ -583,6 +592,33 @@
   background: var(--panel-2);
   font-size: 13px;
   line-height: 1.4;
+}
+
+/* Full-width Notes + Evidence — moved here from the narrow aside column so
+   the fuller composer/list UI (parity with the card drawer: add, edit,
+   delete, file attachments) has room to breathe, matching how "How to study
+   this card" and "Knowledge for this card" already get the full page width. */
+.focus-room-notes-full,
+.focus-room-evidence-full {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.focus-room-notes-full > span,
+.focus-room-evidence-full > span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.focus-room-notes-full .note-composer,
+.focus-room-evidence-full .note-composer {
+  margin-top: 12px;
+}
+.focus-room-notes-full .notes-list,
+.focus-room-evidence-full .saved-evidence-list {
+  margin-top: 12px;
 }
 .focus-room-resource-list {
   display: flex;

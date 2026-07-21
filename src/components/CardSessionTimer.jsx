@@ -30,18 +30,24 @@ export function CardSessionTimer({ cardId }) {
         <strong>{format(state.remaining)}</strong>
         <span>{MODE_LABELS[state.mode]}</span>
       </div>
-      <div className="card-session-controls">
-        <button type="button" className="primary-button" onClick={() => act().toggleRunning?.()}>
-          {state.running ? 'Pause' : 'Start'}
-        </button>
-        <button type="button" className="secondary-button" onClick={() => act().reset?.()}>
-          Log &amp; reset
-        </button>
-        <button type="button" className="secondary-button" onClick={() => act().openFocusRoom?.()}>
-          Focus Room
-        </button>
-        <button type="button" className="text-button" onClick={() => act().clearActive?.()}>
-          Clear
+      <div className="card-session-body">
+        <div className="card-session-controls">
+          <button type="button" className="primary-button" onClick={() => act().toggleRunning?.()}>
+            {state.running ? 'Pause' : 'Start'}
+          </button>
+          <button type="button" className="secondary-button" onClick={() => act().reset?.()}>
+            Log &amp; reset
+          </button>
+          <button type="button" className="text-button" onClick={() => act().clearActive?.()}>
+            Clear
+          </button>
+        </div>
+        <button
+          type="button"
+          className="primary-button card-session-focus-room"
+          onClick={() => act().openFocusRoom?.()}
+        >
+          Open Focus Room ↗
         </button>
       </div>
     </div>

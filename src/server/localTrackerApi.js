@@ -29,6 +29,14 @@ export const APP_CSP = [
 const DEV_SCRIPT_NONCE = 'summer-rescue-local-dev'
 const DEV_APP_CSP = APP_CSP.replace("script-src 'self'", `script-src 'self' 'nonce-${DEV_SCRIPT_NONCE}'`)
 
+// Study-asset files (PDFs, local HTML notes) are the one thing this app frames
+// itself, via ResourceReader/FocusRoom's <iframe src>. `frame-ancestors 'none'`
+// on APP_CSP blocks that even same-origin — the browser was refusing to render
+// them at all ("localhost refused to connect"), not failing to fetch them.
+// 'self' still blocks every third-party site from framing these files; it only
+// stops blocking the one embedder that's supposed to be allowed: this app.
+export const FRAMEABLE_ASSET_CSP = APP_CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+
 const CODE_TYPES = new Set([
   'py',
   'ipy',

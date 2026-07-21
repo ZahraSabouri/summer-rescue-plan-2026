@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import http from 'node:http'
 import path from 'node:path'
-import { APP_CSP, createLocalTrackerApi } from './localTrackerApi.js'
+import { APP_CSP, FRAMEABLE_ASSET_CSP, createLocalTrackerApi } from './localTrackerApi.js'
 
 export const LOCAL_APP_HOST = '127.0.0.1'
 export const LOCAL_APP_PORT = 5173
@@ -38,7 +38,7 @@ function sendText(res, statusCode, text) {
   res.end(text)
 }
 
-function setStaticHeaders(res, filePath, stat, isIndex) {
+function setStaticHeaders(res, filePath, stat, isIndex, isStudyAsset) {
   const extension = path.extname(filePath).toLowerCase()
   res.setHeader('Content-Type', CONTENT_TYPES.get(extension) ?? 'application/octet-stream')
   res.setHeader('Content-Length', String(stat.size))
@@ -47,7 +47,7 @@ function setStaticHeaders(res, filePath, stat, isIndex) {
   // YouTube embeds require the parent page's origin in the Referer header.
   // This policy shares only the origin cross-site, never the route or query.
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.setHeader('Content-Security-Policy', APP_CSP)
+  res.setHeader('Content-Security-Policy', isStudyAsset ? FRAMEABLE_ASSET_CSP : APP_CSP)
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
   res.setHeader('Accept-Ranges', 'bytes')
   res.setHeader('Cache-Control', isIndex || extension === '.webmanifest' ? 'no-cache' : 'public, max-age=3600')
@@ -80,7 +80,7 @@ function parseSingleByteRange(header, size) {
   return { start, end: Math.min(end, size - 1) }
 }
 
-async function sendFile(req, res, filePath, { isIndex = false } = {}) {
+async function sendFile(req, res, filePath, { isIndex = false, isStudyAsset = false } = {}) {
   const stat = await fs.stat(filePath)
   if (!stat.isFile()) return false
 
@@ -95,7 +95,7 @@ async function sendFile(req, res, filePath, { isIndex = false } = {}) {
     }
 
     const bodyLength = range.end - range.start + 1
-    setStaticHeaders(res, filePath, { size: bodyLength, mtime: stat.mtime }, isIndex)
+    setStaticHeaders(res, filePath, { size: bodyLength, mtime: stat.mtime }, isIndex, isStudyAsset)
     res.statusCode = 206
     res.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${stat.size}`)
     if (req.method === 'HEAD') res.end()
@@ -103,7 +103,7 @@ async function sendFile(req, res, filePath, { isIndex = false } = {}) {
     return true
   }
 
-  setStaticHeaders(res, filePath, stat, isIndex)
+  setStaticHeaders(res, filePath, stat, isIndex, isStudyAsset)
   res.statusCode = 200
   if (req.method === 'HEAD') res.end()
   else createReadStream(filePath).pipe(res)
@@ -161,7 +161,8 @@ export function createLocalAppHandler(options = {}) {
         }
 
         try {
-          if (await sendFile(req, res, requestedFile, { isIndex: pathname === '/' })) return
+          const isStudyAsset = pathname.startsWith('/study-assets/')
+          if (await sendFile(req, res, requestedFile, { isIndex: pathname === '/', isStudyAsset })) return
         } catch (error) {
           if (error.code !== 'ENOENT' && error.code !== 'EISDIR') throw error
         }

@@ -1,15 +1,35 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import './FocusRoom.css'
-import { checklistDoneCount, formatDate } from '../utils/progress'
+import { checklistDoneCount, formatDate, requiresEvidence } from '../utils/progress'
 import { focusRewards } from '../utils/focusRewards'
 import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
-import { MarkdownDoc } from './MarkdownDoc'
+import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
+import { RichTextField } from './RichTextField'
 
 const MODE_LABELS = {
   focus: 'Focus',
   short: 'Short break',
   long: 'Long break',
+}
+
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
+function formatBytes(size) {
+  const bytes = Number(size ?? 0)
+  if (!bytes) return ''
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`
+}
+
+function formatStamp(value) {
+  if (!value) return ''
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }
 
 const MODULE_LABELS = {
@@ -158,6 +178,13 @@ export function FocusRoom({
   onForfeit,
   onSaveRestartCue,
   onChecklistToggle,
+  onAddNote,
+  onNoteUpdate,
+  onDeleteNote,
+  onEvidenceAdd,
+  onEvidenceUpdate,
+  onEvidenceDelete,
+  onEvidenceFileAdd,
   resources = [],
   onOpenResource,
   linkedNotes = [],
@@ -168,6 +195,30 @@ export function FocusRoom({
   const exitRef = useRef(onExit)
   const [restartCue, setRestartCue] = useState('')
   const [cueStatus, setCueStatus] = useState('idle')
+
+  // Full notes + evidence CRUD, at parity with the card drawer — this used
+  // to be read-only notes plus a single one-shot restart-cue box, with no
+  // evidence surface at all.
+  const [noteDraft, setNoteDraft] = useState('')
+  const [noteText, setNoteText] = useState({})
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [evidenceDraft, setEvidenceDraft] = useState('')
+  const [evidenceText, setEvidenceText] = useState({})
+  const [editingEvidenceId, setEditingEvidenceId] = useState(null)
+  const [attachmentStatus, setAttachmentStatus] = useState('idle')
+  const [attachmentError, setAttachmentError] = useState('')
+
+  useEffect(() => {
+    setNoteDraft('')
+    setNoteText({})
+    setEditingNoteId(null)
+    setEvidenceDraft('')
+    setEvidenceText({})
+    setEditingEvidenceId(null)
+    setAttachmentStatus('idle')
+    setAttachmentError('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCard?.id])
 
   useEffect(() => {
     exitRef.current = onExit
@@ -432,6 +483,71 @@ export function FocusRoom({
       setCueStatus('saved')
     } catch {
       setCueStatus('error')
+    }
+  }
+
+  function addNote() {
+    const value = noteDraft.trim()
+    if (!value) return
+    onAddNote?.(activeCard.id, value)
+    setNoteDraft('')
+  }
+
+  function beginNoteEdit(note) {
+    setNoteText((current) => ({ ...current, [note.id]: note.text }))
+    setEditingNoteId(note.id)
+  }
+
+  function saveNoteEdit(note) {
+    const next = noteText[note.id]?.trim()
+    if (next && next !== note.text) onNoteUpdate?.(activeCard.id, note.id, next)
+    setEditingNoteId(null)
+  }
+
+  function discardNoteEdit(note) {
+    setNoteText((current) => ({ ...current, [note.id]: note.text }))
+    setEditingNoteId(null)
+  }
+
+  function saveEvidence() {
+    const value = evidenceDraft.trim()
+    if (!value) return
+    onEvidenceAdd?.(activeCard.id, value)
+    setEvidenceDraft('')
+  }
+
+  function beginEvidenceEdit(item) {
+    setEvidenceText((current) => ({ ...current, [item.id]: item.text }))
+    setEditingEvidenceId(item.id)
+  }
+
+  function saveEvidenceEdit(item) {
+    const next = evidenceText[item.id]?.trim()
+    if (next && next !== item.text) onEvidenceUpdate?.(activeCard.id, item.id, next)
+    setEditingEvidenceId(null)
+  }
+
+  function discardEvidenceEdit(item) {
+    setEvidenceText((current) => ({ ...current, [item.id]: item.text }))
+    setEditingEvidenceId(null)
+  }
+
+  async function uploadEvidenceFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !onEvidenceFileAdd) return
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError('Files must be 25 MB or smaller.')
+      return
+    }
+    setAttachmentStatus('saving')
+    setAttachmentError('')
+    try {
+      await onEvidenceFileAdd(activeCard.id, file)
+      setAttachmentStatus('idle')
+    } catch (error) {
+      setAttachmentStatus('idle')
+      setAttachmentError(error.message || 'Upload failed — is the local server running?')
     }
   }
 
@@ -701,28 +817,6 @@ export function FocusRoom({
               </section>
             )}
 
-            {notes.length > 0 && (
-              <section className="focus-room-notes">
-                <span>Notes</span>
-                <ul>
-                  {notes.map((note, index) => (
-                    <li key={note.id ?? index}>{note.text}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {evidenceItems.length > 0 && (
-              <section className="focus-room-evidence">
-                <span>Evidence logged</span>
-                <ul>
-                  {evidenceItems.map((item, index) => (
-                    <li key={item.id ?? index}>{item.text}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
             {hasBoundaries && (
               <div className="focus-room-boundaries" aria-label="Schedule boundaries">
                 <Boundary label="Current boundary" boundary={currentBoundary} />
@@ -730,36 +824,170 @@ export function FocusRoom({
               </div>
             )}
 
-            {onSaveRestartCue && (
-              <form className="focus-room-cue" onSubmit={saveRestartCue}>
-                <label htmlFor="focus-room-restart-cue">Make restarting easy</label>
-                <div>
-                  <input
-                    id="focus-room-restart-cue"
-                    type="text"
-                    value={restartCue}
-                    maxLength={180}
-                    placeholder="One exact next move for your future self"
-                    onChange={(event) => {
-                      setRestartCue(event.target.value.replace(/[\r\n]+/g, ' '))
-                      setCueStatus('idle')
-                    }}
-                  />
-                  <button type="submit" disabled={!restartCue.trim() || cueStatus === 'saving'}>
-                    {cueStatus === 'saving' ? 'Saving…' : 'Save to notes'}
-                  </button>
-                </div>
-                <small role="status">
-                  {cueStatus === 'saved'
-                    ? 'Restart cue saved on this card.'
-                    : cueStatus === 'error'
-                      ? 'The cue could not be saved. Try again.'
-                      : 'This adds one note; it does not change the plan.'}
-                </small>
-              </form>
-            )}
           </aside>
         </div>
+
+        <section className="focus-room-notes focus-room-notes-full">
+          <span>Notes</span>
+          <div className="note-composer">
+            <RichTextField
+              value={noteDraft}
+              onChange={setNoteDraft}
+              rows={3}
+              placeholder="Add reflection, issue, decision, or next action"
+            />
+            <button type="button" className="focus-room-start" onClick={addNote} disabled={!noteDraft.trim()}>
+              Add note
+            </button>
+          </div>
+          <div className="notes-list">
+            {notes.length === 0 && <p className="muted">No notes yet.</p>}
+            {notes.map((note) => {
+              const editing = editingNoteId === note.id
+              return (
+                <article key={note.id} className={`note-item ${editing ? 'editing' : ''}`}>
+                  <div>
+                    <time>{formatStamp(note.at)}</time>
+                    {editing ? (
+                      <RichTextField
+                        value={noteText[note.id] ?? note.text}
+                        onChange={(next) => setNoteText((current) => ({ ...current, [note.id]: next }))}
+                        rows={3}
+                      />
+                    ) : (
+                      <MarkdownPreview source={note.text} />
+                    )}
+                  </div>
+                  <div className="checklist-row-actions">
+                    {editing ? (
+                      <>
+                        <button
+                          type="button"
+                          className="primary-button compact-button"
+                          onClick={() => saveNoteEdit(note)}
+                          disabled={!noteText[note.id]?.trim()}
+                        >
+                          Save
+                        </button>
+                        <button type="button" className="secondary-button compact-button" onClick={() => discardNoteEdit(note)}>
+                          Discard
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" className="text-button" onClick={() => beginNoteEdit(note)}>
+                        Edit
+                      </button>
+                    )}
+                    {onDeleteNote && (
+                      <button type="button" className="text-button danger" onClick={() => onDeleteNote(activeCard.id, note.id)}>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="focus-room-evidence focus-room-evidence-full">
+          <span>{requiresEvidence(activeCard) ? 'Evidence' : 'Proof & attachments'}</span>
+          {!requiresEvidence(activeCard) && (
+            <p className="muted">Optional for this card — attach a screenshot, PDF, or a short note if you want a record.</p>
+          )}
+          <div className="note-composer">
+            <RichTextField
+              value={evidenceDraft}
+              onChange={setEvidenceDraft}
+              rows={3}
+              placeholder={requiresEvidence(activeCard) ? 'Add another evidence link or short text' : 'Add a short note or link'}
+            />
+            <button
+              type="button"
+              className="focus-room-start"
+              onClick={saveEvidence}
+              disabled={!evidenceDraft.trim()}
+            >
+              {requiresEvidence(activeCard) ? 'Save evidence' : 'Save note'}
+            </button>
+          </div>
+          {onEvidenceFileAdd && (
+            <div className="evidence-attach">
+              <label className={`secondary-button attach-button${attachmentStatus === 'saving' ? ' is-busy' : ''}`}>
+                <input type="file" onChange={uploadEvidenceFile} disabled={attachmentStatus === 'saving'} />
+                {attachmentStatus === 'saving' ? 'Uploading…' : 'Attach file (image, PDF, anything)'}
+              </label>
+              {attachmentError && <p className="attach-error">{attachmentError}</p>}
+            </div>
+          )}
+          <div className="saved-evidence-list" aria-label="Saved evidence">
+            {evidenceItems.length === 0 ? (
+              <p className="muted">No evidence saved yet.</p>
+            ) : (
+              evidenceItems.map((item, index) => {
+                const editing = editingEvidenceId === item.id
+                return (
+                  <article key={item.id} className={`evidence-item ${editing ? 'editing' : ''}`}>
+                    <span>{index + 1}</span>
+                    {editing ? (
+                      <>
+                        <RichTextField
+                          value={evidenceText[item.id] ?? item.text}
+                          onChange={(next) => setEvidenceText((current) => ({ ...current, [item.id]: next }))}
+                          rows={4}
+                        />
+                        <div className="checklist-row-actions">
+                          <button
+                            type="button"
+                            className="primary-button compact-button"
+                            onClick={() => saveEvidenceEdit(item)}
+                            disabled={!evidenceText[item.id]?.trim()}
+                          >
+                            Save
+                          </button>
+                          <button type="button" className="secondary-button compact-button" onClick={() => discardEvidenceEdit(item)}>
+                            Discard
+                          </button>
+                          {onEvidenceDelete && (
+                            <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(activeCard.id, item.id)}>
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {item.url ? (
+                          <p className="evidence-attachment">
+                            <a href={item.url} target="_blank" rel="noreferrer">
+                              <span className="type-badge">{item.fileType || 'FILE'}</span>
+                              <strong>{item.text}</strong>
+                              {item.size ? <small>{formatBytes(item.size)}</small> : null}
+                            </a>
+                          </p>
+                        ) : (
+                          <MarkdownPreview source={item.text} />
+                        )}
+                        <div className="checklist-row-actions">
+                          {!item.url && (
+                            <button type="button" className="text-button" onClick={() => beginEvidenceEdit(item)}>
+                              Edit
+                            </button>
+                          )}
+                          {onEvidenceDelete && (
+                            <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(activeCard.id, item.id)}>
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </article>
+                )
+              })
+            )}
+          </div>
+        </section>
 
         {activeCard.studySequence?.steps?.length > 0 && (
           <section className="focus-room-sequence" aria-label="How to study this card">

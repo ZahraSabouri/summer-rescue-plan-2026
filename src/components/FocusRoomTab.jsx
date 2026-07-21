@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { StudyTimer } from './StudyTimer'
 import { focusRewards } from '../utils/focusRewards'
 import {
@@ -6,6 +6,10 @@ import {
   onFocusMessage,
   postFocusMessage,
 } from '../utils/focusSession'
+
+// Lazy-loaded the same way App.jsx loads it, so opening a resource here
+// doesn't pull the whole ModuleWorkspace bundle into the room's own chunk.
+const ResourceReader = lazy(() => import('./ModuleWorkspace').then((module) => ({ default: module.ResourceReader })))
 
 // The Focus Room running as its own browser tab.
 //
@@ -115,6 +119,101 @@ export function FocusRoomTab() {
     return Promise.resolve()
   }
 
+  // Notes and evidence — the same optimistic-then-reconciled pattern as
+  // checklist toggling above: reflect the change immediately using a
+  // temporary id, forward the real mutation to the main tab (the sole
+  // writer), and let its next snapshot echo back the authoritative version.
+  // Previously this tab could only ever fire one write ("add-note", used for
+  // the single restart-cue box) — no update, no delete, no evidence at all.
+  function handleAddNote(id, text) {
+    const optimistic = { id: `pending-${Date.now()}`, text, at: new Date().toISOString() }
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      return { ...current, card: { ...current.card, notes: [optimistic, ...(current.card.notes ?? [])] } }
+    })
+    forward('add-note', { text })
+  }
+
+  function handleUpdateNote(id, noteId, text) {
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      const notes = (current.card.notes ?? []).map((note) => (note.id === noteId ? { ...note, text } : note))
+      return { ...current, card: { ...current.card, notes } }
+    })
+    forward('update-note', { noteId, text })
+  }
+
+  function handleDeleteNote(id, noteId) {
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      const notes = (current.card.notes ?? []).filter((note) => note.id !== noteId)
+      return { ...current, card: { ...current.card, notes } }
+    })
+    forward('delete-note', { noteId })
+  }
+
+  function handleAddEvidence(id, text) {
+    const optimistic = { id: `pending-${Date.now()}`, text, at: new Date().toISOString() }
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      return {
+        ...current,
+        card: { ...current.card, evidenceEntries: [...(current.card.evidenceEntries ?? []), optimistic] },
+      }
+    })
+    forward('add-evidence', { text })
+  }
+
+  function handleUpdateEvidence(id, evidenceId, text) {
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      const evidenceEntries = (current.card.evidenceEntries ?? []).map((entry) =>
+        entry.id === evidenceId ? { ...entry, text } : entry,
+      )
+      return { ...current, card: { ...current.card, evidenceEntries } }
+    })
+    forward('update-evidence', { evidenceId, text })
+  }
+
+  function handleDeleteEvidence(id, evidenceId) {
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      const evidenceEntries = (current.card.evidenceEntries ?? []).filter((entry) => entry.id !== evidenceId)
+      return { ...current, card: { ...current.card, evidenceEntries } }
+    })
+    forward('delete-evidence', { evidenceId })
+  }
+
+  // File objects survive BroadcastChannel's structured clone intact, so the
+  // upload itself (which needs the local server) can stay entirely on the
+  // main tab — no separate upload path to maintain here.
+  function handleAddEvidenceFile(id, file) {
+    forward('add-evidence-file', { file })
+    return Promise.resolve()
+  }
+
+  // Opening a resource (video/PDF/notebook) here needs no round trip to the
+  // main tab — ResourceReader renders purely from the resource object itself,
+  // which already arrived whole in the snapshot. Previously this tab had no
+  // onOpenResource at all, so every resource chip (in "Resources" and in "How
+  // to study this card") silently did nothing when clicked.
+  const [openResourceId, setOpenResourceId] = useState(null)
+  const activeResource = snapshot?.resources?.find((resource) => resource.id === openResourceId) ?? null
+
+  // Same reasoning as the main tab's openResource: PDFs/local HTML render via
+  // <iframe src>, which is needless CSP/caching fragility here since the room
+  // doesn't need checklist/notes alongside them the way a video does. A real
+  // new tab also leaves the room's own timer running untouched, since no
+  // local state changes.
+  function handleOpenResource(resourceId) {
+    const resource = snapshot?.resources?.find((item) => item.id === resourceId)
+    if (resource?.viewer === 'frame') {
+      window.open(resource.url, '_blank', 'noopener')
+      return
+    }
+    setOpenResourceId(resourceId)
+  }
+
   function exit() {
     postFocusMessage('release', { cardId })
     window.close()
@@ -149,18 +248,33 @@ export function FocusRoomTab() {
   }
 
   return (
-    <StudyTimer
-      variant="room"
-      activeCard={snapshot.card}
-      resources={snapshot.resources}
-      currentBoundary={snapshot.currentBoundary}
-      nextBoundary={snapshot.nextBoundary}
-      linkedNotes={snapshot.linkedNotes}
-      onCompleteSession={handleCompleteSession}
-      onFocusBlockComplete={(minutes) => focusRewards.recordBlockComplete(minutes)}
-      onChecklistToggle={handleChecklistToggle}
-      onSaveRestartCue={handleSaveRestartCue}
-      onExitRoom={exit}
-    />
+    <>
+      <StudyTimer
+        variant="room"
+        activeCard={snapshot.card}
+        resources={snapshot.resources}
+        currentBoundary={snapshot.currentBoundary}
+        nextBoundary={snapshot.nextBoundary}
+        linkedNotes={snapshot.linkedNotes}
+        onCompleteSession={handleCompleteSession}
+        onFocusBlockComplete={(minutes) => focusRewards.recordBlockComplete(minutes)}
+        onChecklistToggle={handleChecklistToggle}
+        onSaveRestartCue={handleSaveRestartCue}
+        onAddNote={handleAddNote}
+        onNoteUpdate={handleUpdateNote}
+        onDeleteNote={handleDeleteNote}
+        onEvidenceAdd={handleAddEvidence}
+        onEvidenceUpdate={handleUpdateEvidence}
+        onEvidenceDelete={handleDeleteEvidence}
+        onEvidenceFileAdd={handleAddEvidenceFile}
+        onOpenResource={handleOpenResource}
+        onExitRoom={exit}
+      />
+      {activeResource && (
+        <Suspense fallback={null}>
+          <ResourceReader resource={activeResource} onClose={() => setOpenResourceId(null)} />
+        </Suspense>
+      )}
+    </>
   )
 }

@@ -545,6 +545,12 @@ export default function App() {
     }
   })
   const [navOpen, setNavOpen] = useState(false)
+  const [cardiffLinksOpen, setCardiffLinksOpen] = useState(false)
+  // Bumped on every nav click, including a click back to the page you're
+  // already on. `.view-anim`'s key below combines this with activeView, so a
+  // repeat click still forces a full remount (filters/local view state reset
+  // to fresh) instead of being a no-op because activeView didn't change.
+  const [navRefreshKey, setNavRefreshKey] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [newModuleName, setNewModuleName] = useState('')
   const [newPhaseName, setNewPhaseName] = useState('')
@@ -1515,6 +1521,19 @@ export default function App() {
   }
 
   function openResource(resourceId) {
+    // PDFs and local HTML render via <iframe src>, which the in-app overlay/
+    // full-screen-tab both wrap in our own page — fragile (CSP frame-ancestors,
+    // browser caching of a once-blocked response) for no benefit, since neither
+    // needs the checklist/notes alongside it the way a video does. A real new
+    // tab straight to the file sidesteps all of that AND leaves whatever's open
+    // behind it (a study card drawer, Focus Room) completely untouched, since
+    // no app state changes at all.
+    const resource = allResources.find((item) => item.id === resourceId)
+    if (resource?.viewer === 'frame') {
+      window.open(resource.url, '_blank', 'noopener')
+      tracker.markResourceOpened(resourceId)
+      return
+    }
     setOpenResourceId(resourceId)
     hashResourceRef.current = resourceId
     writeRoute({ resourceId, resourceMode: '' })
@@ -1599,6 +1618,16 @@ export default function App() {
         tracker.addFocusSession(message.cardId, message.minutes)
         setMessage(`Logged ${message.minutes} min focus session (Focus Room).`)
       } else if (message.action === 'add-note') tracker.addNote(message.cardId, message.text)
+      else if (message.action === 'update-note') tracker.updateNote(message.cardId, message.noteId, message.text)
+      else if (message.action === 'delete-note') tracker.deleteNote(message.cardId, message.noteId)
+      else if (message.action === 'add-evidence') tracker.addEvidence(message.cardId, message.text)
+      else if (message.action === 'update-evidence') tracker.updateEvidence(message.cardId, message.evidenceId, message.text)
+      else if (message.action === 'delete-evidence') tracker.deleteEvidence(message.cardId, message.evidenceId)
+      else if (message.action === 'add-evidence-file') {
+        addEvidenceAttachment(message.cardId, message.file).catch((error) => {
+          setMessage(`Attachment from Focus Room failed: ${error.message || 'is the local server running?'}`)
+        })
+      }
     }
   })
 
@@ -1670,6 +1699,23 @@ export default function App() {
     setMessage('Backup exported; unfinished work restored to the 20 July plan while completed history was retained.')
   }
 
+  // Real hrefs on every nav link, so the browser's own "open in new tab" /
+  // "open in new window" context-menu entries and ctrl/cmd/middle-click all
+  // work — a plain onClick-only button never offers those. A plain left
+  // click still does the instant SPA navigation via openGlobalView; anything
+  // else (modifier held, or a click the browser already intends to open
+  // elsewhere) is left alone so the browser's native behavior takes over.
+  function navHref(view, extra = {}) {
+    return buildHashRoute({ view, tab: studyModuleMap[view] ? 'overview' : '', ...extra })
+  }
+
+  function handleNavClick(event, view, options) {
+    if (event.defaultPrevented || event.button !== 0) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    openGlobalView(view, options)
+  }
+
   function openGlobalView(view, { date = '' } = {}) {
     const tab = studyModuleMap[view] ? 'overview' : ''
     setFilters(routeFilters())
@@ -1679,6 +1725,7 @@ export default function App() {
     setActiveModuleTab(tab || 'overview')
     setSelectedCardId(null)
     setOpenResourceId(null)
+    setNavRefreshKey((n) => n + 1)
     hashResourceRef.current = ''
     writeRoute({ view, tab, cardId: '', resourceId: '', resourceMode: '', date, noteId: '', filters: {} })
     setNavOpen(false)
@@ -1687,6 +1734,7 @@ export default function App() {
   function openModuleView(view, moduleGroup) {
     const tab = studyModuleMap[view] ? 'overview' : ''
     setFilters(routeFilters({ module: moduleGroup }))
+    setNavRefreshKey((n) => n + 1)
     setRouteDate('')
     setKnowledgeFocus(null)
     setActiveView(view)
@@ -2044,7 +2092,7 @@ export default function App() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} />}
 
       <aside className="app-sidebar" aria-label="Primary navigation">
-        <button type="button" className="sidebar-brand" onClick={() => openGlobalView('today')} title="Open Today">
+        <a href={navHref('today')} className="sidebar-brand" onClick={(event) => handleNavClick(event, 'today')} title="Open Today">
           <span className="brand-mark">
             <Icon name="brand" />
           </span>
@@ -2052,18 +2100,18 @@ export default function App() {
             <strong>Summer Rescue</strong>
             <small>Cardiff University · MSc</small>
           </span>
-        </button>
+        </a>
 
         <nav className="sidebar-nav" aria-label="Views">
           {NAV_GROUPS.map((group) => (
             <div className="nav-group" key={group.label}>
               <p className="nav-group-label">{group.label}</p>
               {group.items.map((id) => (
-                <button
-                  type="button"
+                <a
+                  href={navHref(id)}
                   key={id}
                   className={`nav-item${activeView === id ? ' active' : ''}`}
-                  onClick={() => openGlobalView(id)}
+                  onClick={(event) => handleNavClick(event, id)}
                   title={LABEL_BY_ID[id]}
                   aria-current={activeView === id ? 'page' : undefined}
                 >
@@ -2072,28 +2120,57 @@ export default function App() {
                   </span>
                   <span className="nav-label">{LABEL_BY_ID[id]}</span>
                   {id === 'mat700' && !mat700Active && <span className="nav-flag">paused</span>}
-                </button>
+                </a>
               ))}
             </div>
           ))}
         </nav>
 
         <div className="sidebar-foot">
-          <div className="sidebar-crest">
-            <img
-              src="/cardiff-logo.png"
-              alt="Cardiff University"
-              onError={(event) => {
-                event.currentTarget.style.display = 'none'
-              }}
-            />
-            <span>Cardiff University</span>
+          <div className="sidebar-crest-group">
+            <button
+              type="button"
+              className="sidebar-crest"
+              aria-expanded={cardiffLinksOpen}
+              onClick={() => setCardiffLinksOpen((value) => !value)}
+            >
+              <img
+                src="/cardiff-logo.png"
+                alt="Cardiff University"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none'
+                }}
+              />
+              <span>Cardiff University</span>
+              <span className={`sidebar-crest-chevron${cardiffLinksOpen ? ' is-open' : ''}`}>
+                <Icon name="chevron" />
+              </span>
+            </button>
+            {cardiffLinksOpen && (
+              <ul className="sidebar-crest-links">
+                <li>
+                  <a href="https://learningcentral.cf.ac.uk/" target="_blank" rel="noreferrer">
+                    Learning Central
+                  </a>
+                </li>
+                <li>
+                  <a href="https://www.cardiff.ac.uk/" target="_blank" rel="noreferrer">
+                    Cardiff University website
+                  </a>
+                </li>
+                <li>
+                  <a href="https://sims.cardiff.ac.uk/" target="_blank" rel="noreferrer">
+                    SIMS portal
+                  </a>
+                </li>
+              </ul>
+            )}
           </div>
-          <button
-            type="button"
+          <a
+            href={navHref('progress')}
             className="mini-progress"
             title="Open the full progress record"
-            onClick={() => openGlobalView('progress')}
+            onClick={(event) => handleNavClick(event, 'progress')}
           >
             <div className="mini-progress-head">
               <span>Campaign progress</span>
@@ -2105,16 +2182,29 @@ export default function App() {
             <small>
               {doneCount} of {totalCount} completed · {tracker.state.addedCards.length} personal/routine
             </small>
-          </button>
-          <button
-            type="button"
-            className="collapse-btn"
-            onClick={() => setNavCollapsed((value) => !value)}
-            aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <Icon name="chevron" />
-            <span>Collapse</span>
-          </button>
+          </a>
+          <div className="collapse-row">
+            <button
+              type="button"
+              className="collapse-btn"
+              onClick={() => setNavCollapsed((value) => !value)}
+              aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <Icon name="chevron" />
+              <span>Collapse</span>
+            </button>
+            {navCollapsed && (
+              <button
+                type="button"
+                className={`nav-lock-btn${navLocked ? ' is-locked' : ''}`}
+                onClick={() => setNavLocked((value) => !value)}
+                title={navLocked ? 'Locked collapsed — click to allow hover-to-expand' : 'Hover-to-expand — click to lock collapsed'}
+                aria-pressed={navLocked}
+              >
+                {navLocked ? '🔒' : '🔓'}
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -2125,14 +2215,14 @@ export default function App() {
               <Icon name="menu" />
             </button>
             <div className="topbar-title">
-              <button
-                type="button"
+              <a
+                href={navHref('today')}
                 className="eyebrow topbar-home-link"
                 title="Go to Today"
-                onClick={() => openGlobalView('today')}
+                onClick={(event) => handleNavClick(event, 'today')}
               >
                 {campaignMeta.title}
-              </button>
+              </a>
               <h1 ref={pageHeadingRef} tabIndex={-1}>{viewMeta.title}</h1>
               {viewMeta.subtitle && <p className="topbar-sub">{viewMeta.subtitle}</p>}
             </div>
@@ -2232,7 +2322,7 @@ export default function App() {
         )}
 
         <section className="view-shell" aria-label="Active planner view">
-          <div className="view-anim" key={activeView}>
+          <div className="view-anim" key={`${activeView}-${navRefreshKey}`}>
             <Suspense fallback={<ViewLoading label={`Loading ${viewMeta.title}`} />}>
               {renderView()}
             </Suspense>

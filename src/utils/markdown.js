@@ -6,7 +6,7 @@
 // emphasis/code/links/math. Anything it does not recognise stays literal text,
 // which is the right failure mode for pasted material.
 
-const SPECIALS = new Set(['`', '$', '*', '_', '~', '['])
+const SPECIALS = new Set(['`', '$', '*', '_', '~', '[', '+'])
 
 // Sticky patterns so the scanner can advance by index instead of re-slicing a
 // multi-kilobyte note on every character.
@@ -16,6 +16,9 @@ const INLINE_RULES = [
   { type: 'strong', re: /\*\*([\s\S]+?)\*\*/y, nest: true },
   { type: 'strong', re: /__([\s\S]+?)__/y, nest: true },
   { type: 'strike', re: /~~([\s\S]+?)~~/y, nest: true },
+  // No standard Markdown syntax for underline; ++text++ is unused elsewhere
+  // in this parser and is what the rich-text toolbar's Underline button emits.
+  { type: 'underline', re: /\+\+([\s\S]+?)\+\+/y, nest: true },
   { type: 'em', re: /\*([^*\n]+)\*/y, nest: true },
   { type: 'em', re: /_([^_\n]+)_/y, nest: true },
   { type: 'link', re: /\[([^\]]*)\]\(([^)\s]+)\)/y },

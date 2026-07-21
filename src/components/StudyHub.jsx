@@ -30,7 +30,18 @@ function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen,
   const inactiveInsurance = module.id === 'mat700' && !mat700Active
 
   return (
-    <article className={`module-command-card ${inactiveInsurance ? 'is-muted' : ''}`}>
+    <article
+      className={`module-command-card clickable-card ${inactiveInsurance ? 'is-muted' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(module.viewId)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onOpen(module.viewId)
+        }
+      }}
+    >
       <div className="module-card-visual">
         <img src={(module.hero ?? module.visual).url} alt="" loading="lazy" />
       </div>
@@ -51,7 +62,14 @@ function ModuleCommandCard({ module, cards, referenceDate, mat700Active, onOpen,
         <button type="button" className="primary-button" onClick={() => onOpen(module.viewId)}>
           Open workspace
         </button>
-        <button type="button" className="secondary-button" onClick={() => onOpenModuleView('week', module.moduleGroup)}>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onOpenModuleView('week', module.moduleGroup)
+          }}
+        >
           Week queue
         </button>
       </div>
@@ -166,18 +184,49 @@ export function StudyHub({ cards, stats, referenceDate, mat700Active, actions, s
       </section>
 
       <section className="bounded-area-grid" aria-label="Bounded life areas">
-        <article>
+        <article
+          className="clickable-card"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveView('jobs')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setActiveView('jobs')
+            }
+          }}
+        >
           <p className="eyebrow">Bounded area</p>
           <h2>Job Hunt</h2>
           <p>Weekly maintenance with a hard time ceiling so it cannot consume exam preparation.</p>
           <button type="button" className="secondary-button" onClick={() => setActiveView('jobs')}>Open Job Hunt</button>
         </article>
-        <article>
+        <article
+          className="clickable-card"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveView('admin')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setActiveView('admin')
+            }
+          }}
+        >
           <p className="eyebrow">Bounded area</p>
           <h2>Life Admin & Dates</h2>
           <p>Exam logistics, university date checks, health, and recurring life-admin boundaries.</p>
           <button type="button" className="secondary-button" onClick={() => setActiveView('admin')}>Open Life Admin</button>
-          <button type="button" className="text-button" onClick={onGenerateWeeklyLifeCards}>Generate this week’s routine cards</button>
+          <button
+            type="button"
+            className="text-button"
+            onClick={(event) => {
+              event.stopPropagation()
+              onGenerateWeeklyLifeCards()
+            }}
+          >
+            Generate this week’s routine cards
+          </button>
         </article>
       </section>
 

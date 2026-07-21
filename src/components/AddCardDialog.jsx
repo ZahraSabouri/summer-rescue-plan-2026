@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MODULE_OPTIONS, PHASE_OPTIONS, PRIORITY_OPTIONS, SLOT_OPTIONS, STATUS_OPTIONS } from '../data/constants'
 import { AccessibleDialog } from './AccessibleDialog'
+import { RichTextField } from './RichTextField'
 
 const emptyCard = {
   title: '',
@@ -133,7 +134,7 @@ export function AddCardDialog({
           </label>
           <label className="span-2">
             <span>Description</span>
-            <textarea rows={4} value={form.description} onChange={(event) => update('description', event.target.value)} />
+            <RichTextField rows={4} value={form.description} onChange={(next) => update('description', next)} />
           </label>
           <label className="span-2">
             <span>Checklist</span>
@@ -146,15 +147,15 @@ export function AddCardDialog({
           </label>
           <label className="span-2">
             <span>Evidence requirement</span>
-            <textarea
+            <RichTextField
               rows={2}
               value={form.evidenceRequirement}
-              onChange={(event) => update('evidenceRequirement', event.target.value)}
+              onChange={(next) => update('evidenceRequirement', next)}
             />
           </label>
           <label className="span-2">
             <span>Done condition</span>
-            <textarea rows={2} value={form.doneCondition} onChange={(event) => update('doneCondition', event.target.value)} />
+            <RichTextField rows={2} value={form.doneCondition} onChange={(next) => update('doneCondition', next)} />
           </label>
           <div className="dialog-actions span-2">
             <button type="button" className="secondary-button" onClick={() => onClose()}>

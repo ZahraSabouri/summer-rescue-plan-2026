@@ -599,7 +599,14 @@ button:disabled {
 .work-card {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.26fr) minmax(390px, 0.58fr);
+  /* The title column had no floor (minmax(0, 1fr)), so a long title (MAT700's
+     "L2 — rebuild concepts, formula sheet, and question-bank recall" style)
+     could get squeezed toward zero width by the other two columns' own
+     minimums, wrapping one word per line for 8+ lines. A 220px floor keeps
+     that from happening; if a container is genuinely too narrow for all
+     three columns plus this floor, the @container (max-width: 900px) rule
+     below already switches to a single stacked column well before that. */
+  grid-template-columns: minmax(220px, 1fr) minmax(120px, 0.26fr) minmax(390px, 0.58fr);
   gap: 16px;
   align-items: start;
   padding: 14px;
@@ -615,6 +622,18 @@ button:disabled {
 }
 
 .work-card.is-done {
+  border-left-color: var(--green);
+  background: var(--done-bg);
+}
+
+/* Overdue is computed inside CardSummary itself (not per-caller), so this is
+   consistent everywhere the component is used — Planning tabs included, which
+   previously only showed overdue via Today's separate Catch-up panel. */
+.work-card.is-overdue {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--red) 6%, var(--panel));
+}
+.work-card.is-overdue.is-done {
   border-left-color: var(--green);
   background: var(--done-bg);
 }
@@ -1257,6 +1276,46 @@ button:disabled {
   min-height: 126px;
   font-size: 13px;
   line-height: 1.45;
+}
+
+/* Markdown + toolbar field: same footprint as the plain textarea it replaces,
+   so it drops into note/evidence/description composers without layout churn. */
+.rich-text-field {
+  display: grid;
+  gap: 6px;
+}
+
+.rich-text-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rich-text-toolbar button {
+  min-width: 30px;
+}
+
+.rich-text-preview-toggle {
+  margin-left: auto;
+}
+
+.rich-text-preview-toggle.active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.rich-text-preview {
+  min-height: 60px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.rich-text-preview .md-doc-flat {
+  display: grid;
+  gap: 6px;
 }
 
 .edit-grid {
@@ -2776,14 +2835,25 @@ rect.heat-future { fill: transparent; stroke: var(--line); stroke-dasharray: 2 2
   line-height: 1.45;
 }
 
+/* .module-note now sits on the RichTextField wrapper (a toolbar + textarea),
+   not a bare textarea, so the border/background move here and the nested
+   textarea goes flush so the toolbar reads as part of the same box. */
 .module-note {
-  min-height: 260px;
-  width: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--input-bg);
+  padding: 8px 10px 10px;
+}
+
+.module-note textarea,
+.module-note .rich-text-preview {
+  min-height: 240px;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: var(--input-ink);
-  padding: 10px;
+  padding: 6px 0 0;
   line-height: 1.45;
 }
 
@@ -2887,6 +2957,14 @@ button:hover,
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   align-items: stretch;
 }
+.collapse-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.collapse-row .collapse-btn {
+  flex: 1;
+}
 
 /* ---- Sidebar ---- */
 .app-sidebar {
@@ -2913,6 +2991,7 @@ button:hover,
   border: 0;
   background: transparent;
   color: inherit;
+  text-decoration: none;
   text-align: left;
   cursor: pointer;
   font: inherit;
@@ -2982,6 +3061,7 @@ button:hover,
   border-radius: 11px;
   background: transparent;
   color: var(--muted);
+  text-decoration: none;
   font-weight: 600;
   font-size: 13.5px;
   text-align: left;
@@ -3039,12 +3119,13 @@ button:hover,
 .mini-progress {
   display: grid;
   width: 100%;
-  gap: 6px;
-  padding: 11px;
+  gap: 4px;
+  padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 13px;
   background: var(--panel);
   color: inherit;
+  text-decoration: none;
   text-align: left;
   cursor: pointer;
   font: inherit;
@@ -3069,13 +3150,13 @@ button:hover,
 }
 .mini-progress-head strong {
   font-family: var(--font-num);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
 }
 .mini-progress-track {
-  height: 7px;
+  height: 5px;
   border-radius: 999px;
   background: var(--track);
   overflow: hidden;
@@ -3088,8 +3169,13 @@ button:hover,
   transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .mini-progress small {
+  display: block;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 9.5px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .collapse-btn {
   display: flex;
@@ -4443,11 +4529,20 @@ h1,
   flex: none;
   filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.14));
 }
+.sidebar-crest-group {
+  margin-bottom: 4px;
+}
 .sidebar-crest {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 9px;
   padding: 2px 6px 8px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
 }
 .sidebar-crest img {
   width: 26px;
@@ -4459,6 +4554,44 @@ h1,
   font-size: 12px;
   font-weight: 650;
   white-space: nowrap;
+}
+.sidebar-crest-chevron {
+  display: inline-flex;
+  margin-left: auto;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transform: rotate(180deg);
+  transition: transform 0.15s ease;
+}
+.sidebar-crest-chevron.is-open {
+  transform: rotate(270deg);
+}
+.sidebar-crest-chevron svg {
+  width: 100%;
+  height: 100%;
+}
+.sidebar-crest-links {
+  margin: 2px 0 6px;
+  padding: 0 6px 0 32px;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+.sidebar-crest-links a {
+  display: block;
+  padding: 5px 6px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.sidebar-crest-links a:hover,
+.sidebar-crest-links a:focus-visible {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 @media (min-width: 1025px) {
   .app-shell.nav-collapsed .sidebar-crest {
@@ -5435,28 +5568,6 @@ h1,
 .timer-handoff-note small {
   color: var(--muted);
   font-size: 11px;
-}
-
-/* Post "Start session" choice inside the card drawer. */
-.session-start-choice {
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  border: 1px dashed var(--accent);
-  border-radius: 12px;
-  background: var(--accent-soft);
-}
-.session-start-choice p {
-  margin: 0;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-}
-.session-start-choice-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .notif-head {
@@ -6989,7 +7100,17 @@ body.modal-open {
 
 /* In-card focus session timer ================================================ */
 .card-session {
+  /* .work-card is a 3-column grid (title / progress / controls); this renders
+     as a 4th child with no explicit placement, so it was landing in column 1's
+     track only (~220-390px) while its own flex content (a 64px dial plus four
+     buttons) needs much more — the excess visually spilled past that column's
+     boundary into the row below instead of being clipped. Spanning the full
+     row width fixes it; harmless no-op wherever .card-session isn't in a grid
+     (the card drawer's .drawer-controls), since a lone `auto` column there
+     already sized to fit. */
+  grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   margin-top: 12px;
@@ -7030,6 +7151,12 @@ body.modal-open {
   letter-spacing: 0.04em;
   color: var(--muted);
 }
+.card-session-body {
+  display: grid;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .card-session-controls {
   display: flex;
   flex-wrap: wrap;
@@ -7040,6 +7167,12 @@ body.modal-open {
 .card-session-controls .secondary-button {
   padding: 6px 12px;
   font-size: 12px;
+}
+/* The one, single way to open Focus Room — kept at full primary-button size
+   (not the compact row above it) so it reads as the deliberate, prominent
+   action it is, rather than one utility button among four. */
+.card-session-focus-room {
+  justify-self: start;
 }
 
 /* Focus rewards — top-bar badge ============================================= */
@@ -8648,6 +8781,23 @@ button.countdown-chip:hover {
   margin: 4px 0 8px;
 }
 
+/* A card whose whole body is clickable (Study Hub's Job Hunt/Life Admin
+   tiles, the module command cards), not just the button inside it — buttons
+   inside still work on their own (stopPropagation where they mean something
+   different from the card's own primary action). */
+.clickable-card {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.clickable-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-1);
+}
+.clickable-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .today-destinations {
   display: flex;
   align-items: center;
@@ -8815,11 +8965,37 @@ button.countdown-chip:hover {
 }
 
 .card-control-fields {
+  /* Was a 4-column grid with fixed-length track minimums (auto + 108 + 72 +
+     96px + gaps ≈ 390px) that summed to right around this column's own
+     390px floor in .work-card's outer grid — a grid track with a fixed
+     minimum never shrinks below it, so the first card whose "Done" toggle
+     (the "auto" column) needed even a few px more pushed the whole row past
+     its container, and since grid doesn't clip overflow, it bled out past
+     the card's own right edge into whatever sat next to it on the page (the
+     "upcoming" sidebar panel in the Planning tab). flex-wrap can't overflow
+     this way: if a row is too narrow for all four fields, the excess wraps
+     to a second line instead of spilling out — matches .card-control-actions
+     just below, which already uses flex-wrap for the same reason. */
   min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(108px, 1fr) minmax(72px, 88px) minmax(82px, 100px);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: end;
+}
+.card-control-fields > .done-toggle {
+  flex: 0 0 auto;
+}
+.card-control-fields > select {
+  flex: 1 1 108px;
+  min-width: 90px;
+}
+.card-control-fields > .hours-field {
+  flex: 0 1 88px;
+  min-width: 72px;
+}
+.card-control-fields > .hours-field.progress-percent-field {
+  flex: 0 1 118px;
+  min-width: 96px;
 }
 
 .card-control-actions {
@@ -8843,6 +9019,8 @@ button.countdown-chip:hover {
 
 .progress-percent-field input {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .schedule-capacity-note {
@@ -9303,4 +9481,578 @@ button.countdown-chip:hover {
   color: var(--warning-ink);
   background: var(--warning-bg);
   border-color: var(--warning-line);
+}
+
+
+/* ==================== Moved from ModuleKnowledge.css ====================
+   MarkdownDoc.jsx and TexMath.jsx render outside the lazy-loaded module-
+   workspace chunk too (card drawer note popup, Focus Room tab), so their
+   base styles live here instead, where they're always loaded. ==================== */
+
+/* ---------- Markdown document ---------- */
+
+.md-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 22px 26px 26px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.md-doc-flat {
+  gap: 2px;
+}
+
+.md-section {
+  padding-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.md-section:last-child {
+  border-bottom: 0;
+}
+
+.md-section-toggle {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  width: 100%;
+  padding: 14px 0 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.md-section-chevron {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--muted);
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+
+.md-section.is-closed .md-section-chevron {
+  transform: rotate(0deg);
+}
+
+.md-section-title {
+  font-family: var(--font-serif);
+  font-size: 1.28rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.md-section-l1 .md-section-title {
+  font-size: 1.42rem;
+}
+
+.md-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 10px;
+}
+
+.md-h {
+  margin: 16px 0 6px;
+  font-family: var(--font-serif);
+  line-height: 1.3;
+  scroll-margin-top: 20px;
+}
+
+.md-h3 { font-size: 1.08rem; }
+.md-h4 { font-size: 0.96rem; }
+.md-h5,
+.md-h6 {
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.md-p {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  max-width: 74ch;
+}
+
+.md-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  max-width: 74ch;
+}
+
+.md-list li {
+  margin-bottom: 4px;
+}
+
+.md-list .md-list {
+  margin: 4px 0 0;
+}
+
+.md-rule {
+  height: 1px;
+  margin: 16px 0;
+  background: var(--line);
+  border: 0;
+}
+
+.md-code {
+  padding: 1px 5px;
+  font-family: var(--font-num);
+  font-size: 0.86em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+}
+
+.md-quote {
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.md-quote .md-p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tables: the reason this feature exists. Sticky header, zebra rows, and a
+   scroll frame so an eight-column reference table stays readable. */
+
+.md-table-frame {
+  margin: 0 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* Expanded lifts the table out of the reading column to full viewport width.
+   z-index clears the app's sticky header (240) but stays under dialogs and
+   toasts (6000+). */
+.md-table-frame.is-expanded {
+  position: fixed;
+  inset: 3vh 3vw;
+  z-index: 4001;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--panel);
+  border-color: var(--line-strong);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+}
+
+.md-table-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: var(--overlay);
+}
+
+/* Holds the document's place in the flow while its table is portalled out. */
+.md-table-placeholder {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.md-table-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.md-table-meta {
+  font-family: var(--font-num);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.md-table-expand {
+  padding: 3px 12px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.md-table-expand:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.md-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.md-table-frame.is-expanded .md-table-wrap {
+  flex: 1;
+}
+
+.md-table-wrap:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* Below this width the columns of a reference table squeeze to one word per
+   line, so scroll the frame instead of crushing the content. */
+.md-table {
+  width: 100%;
+  min-width: 660px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.md-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--chip-bg);
+  border-bottom: 2px solid var(--line-strong);
+}
+
+.md-table td {
+  padding: 10px 14px;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+/* Vertical rules: with this many columns, row striping alone is not enough to
+   keep your eye on one column. */
+.md-table th + th,
+.md-table td + td {
+  border-left: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+}
+
+.md-table tbody tr td:first-child {
+  font-weight: 600;
+}
+
+.md-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--chip-bg) 55%, transparent);
+}
+
+.md-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.md-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+/* Code and tree diagrams: dark panel, so ASCII structure reads as a figure. */
+
+.md-pre-wrap {
+  position: relative;
+  margin: 0 0 14px;
+}
+
+.md-pre-lang {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: var(--font-num);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(236, 231, 220, 0.5);
+}
+
+.md-pre {
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: var(--font-num), 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #ece7dc;
+  background: #221f19;
+  border-radius: var(--radius);
+  tab-size: 2;
+}
+
+.md-math-block {
+  margin: 0 0 14px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- TeX subset rendering ---------- */
+
+.tex {
+  font-family: var(--font-serif);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.tex-inline {
+  padding: 0 2px;
+}
+
+.tex-display {
+  display: inline-block;
+  font-size: 1.15rem;
+  line-height: 1.9;
+  white-space: normal;
+}
+
+.tex sub,
+.tex sup {
+  font-size: 0.72em;
+  font-style: normal;
+}
+
+.tex-upright,
+.tex-bigop {
+  font-style: normal;
+}
+
+.tex-bold {
+  font-weight: 700;
+  font-style: italic;
+}
+
+.tex-bigop {
+  font-size: 1.4em;
+  padding: 0 1px;
+  vertical-align: -0.16em;
+}
+
+/* Stacked fraction, so a/b reads as a real fraction rather than a slash.
+   Fractions and big operators both align on `middle` so a formula mixing them
+   keeps one visual axis instead of stepping up and down. */
+.tex-frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  padding: 0 3px;
+  text-align: center;
+}
+
+.tex-num {
+  display: block;
+  padding: 0 4px 1px;
+  border-bottom: 1px solid currentColor;
+  font-size: 0.92em;
+}
+
+.tex-den {
+  display: block;
+  padding: 1px 4px 0;
+  font-size: 0.92em;
+}
+
+/* Sum/product with limits above and below, display mode only. */
+.tex-bigop-limits {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.tex-bigop-limits .tex-limit {
+  font-size: 0.62em;
+  font-style: normal;
+}
+
+.tex-binom {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.tex-binom-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.86em;
+  line-height: 1.1;
+}
+
+.tex-paren {
+  font-size: 1.7em;
+  font-style: normal;
+}
+
+.tex-sqrt {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.tex-radical {
+  font-style: normal;
+}
+
+.tex-radicand {
+  border-top: 1px solid currentColor;
+  padding: 0 2px;
+  margin-top: 1px;
+}
+
+/* Accents sit above the glyph, centred. A combining character renders high and
+   to the right in this serif face, which reads as a superscript rather than a
+   bar — and x-bar / y-hat appear constantly in these notes. */
+.tex-accent {
+  position: relative;
+  display: inline-block;
+}
+
+.tex-accent-base {
+  display: inline-block;
+}
+
+.tex-accent-bar .tex-accent-base {
+  border-top: 1px solid currentColor;
+  padding-top: 1px;
+  margin-top: 2px;
+}
+
+.tex-accent-mark {
+  position: absolute;
+  top: -0.42em;
+  right: 0;
+  left: 0;
+  font-size: 0.9em;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
+}
+
+:root[data-theme='dark'] .md-pre {
+  background: #100f0c;
+  border: 1px solid var(--line);
+}
+
+:root[data-theme='dark'] .md-table-frame,
+:root[data-theme='dark'] .md-math-block {
+  background: color-mix(in srgb, var(--surface) 70%, #000);
+}
+
+/* Quiz list — MarkdownDoc's own "Check yourself" renderer, styled close to
+   ModuleKnowledge's .kn-selftest (same visual language) but simpler: no
+   rating buttons, since this component has no tracker-state context to save
+   a rating into. */
+.md-quiz-section {
+  padding-top: 14px;
+}
+.md-quiz-heading {
+  margin-bottom: 10px !important;
+}
+.md-quiz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: md-quiz-q;
+}
+.md-quiz-item {
+  position: relative;
+  padding: 12px 14px 12px 40px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius);
+  counter-increment: md-quiz-q;
+}
+.md-quiz-item::before {
+  position: absolute;
+  top: 12px;
+  left: 13px;
+  font-family: var(--font-num);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  content: counter(md-quiz-q);
+}
+.md-quiz-question {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.md-quiz-answer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+}
+.md-quiz-answer p {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  background: var(--panel);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  flex: 1 1 100%;
+}
+.md-quiz-reveal {
+  font-weight: 700;
+}
+:root[data-theme='dark'] .md-quiz-item {
+  background: color-mix(in srgb, var(--surface) 70%, #000);
+}
+
+.md-sources {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.md-sources > span {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+}
+.md-sources ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
 }

@@ -11,10 +11,10 @@ import {
 import { addDays, cardKind, cardPlanLane, checklistDoneCount, formatDate, isOverdue, kindFeatures, requiresEvidence } from '../utils/progress'
 import { resourcesForCard, searchResourcesForCard } from '../utils/cardResourceSearch'
 import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
-import { openFocusRoomTab } from '../utils/focusSession'
 import { CardSessionTimer } from './CardSessionTimer'
-import { MarkdownDoc } from './MarkdownDoc'
+import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
+import { RichTextField } from './RichTextField'
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
@@ -273,10 +273,6 @@ export function CardDetailDrawer({
   const [resourceQuery, setResourceQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [openNote, setOpenNote] = useState(null)
-  // Shown right after Start session so the running session can either stay in this
-  // card or move to the Focus Room tab, without forcing either. The render already
-  // gates on this card owning the active session, so no reset effect is needed.
-  const [sessionChoiceOpen, setSessionChoiceOpen] = useState(false)
 
   useEffect(() => {
     if (!card) return undefined
@@ -617,38 +613,11 @@ export function CardDetailDrawer({
               />
             </label>
             {activeSessionCardId !== card.id && (
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  onStartSession?.(card.id)
-                  setSessionChoiceOpen(true)
-                }}
-              >
+              <button type="button" className="primary-button" onClick={() => onStartSession?.(card.id)}>
                 Start session
               </button>
             )}
             {activeSessionCardId === card.id && <CardSessionTimer cardId={card.id} />}
-            {activeSessionCardId === card.id && sessionChoiceOpen && (
-              <div className="session-start-choice" role="group" aria-label="Where to run this session">
-                <p>Session started — where do you want to work?</p>
-                <div className="session-start-choice-actions">
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => {
-                      openFocusRoomTab(card.id)
-                      setSessionChoiceOpen(false)
-                    }}
-                  >
-                    Open Focus Room ↗
-                  </button>
-                  <button type="button" className="secondary-button" onClick={() => setSessionChoiceOpen(false)}>
-                    Stay on this card
-                  </button>
-                </div>
-              </div>
-            )}
             {overdue && (
               <div className="reschedule-inline drawer-reschedule">
                 <button type="button" onClick={() => onReschedule?.(card.id, referenceDate)}>
@@ -664,7 +633,7 @@ export function CardDetailDrawer({
           <div className="drawer-grid">
           <section className="drawer-section wide">
             <h3>Description</h3>
-            <p>{card.description}</p>
+            <MarkdownPreview source={card.description} />
             <dl className="definition-grid">
               <div>
                 <dt>Slot</dt>
@@ -677,12 +646,12 @@ export function CardDetailDrawer({
               {evidenceExpected && (
                 <div>
                   <dt>Evidence requirement</dt>
-                  <dd>{card.evidenceRequirement || 'None recorded'}</dd>
+                  <dd>{card.evidenceRequirement ? <MarkdownPreview source={card.evidenceRequirement} /> : 'None recorded'}</dd>
                 </div>
               )}
               <div>
                 <dt>Done condition</dt>
-                <dd>{card.doneCondition || 'None recorded'}</dd>
+                <dd>{card.doneCondition ? <MarkdownPreview source={card.doneCondition} /> : 'None recorded'}</dd>
               </div>
             </dl>
           </section>
@@ -949,9 +918,9 @@ export function CardDetailDrawer({
               </p>
             )}
             <div className="note-composer">
-              <textarea
+              <RichTextField
                 value={evidenceDraft}
-                onChange={(event) => setEvidenceDraft(event.target.value)}
+                onChange={setEvidenceDraft}
                 rows={evidenceExpected ? 5 : 3}
                 placeholder={evidenceExpected ? 'Add another evidence link or short text' : 'Add a short note or link'}
               />
@@ -984,11 +953,9 @@ export function CardDetailDrawer({
                       <span>{index + 1}</span>
                       {editing ? (
                         <>
-                          <textarea
+                          <RichTextField
                             value={evidenceText[item.id] ?? item.text}
-                            onChange={(event) =>
-                              setEvidenceText((current) => ({ ...current, [item.id]: event.target.value }))
-                            }
+                            onChange={(next) => setEvidenceText((current) => ({ ...current, [item.id]: next }))}
                             rows={4}
                           />
                           <div className="checklist-row-actions">
@@ -1030,7 +997,7 @@ export function CardDetailDrawer({
                               </a>
                             </p>
                           ) : (
-                            <p>{item.text}</p>
+                            <MarkdownPreview source={item.text} />
                           )}
                           <div className="checklist-row-actions">
                             {!item.url && (
@@ -1054,9 +1021,9 @@ export function CardDetailDrawer({
           <section className="drawer-section">
             <h3>Notes</h3>
             <div className="note-composer">
-              <textarea
+              <RichTextField
                 value={noteDraft}
-                onChange={(event) => setNoteDraft(event.target.value)}
+                onChange={setNoteDraft}
                 rows={3}
                 placeholder="Add reflection, issue, decision, or next action"
               />
@@ -1073,13 +1040,13 @@ export function CardDetailDrawer({
                     <div>
                       <time>{formatStamp(note.at)}</time>
                       {editing ? (
-                        <textarea
+                        <RichTextField
                           value={noteText[note.id] ?? note.text}
-                          onChange={(event) => setNoteText((current) => ({ ...current, [note.id]: event.target.value }))}
+                          onChange={(next) => setNoteText((current) => ({ ...current, [note.id]: next }))}
                           rows={3}
                         />
                       ) : (
-                        <p>{note.text}</p>
+                        <MarkdownPreview source={note.text} />
                       )}
                     </div>
                     <div className="checklist-row-actions">
@@ -1207,26 +1174,26 @@ export function CardDetailDrawer({
                   </label>
                   <label className="span-2">
                     <span>Description</span>
-                    <textarea
+                    <RichTextField
                       rows={4}
                       value={form.description}
-                      onChange={(event) => updateForm('description', event.target.value)}
+                      onChange={(next) => updateForm('description', next)}
                     />
                   </label>
                   <label className="span-2">
                     <span>Evidence requirement</span>
-                    <textarea
+                    <RichTextField
                       rows={2}
                       value={form.evidenceRequirement}
-                      onChange={(event) => updateForm('evidenceRequirement', event.target.value)}
+                      onChange={(next) => updateForm('evidenceRequirement', next)}
                     />
                   </label>
                   <label className="span-2">
                     <span>Done condition</span>
-                    <textarea
+                    <RichTextField
                       rows={2}
                       value={form.doneCondition}
-                      onChange={(event) => updateForm('doneCondition', event.target.value)}
+                      onChange={(next) => updateForm('doneCondition', next)}
                     />
                   </label>
                 </div>

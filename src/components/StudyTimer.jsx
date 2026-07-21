@@ -58,6 +58,13 @@ export function StudyTimer({
   onClearActive,
   onSaveRestartCue,
   onChecklistToggle,
+  onAddNote,
+  onNoteUpdate,
+  onDeleteNote,
+  onEvidenceAdd,
+  onEvidenceUpdate,
+  onEvidenceDelete,
+  onEvidenceFileAdd,
   resources = [],
   onOpenResource,
   // 'bar' is the always-mounted top-bar timer. 'room' is the same engine running
@@ -166,27 +173,22 @@ export function StudyTimer({
     setRemaining((current) => (current === nextRemaining ? current : nextRemaining))
   }, [completeRun])
 
-  // Begin a fresh focus block for whatever card is currently active. Mirrors the
-  // start branch of handleToggleRunning but always resets to a full focus segment.
-  const startFocusRun = useCallback(() => {
-    const now = Date.now()
+  // Reset the clock to a fresh, paused focus block for whatever card just became
+  // active. Deliberately does NOT start running: arriving at a card should never
+  // begin counting down by itself — the user still presses Start on the timer
+  // itself as a separate, explicit action.
+  const armFocusRun = useCallback(() => {
     const seconds = durationsRef.current.focus * 60
     modeRef.current = 'focus'
     setMode('focus')
     setRemaining(seconds)
-    const runId = runIdRef.current + 1
-    runIdRef.current = runId
+    runIdRef.current += 1
     completedRunIdRef.current = null
-    deadlineRef.current = now + seconds * 1000
-    if (activeCardRef.current) {
-      segmentStartedAtRef.current = now
-      segmentCardIdRef.current = activeCardRef.current.id
-    } else {
-      segmentStartedAtRef.current = null
-      segmentCardIdRef.current = null
-    }
-    runningRef.current = true
-    setRunning(true)
+    deadlineRef.current = null
+    segmentStartedAtRef.current = null
+    segmentCardIdRef.current = null
+    runningRef.current = false
+    setRunning(false)
   }, [])
 
   // Abandon the current run WITHOUT logging any focus time (strict-mode forfeit).
@@ -254,34 +256,36 @@ export function StudyTimer({
     return () => window.removeEventListener('focus', onWindowFocus)
   }, [isRoom, remoteOwner])
 
-  // Pressing "Start" on a card sends a new startSignal. Begin the focus session
-  // right away so the timer visibly runs inside the card. We key off startSignal
-  // (not the activeCard reference, which also changes when a session is logged) so
-  // completing a segment never silently restarts the clock.
+  // Pressing "Start session" on a card sends a new startSignal. Arm a fresh,
+  // paused focus block for it — the countdown itself only begins once the user
+  // presses Start on the timer, a separate and deliberate click. We key off
+  // startSignal (not the activeCard reference, which also changes when a session
+  // is logged) so completing a segment never silently re-arms the clock.
   useEffect(() => {
     const userInitiated = startSignal !== startSignalRef.current
     startSignalRef.current = startSignal
     if (!activeCard || !userInitiated) return undefined
     const id = window.setTimeout(() => {
       const cardId = activeCardRef.current?.id
-      const alreadyRunningThisCard =
+      const alreadyOnThisCard =
         runningRef.current && modeRef.current === 'focus' && segmentCardIdRef.current === cardId
-      if (alreadyRunningThisCard) return
+      if (alreadyOnThisCard) return
       if (runningRef.current) logFocusSegment()
-      startFocusRun()
+      armFocusRun()
     }, 0)
     return () => window.clearTimeout(id)
-  }, [activeCard, startSignal, logFocusSegment, startFocusRun])
+  }, [activeCard, startSignal, logFocusSegment, armFocusRun])
 
-  // The Focus Room tab opens with the clock already running: the user pressed
-  // "Start session" to get here, so the block should be live the moment the tab
-  // paints. Only auto-start once, and only if nothing is already running.
-  const roomAutoStartedRef = useRef(false)
+  // The Focus Room tab opens with a fresh, paused block ready for this card —
+  // same as the main tab, the user still presses Start once the tab has
+  // painted. Only arm once, and only if nothing is already running (jumping
+  // tabs mid-session must not reset progress already under way).
+  const roomArmedRef = useRef(false)
   useEffect(() => {
-    if (!isRoom || !activeCard || roomAutoStartedRef.current) return
-    roomAutoStartedRef.current = true
-    if (!runningRef.current) startFocusRun()
-  }, [isRoom, activeCard, startFocusRun])
+    if (!isRoom || !activeCard || roomArmedRef.current) return
+    roomArmedRef.current = true
+    if (!runningRef.current) armFocusRun()
+  }, [isRoom, activeCard, armFocusRun])
 
   // Claim the session for this tab and hold it for as long as the room is open.
   // The claim is re-announced on ping so a bar timer can confirm we are alive.
@@ -552,6 +556,13 @@ export function StudyTimer({
         onForfeit={forfeitRun}
         onSaveRestartCue={onSaveRestartCue}
         onChecklistToggle={onChecklistToggle}
+        onAddNote={onAddNote}
+        onNoteUpdate={onNoteUpdate}
+        onDeleteNote={onDeleteNote}
+        onEvidenceAdd={onEvidenceAdd}
+        onEvidenceUpdate={onEvidenceUpdate}
+        onEvidenceDelete={onEvidenceDelete}
+        onEvidenceFileAdd={onEvidenceFileAdd}
         resources={resources}
         onOpenResource={onOpenResource}
         linkedNotes={linkedNotes}

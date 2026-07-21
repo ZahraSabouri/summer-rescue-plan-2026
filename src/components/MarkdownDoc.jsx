@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { parseMarkdown } from '../utils/markdown'
+import { parseMarkdown, splitNoteSections } from '../utils/markdown'
 import { TexMath } from './TexMath'
 
 export function Inline({ nodes }) {
@@ -33,6 +33,12 @@ export function Inline({ nodes }) {
           <s key={index}>
             <Inline nodes={node.children} />
           </s>
+        )
+      case 'underline':
+        return (
+          <u key={index}>
+            <Inline nodes={node.children} />
+          </u>
         )
       case 'link':
         return (
@@ -256,9 +262,62 @@ function Section({ section, index }) {
   )
 }
 
+// Answer hidden until clicked — same "::" convention and hide/reveal
+// mechanic as ModuleKnowledge.jsx's SelfTest, minus the persisted "I know
+// this / Shaky" rating (this component doesn't have a card/tracker-state
+// context to save that into; it's read-only wherever it's used).
+function QuizList({ questions }) {
+  const [revealed, setRevealed] = useState(() => new Set())
+
+  function toggle(index) {
+    setRevealed((current) => {
+      const next = new Set(current)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
+  return (
+    <ol className="md-quiz-list">
+      {questions.map((entry, index) => {
+        const open = revealed.has(index)
+        return (
+          <li key={index} className="md-quiz-item">
+            <p className="md-quiz-question">
+              <Inline nodes={entry.question} />
+            </p>
+            {entry.answerText &&
+              (open ? (
+                <div className="md-quiz-answer">
+                  <p>
+                    <Inline nodes={entry.answer} />
+                  </p>
+                  <button type="button" className="text-button" onClick={() => toggle(index)}>
+                    Hide
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="text-button md-quiz-reveal" onClick={() => toggle(index)}>
+                  Show answer
+                </button>
+              ))}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function MarkdownDoc({ blocks, source }) {
   const parsed = useMemo(() => blocks ?? parseMarkdown(source), [blocks, source])
-  const sections = useMemo(() => toSections(parsed), [parsed])
+  // Pulls out a "## Check yourself" quiz list (rendered with answers hidden
+  // until clicked, instead of the raw "question :: answer" text) and a
+  // "## Sources" list (rendered as a plain footer) before grouping whatever
+  // remains into the normal collapsible sections. Notes without either
+  // heading are completely unaffected — `body` is just `parsed` unchanged.
+  const { body, questions, sources } = useMemo(() => splitNoteSections(parsed), [parsed])
+  const sections = useMemo(() => toSections(body), [body])
 
   if (!parsed.length) return <p className="empty-state">This note is empty.</p>
 
@@ -267,6 +326,22 @@ export function MarkdownDoc({ blocks, source }) {
       {sections.map((section, index) => (
         <Section key={section.heading?.id ?? `pre-${index}`} section={section} index={index} />
       ))}
+      {questions.length > 0 && (
+        <section className="md-section md-quiz-section">
+          <h3 className="md-h md-h2 md-quiz-heading">Check yourself</h3>
+          <QuizList questions={questions} />
+        </section>
+      )}
+      {sources.length > 0 && (
+        <footer className="md-sources">
+          <span>Sources</span>
+          <ul>
+            {sources.map((entry, index) => (
+              <li key={index}>{entry}</li>
+            ))}
+          </ul>
+        </footer>
+      )}
     </div>
   )
 }

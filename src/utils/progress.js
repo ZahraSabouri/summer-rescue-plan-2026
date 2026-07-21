@@ -271,7 +271,7 @@ export function deriveStats(cards, referenceDate, mat700Active = true) {
       total: projectCards.length,
       done: projectCards.filter((card) => card.done).length,
       presentationReady: projectCards.some((card) => card.id === 'project-submit' && card.done),
-      reportReady: projectCards.some((card) => card.id === 'project-evidence-reserve' && card.done),
+      reportReady: projectCards.some((card) => card.id === 'project-report-submit' && card.done),
     },
     examReadiness: {
       examCards: examCards.length,
