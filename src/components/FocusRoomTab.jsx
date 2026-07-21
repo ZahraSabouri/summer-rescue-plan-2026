@@ -200,20 +200,6 @@ export function FocusRoomTab() {
   const [openResourceId, setOpenResourceId] = useState(null)
   const activeResource = snapshot?.resources?.find((resource) => resource.id === openResourceId) ?? null
 
-  // Same reasoning as the main tab's openResource: PDFs/local HTML render via
-  // <iframe src>, which is needless CSP/caching fragility here since the room
-  // doesn't need checklist/notes alongside them the way a video does. A real
-  // new tab also leaves the room's own timer running untouched, since no
-  // local state changes.
-  function handleOpenResource(resourceId) {
-    const resource = snapshot?.resources?.find((item) => item.id === resourceId)
-    if (resource?.viewer === 'frame') {
-      window.open(resource.url, '_blank', 'noopener')
-      return
-    }
-    setOpenResourceId(resourceId)
-  }
-
   function exit() {
     postFocusMessage('release', { cardId })
     window.close()
@@ -267,7 +253,7 @@ export function FocusRoomTab() {
         onEvidenceUpdate={handleUpdateEvidence}
         onEvidenceDelete={handleDeleteEvidence}
         onEvidenceFileAdd={handleAddEvidenceFile}
-        onOpenResource={handleOpenResource}
+        onOpenResource={setOpenResourceId}
         onExitRoom={exit}
       />
       {activeResource && (

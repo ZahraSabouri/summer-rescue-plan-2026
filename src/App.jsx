@@ -1521,19 +1521,6 @@ export default function App() {
   }
 
   function openResource(resourceId) {
-    // PDFs and local HTML render via <iframe src>, which the in-app overlay/
-    // full-screen-tab both wrap in our own page — fragile (CSP frame-ancestors,
-    // browser caching of a once-blocked response) for no benefit, since neither
-    // needs the checklist/notes alongside it the way a video does. A real new
-    // tab straight to the file sidesteps all of that AND leaves whatever's open
-    // behind it (a study card drawer, Focus Room) completely untouched, since
-    // no app state changes at all.
-    const resource = allResources.find((item) => item.id === resourceId)
-    if (resource?.viewer === 'frame') {
-      window.open(resource.url, '_blank', 'noopener')
-      tracker.markResourceOpened(resourceId)
-      return
-    }
     setOpenResourceId(resourceId)
     hashResourceRef.current = resourceId
     writeRoute({ resourceId, resourceMode: '' })
