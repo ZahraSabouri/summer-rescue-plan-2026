@@ -5353,7 +5353,8 @@ h1,
 }
 .card-resource-panel > summary,
 .card-knowledge-panel > summary,
-.done-details > summary {
+.done-details > summary,
+.notes-group-panel > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5363,18 +5364,24 @@ h1,
 }
 .card-resource-panel > summary::-webkit-details-marker,
 .card-knowledge-panel > summary::-webkit-details-marker,
-.done-details > summary::-webkit-details-marker {
+.done-details > summary::-webkit-details-marker,
+.notes-group-panel > summary::-webkit-details-marker {
   display: none;
 }
 .card-resource-panel > summary > span:first-child,
 .card-knowledge-panel > summary > span:first-child,
-.done-details > summary > span:first-child {
+.done-details > summary > span:first-child,
+.notes-group-panel > summary > span:first-child {
   display: grid;
   gap: 2px;
 }
 .card-resource-panel > summary strong,
 .card-knowledge-panel > summary strong,
-.done-details > summary strong {
+.done-details > summary strong,
+.notes-group-panel > summary strong {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 14px;
 }
 .card-resource-panel > summary small,
@@ -5382,16 +5389,18 @@ h1,
 .card-knowledge-panel > summary small,
 .card-knowledge-panel > summary > span:last-child,
 .done-details > summary small,
-.done-details > summary > span:last-child {
+.done-details > summary > span:last-child,
+.notes-group-panel > summary small,
+.notes-group-panel > summary > span:last-child {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
 }
-/* The trailing "N done" chip earns a stronger, positive treatment than the
+/* The trailing "N done"/"N notes" chip earns a stronger treatment than the
    plain muted counts on the resource/knowledge panels — it is the one thing
-   this toggle most needs to say at a glance. Applies to both the module-level
-   done-cards toggle and the card-level done-checklist toggle below. */
-.done-details > summary > span:last-child {
+   each of these toggles most needs to say at a glance. */
+.done-details > summary > span:last-child,
+.notes-group-panel > summary > span:last-child {
   padding: 3px 10px;
   color: var(--accent-strong);
   background: var(--accent-soft);
@@ -5400,7 +5409,8 @@ h1,
 }
 .card-resource-panel > summary::after,
 .card-knowledge-panel > summary::after,
-.done-details > summary::after {
+.done-details > summary::after,
+.notes-group-panel > summary::after {
   content: '+';
   color: var(--accent);
   font-size: 18px;
@@ -5408,7 +5418,8 @@ h1,
 }
 .card-resource-panel[open] > summary::after,
 .card-knowledge-panel[open] > summary::after,
-.done-details[open] > summary::after {
+.done-details[open] > summary::after,
+.notes-group-panel[open] > summary::after {
   content: '−';
 }
 

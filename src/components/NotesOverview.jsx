@@ -183,15 +183,19 @@ function NotePreviewModal({ eyebrow, title, body, openLabel, onOpen, onClose }) 
 function GroupSection({ group, page, onShowMore, onOpenItem }) {
   const visible = group.items.slice(0, page)
   return (
-    <section className="notes-overview-section">
-      <h3>
-        <span className="notes-section-icon tone-group" aria-hidden="true">
-          {group.icon}
+    <details className="notes-overview-section notes-group-panel" open>
+      <summary>
+        <span>
+          <strong>
+            <span className="notes-section-icon tone-group" aria-hidden="true">
+              {group.icon}
+            </span>
+            {group.label}
+            {group.code && <span className="notes-group-code">{group.code}</span>}
+          </strong>
         </span>
-        {group.label}
-        {group.code && <span className="notes-group-code">{group.code}</span>}
-        <span className="notes-section-count">{group.items.length}</span>
-      </h3>
+        <span>{group.items.length}</span>
+      </summary>
       {group.items.length === 0 ? (
         <p className="muted">{group.emptyHint}</p>
       ) : (
@@ -209,7 +213,7 @@ function GroupSection({ group, page, onShowMore, onOpenItem }) {
           )}
         </>
       )}
-    </section>
+    </details>
   )
 }
 

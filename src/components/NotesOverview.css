@@ -126,24 +126,6 @@
   border-radius: var(--radius-lg);
 }
 
-.notes-overview-section h3 {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 0;
-}
-
-.notes-section-count {
-  padding: 2px 9px;
-  margin-left: 2px;
-  font-family: var(--font-num);
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--muted);
-  background: var(--chip-bg);
-  border-radius: var(--radius-pill);
-}
-
 .notes-section-icon {
   display: inline-grid;
   flex-shrink: 0;

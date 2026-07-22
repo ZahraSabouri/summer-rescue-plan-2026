@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { StudyTimer } from './StudyTimer'
+import { FloatingVideoPlayer } from './FloatingVideoPlayer'
 import { focusRewards } from '../utils/focusRewards'
 import {
   FOCUS_TAB_HASH,
@@ -310,6 +311,7 @@ export function FocusRoomTab() {
         ) : (
           <p>Connecting to your session…</p>
         )}
+        <FloatingVideoPlayer />
       </div>
     )
   }
@@ -341,6 +343,7 @@ export function FocusRoomTab() {
         theme={theme}
         onThemeChange={handleThemeChange}
       />
+      <FloatingVideoPlayer />
       {activeResource && (
         <Suspense fallback={null}>
           <ResourceReader

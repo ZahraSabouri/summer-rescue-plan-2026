@@ -68,7 +68,7 @@
 .floating-video-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 6px 6px 6px 10px;
   cursor: grab;
   background: var(--surface);
@@ -97,7 +97,7 @@
   text-transform: uppercase;
 }
 
-.floating-video-close {
+.floating-video-btn {
   display: grid;
   flex-shrink: 0;
   place-items: center;
@@ -109,8 +109,17 @@
   background: transparent;
   border: 0;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1;
+}
+
+.floating-video-btn:hover {
+  color: var(--accent);
+  background: var(--chip-bg);
+}
+
+.floating-video-close {
+  font-size: 16px;
 }
 
 .floating-video-close:hover {
@@ -118,25 +127,67 @@
   background: var(--chip-bg);
 }
 
+.floating-video-follower-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  color: var(--warning-ink);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--warning-bg);
+  border-bottom: 1px solid var(--warning-line);
+}
+
+.floating-video-follower-bar .text-button {
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .floating-video-body {
   position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  overflow: hidden;
   background: #000;
+  transition: height 0.18s ease;
 }
 
 .floating-video-body iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  display: block;
   border: 0;
 }
 
 /* An iframe otherwise swallows pointermove while the cursor crosses it,
-   which would stop the drag tracking dead the moment it reached the video. */
-.floating-video-player.is-dragging .floating-video-body iframe {
+   which would stop the drag/resize tracking dead the moment it reached the
+   video — the iframe keeps its full internal size even while minimized
+   (see the JSX: height is controlled on the wrapper, not the iframe), so
+   this never needs to touch playback, only event routing while dragging. */
+.floating-video-player.is-dragging iframe,
+.floating-video-player.is-resizing iframe {
   pointer-events: none;
+}
+
+.floating-video-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.floating-video-resize-handle::after {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  content: '';
+  border-right: 2px solid var(--line-strong);
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0 0 2px 0;
+  opacity: 0.7;
 }
 
 @media (max-width: 480px) {
