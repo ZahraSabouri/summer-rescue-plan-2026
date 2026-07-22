@@ -66,6 +66,7 @@ function EntryComposer({ entry, referenceDate, onSubmit, onCancel }) {
         <input
           type="text"
           className="gk-composer-tags"
+          dir="auto"
           list={TAG_OPTIONS_ID}
           value={tags}
           onChange={(event) => setTags(event.target.value)}

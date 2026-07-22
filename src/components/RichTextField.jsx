@@ -157,6 +157,7 @@ export function RichTextField({ id, value, onChange, rows = 4, placeholder = '',
         <textarea
           ref={ref}
           id={id}
+          dir="auto"
           value={value ?? ''}
           onChange={(event) => onChange(event.target.value)}
           rows={rows}

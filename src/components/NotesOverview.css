@@ -42,6 +42,61 @@
   border-radius: var(--radius-sm);
 }
 
+.notes-overview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.notes-module-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.notes-tag-filter {
+  padding: 4px 11px;
+  font: inherit;
+  font-size: 0.76rem;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.notes-tag-filter.active {
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.notes-sort-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.notes-sort-select select {
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--input-ink);
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.notes-show-more {
+  align-self: flex-start;
+}
+
 .notes-overview-section {
   display: flex;
   flex-direction: column;

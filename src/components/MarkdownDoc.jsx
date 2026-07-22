@@ -63,7 +63,7 @@ function MarkdownList({ block }) {
   return (
     <Tag className="md-list">
       {block.items.map((item, index) => (
-        <li key={index}>
+        <li key={index} dir="auto">
           <Inline nodes={item.content} />
           {item.children.map((child, childIndex) => (
             <MarkdownList key={childIndex} block={child} />
@@ -166,14 +166,14 @@ function MarkdownBlock({ block }) {
       // collapse control; anything deeper renders inline here.
       const Tag = `h${Math.min(6, block.level)}`
       return (
-        <Tag id={block.id} className={`md-h md-h${block.level}`}>
+        <Tag id={block.id} dir="auto" className={`md-h md-h${block.level}`}>
           <Inline nodes={block.content} />
         </Tag>
       )
     }
     case 'paragraph':
       return (
-        <p className="md-p">
+        <p className="md-p" dir="auto">
           <Inline nodes={block.content} />
         </p>
       )
@@ -196,7 +196,7 @@ function MarkdownBlock({ block }) {
       )
     case 'quote':
       return (
-        <blockquote className="md-quote">
+        <blockquote className="md-quote" dir="auto">
           {block.blocks.map((child, index) => (
             <MarkdownBlock key={index} block={child} />
           ))}
