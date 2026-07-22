@@ -2,10 +2,28 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { StudyTimer } from './StudyTimer'
 import { focusRewards } from '../utils/focusRewards'
 import {
+  FOCUS_TAB_HASH,
   focusRoomCardId,
   onFocusMessage,
   postFocusMessage,
 } from '../utils/focusSession'
+
+// Mirrors the `resource=` param the main app writes into its own hash
+// (src/App.jsx's writeRoute) so this tab's address bar reflects what's open
+// here too — needed for the room's own back button and for reloads to
+// reopen whatever was showing.
+function resourceIdFromRoomHash(hash = window.location.hash) {
+  const query = String(hash ?? '').split('?')[1] ?? ''
+  return new URLSearchParams(query).get('resource') ?? ''
+}
+
+function roomHash(cardId, resourceId) {
+  const params = new URLSearchParams()
+  if (cardId) params.set('card', cardId)
+  if (resourceId) params.set('resource', resourceId)
+  const query = params.toString()
+  return `${FOCUS_TAB_HASH}${query ? `?${query}` : ''}`
+}
 
 // Lazy-loaded the same way App.jsx loads it, so opening a resource here
 // doesn't pull the whole ModuleWorkspace bundle into the room's own chunk.
@@ -197,8 +215,28 @@ export function FocusRoomTab() {
   // which already arrived whole in the snapshot. Previously this tab had no
   // onOpenResource at all, so every resource chip (in "Resources" and in "How
   // to study this card") silently did nothing when clicked.
-  const [openResourceId, setOpenResourceId] = useState(null)
+  const [openResourceId, setOpenResourceIdState] = useState(() => resourceIdFromRoomHash() || null)
   const activeResource = snapshot?.resources?.find((resource) => resource.id === openResourceId) ?? null
+
+  function setOpenResourceId(resourceId) {
+    setOpenResourceIdState(resourceId || null)
+    const nextHash = roomHash(cardId, resourceId || '')
+    if (window.location.hash !== nextHash) window.history.pushState(null, '', nextHash)
+  }
+
+  // Back/forward through a resource push (or a manual hash edit) should open
+  // or close the reader to match, same as the main app's hashchange handling.
+  useEffect(() => {
+    function syncFromHash() {
+      setOpenResourceIdState(resourceIdFromRoomHash() || null)
+    }
+    window.addEventListener('hashchange', syncFromHash)
+    window.addEventListener('popstate', syncFromHash)
+    return () => {
+      window.removeEventListener('hashchange', syncFromHash)
+      window.removeEventListener('popstate', syncFromHash)
+    }
+  }, [])
 
   function exit() {
     postFocusMessage('release', { cardId })

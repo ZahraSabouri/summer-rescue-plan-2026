@@ -6,9 +6,21 @@ function encodePath(path) {
   return encodeURI(path.replace(/\\/g, '/'))
 }
 
+// Study-asset responses are cached hard (Cache-Control: max-age=3600) since the
+// files themselves never change — but that means a browser that already
+// fetched one before a *server-side* header fix (e.g. the CSP frame-ancestors
+// bug) keeps replaying the old, broken response for up to an hour, and no
+// server-side change can retroactively invalidate an entry the browser has
+// already decided is fresh. A query-string cache-buster sidesteps that: it
+// makes the URL itself new, so there is no existing cache entry to reuse —
+// every browser gets a real network request on the very next load. Bump this
+// only when a change to how study-assets are SERVED (not their content) needs
+// every browser to drop what it cached.
+const ASSET_CACHE_BUST = 'v2'
+
 export function moduleFileUrl(moduleFolder, relativePath) {
   const base = import.meta.env?.BASE_URL || '/'
-  return `${base}study-assets/${encodePath(`${moduleFolder}/${relativePath}`)}`
+  return `${base}study-assets/${encodePath(`${moduleFolder}/${relativePath}`)}?v=${ASSET_CACHE_BUST}`
 }
 
 // Code / script file extensions -> human-readable language label.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { formatDate, isOverdue } from '../utils/progress'
 import {
   buildCatchUp,
@@ -14,9 +14,17 @@ import { CardSessionTimer } from './CardSessionTimer'
 import { FocusForestPanel } from './FocusStats'
 import { CatchUpPanel } from './CatchUpPanel'
 import { ReplanPanel } from './ReplanPanel'
-import { YesterdayStrip } from './DayReview'
-import { DailyAgenda } from './ScheduleView'
 import { buildExecutionContext, summariseDay } from '../utils/schedule.js'
+
+// Lazy, not statically imported: DayReview.jsx and ScheduleView.jsx are each
+// ~500-650 lines of full-page view code that App.jsx already lazy-loads for
+// their own routes. Today stays the one eager landing route, but a static
+// import here of just these two named exports used to make Rollup fold both
+// entire modules into the eager entry chunk anyway (defeating that
+// code-splitting) since a module reachable via both a static and a dynamic
+// import can't be moved into its own chunk.
+const YesterdayStrip = lazy(() => import('./DayReview').then((module) => ({ default: module.YesterdayStrip })))
+const DailyAgenda = lazy(() => import('./ScheduleView').then((module) => ({ default: module.DailyAgenda })))
 
 function PersistedDetails({ storageKey, className, children }) {
   const [open, setOpen] = useState(() => {
@@ -387,25 +395,29 @@ export function TodayView({
               : 'Protected module capacity; each study block opens its dated card or the next real queue card.'}
           </span>
         </header>
-        <DailyAgenda
-          date={scheduleDate || referenceDate}
-          blocks={dayBlocks}
-          cards={cards}
-          onOpenCard={onOpenCard}
-          onCardStatusChange={actions.onStatusChange}
-          onToggleCardDone={actions.onToggleDone}
-          referenceDate={referenceDate}
-          logDate={preCampaign ? '' : scheduleDate || referenceDate}
-          editDate={scheduleDate || referenceDate}
-          compact
-        />
+        <Suspense fallback={null}>
+          <DailyAgenda
+            date={scheduleDate || referenceDate}
+            blocks={dayBlocks}
+            cards={cards}
+            onOpenCard={onOpenCard}
+            onCardStatusChange={actions.onStatusChange}
+            onToggleCardDone={actions.onToggleDone}
+            referenceDate={referenceDate}
+            logDate={preCampaign ? '' : scheduleDate || referenceDate}
+            editDate={scheduleDate || referenceDate}
+            compact
+          />
+        </Suspense>
       </section>
 
-      <YesterdayStrip
-        cards={cards}
-        referenceDate={referenceDate}
-        onOpenReview={(date) => onOpenView('review', { date })}
-      />
+      <Suspense fallback={null}>
+        <YesterdayStrip
+          cards={cards}
+          referenceDate={referenceDate}
+          onOpenReview={(date) => onOpenView('review', { date })}
+        />
+      </Suspense>
 
       <PersistedDetails storageKey="srp-today-tools-replan" className="today-tools panel">
         <summary>

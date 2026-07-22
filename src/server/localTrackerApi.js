@@ -36,6 +36,11 @@ const DEV_APP_CSP = APP_CSP.replace("script-src 'self'", `script-src 'self' 'non
 // 'self' still blocks every third-party site from framing these files; it only
 // stops blocking the one embedder that's supposed to be allowed: this app.
 export const FRAMEABLE_ASSET_CSP = APP_CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+// Same relaxation, but for the Vite dev server, which serves the nonce'd
+// DEV_APP_CSP instead of APP_CSP — without this, `npm run dev` never got the
+// FRAMEABLE_ASSET_CSP fix above at all, since only the production static
+// server (localAppServer.js) applied it.
+export const DEV_FRAMEABLE_ASSET_CSP = DEV_APP_CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
 
 const CODE_TYPES = new Set([
   'py',
@@ -100,12 +105,15 @@ function setSecurityHeaders(res) {
   res.setHeader('Cache-Control', 'no-store')
 }
 
-function setAppSecurityHeaders(res, { development = false } = {}) {
+function setAppSecurityHeaders(res, { development = false, isStudyAsset = false } = {}) {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   // Embedded YouTube players return Error 153 when no parent origin is sent.
   // Keep API responses at no-referrer; the app shell shares only its origin.
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.setHeader('Content-Security-Policy', development ? DEV_APP_CSP : APP_CSP)
+  const csp = development
+    ? (isStudyAsset ? DEV_FRAMEABLE_ASSET_CSP : DEV_APP_CSP)
+    : (isStudyAsset ? FRAMEABLE_ASSET_CSP : APP_CSP)
+  res.setHeader('Content-Security-Policy', csp)
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
 }
 
@@ -627,7 +635,10 @@ export function createLocalTrackerApi(options = {}) {
       }
       setSecurityHeaders(res)
     } else {
-      setAppSecurityHeaders(res, { development: Boolean(options.development) })
+      setAppSecurityHeaders(res, {
+        development: Boolean(options.development),
+        isStudyAsset: pathname.startsWith('/study-assets/'),
+      })
     }
 
     if (pathname === '/api/health') {
