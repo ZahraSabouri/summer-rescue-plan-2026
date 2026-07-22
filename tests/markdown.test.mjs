@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildToc, parseMarkdown, readMinutes, slugify, splitNoteSections } from '../src/utils/markdown.js'
+import {
+  TEXT_COLORS,
+  buildToc,
+  parseMarkdown,
+  readMinutes,
+  slugify,
+  splitNoteSections,
+  stripMarkdown,
+} from '../src/utils/markdown.js'
 
 function types(blocks) {
   return blocks.map((block) => block.type)
@@ -77,6 +85,26 @@ test('parses inline emphasis, code, links and math', () => {
   assert.ok(kinds.includes('math'))
 })
 
+test('parses coloured text for every colour in the fixed palette', () => {
+  for (const name of TEXT_COLORS) {
+    const [paragraph] = parseMarkdown(`{${name}:warning text}`)
+    const [node] = paragraph.content
+    assert.equal(node.type, 'color')
+    assert.equal(node.color, name)
+    assert.equal(plain(node.children), 'warning text')
+  }
+})
+
+test('coloured text nests other inline formatting and an unknown colour stays literal', () => {
+  const [paragraph] = parseMarkdown('{red:**bold warning**}')
+  const [node] = paragraph.content
+  assert.equal(node.type, 'color')
+  assert.equal(node.children[0].type, 'strong')
+
+  const [literalParagraph] = parseMarkdown('{purple:not a real colour}')
+  assert.equal(plain(literalParagraph.content), '{purple:not a real colour}')
+})
+
 test('escaped pipes stay inside a table cell', () => {
   const [table] = parseMarkdown('| a | b |\n| --- | --- |\n| x \\| y | z |')
   assert.equal(plain(table.rows[0][0]), 'x | y')
@@ -132,6 +160,13 @@ test('buildToc lists headings down to level three', () => {
     toc.map((entry) => entry.text),
     ['One', 'Two'],
   )
+})
+
+test('stripMarkdown gives a clean plain-text digest for previews', () => {
+  assert.equal(stripMarkdown('## Heading\n\nSome **bold** and *thin* text.'), 'Heading Some bold and thin text.')
+  assert.equal(stripMarkdown('- one\n- two'), 'one two')
+  assert.equal(stripMarkdown('{red:careful} plain `code` and [a link](https://x.test)'), 'careful plain code and a link')
+  assert.equal(stripMarkdown(''), '')
 })
 
 test('readMinutes never returns zero', () => {

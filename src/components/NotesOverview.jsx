@@ -3,14 +3,17 @@
 // Knowledge tab) rather than duplicating edit/delete UI. Four sections stay
 // visually separate on purpose — module/card/resource notes and Knowledge
 // "marked to revisit" are different things and should never read as one
-// blended list.
+// blended list. Visual language (kind dots, topic/tag chips) is borrowed
+// straight from ModuleKnowledge.jsx so this reads as the same app, not a
+// plainer second one.
 import { useMemo, useState } from 'react'
 import { KNOWLEDGE_SEEDS } from '../data/knowledgeSeeds'
-import { resolveModuleNotes, revisitNotes } from '../utils/knowledge'
+import { kindMeta, resolveModuleNotes, revisitNotes } from '../utils/knowledge'
+import { stripMarkdown } from '../utils/markdown'
 import './NotesOverview.css'
 
 function preview(text, length = 140) {
-  const flat = String(text ?? '').replace(/\s+/g, ' ').trim()
+  const flat = stripMarkdown(text)
   if (!flat) return ''
   return flat.length <= length ? flat : `${flat.slice(0, length).trimEnd()}…`
 }
@@ -21,12 +24,40 @@ function matches(query, ...fields) {
   return fields.some((field) => String(field ?? '').toLowerCase().includes(needle))
 }
 
-function NotesSection({ title, rows, emptyHint, query, renderRow }) {
+function SectionIcon({ tone, children }) {
+  return (
+    <span className={`notes-section-icon tone-${tone}`} aria-hidden="true">
+      {children}
+    </span>
+  )
+}
+
+function Chip({ children, tone }) {
+  return <span className={`notes-chip${tone ? ` tone-${tone}` : ''}`}>{children}</span>
+}
+
+function NoteRow({ icon, title, chips, snippet, onOpen }) {
+  return (
+    <button type="button" className="notes-overview-row" onClick={onOpen}>
+      {icon}
+      <span className="notes-overview-row-body">
+        <span className="notes-overview-row-head">
+          <strong>{title}</strong>
+          {chips?.length > 0 && <span className="notes-chip-row">{chips}</span>}
+        </span>
+        {snippet && <span className="notes-overview-preview">{snippet}</span>}
+      </span>
+    </button>
+  )
+}
+
+function NotesSection({ tone, icon, title, rows, emptyHint, query, renderRow }) {
   return (
     <section className="notes-overview-section">
       <h3>
+        <SectionIcon tone={tone}>{icon}</SectionIcon>
         {title}
-        <span>{rows.length}</span>
+        <span className="notes-section-count">{rows.length}</span>
       </h3>
       {rows.length === 0 ? (
         <p className="muted">{query ? 'Nothing here matches that search.' : emptyHint}</p>
@@ -87,9 +118,15 @@ export function NotesOverview({
   )
 
   const filteredModuleRows = moduleRows.filter((row) => matches(query, row.text, row.module.title))
-  const filteredCardRows = cardRows.filter((row) => matches(query, row.note.text, row.card.title))
-  const filteredResourceRows = resourceRows.filter((row) => matches(query, row.note, row.resource.title))
-  const filteredRevisitRows = revisitRows.filter((row) => matches(query, row.note.title, row.note.body))
+  const filteredCardRows = cardRows.filter((row) =>
+    matches(query, row.note.text, row.card.title, ...(row.card.tags ?? [])),
+  )
+  const filteredResourceRows = resourceRows.filter((row) =>
+    matches(query, row.note, row.resource.title, row.resource.group, ...(row.resource.tags ?? [])),
+  )
+  const filteredRevisitRows = revisitRows.filter((row) =>
+    matches(query, row.note.title, row.note.body, row.note.topic, ...(row.note.tags ?? [])),
+  )
 
   return (
     <div className="notes-overview">
@@ -111,56 +148,106 @@ export function NotesOverview({
       </header>
 
       <NotesSection
+        tone="module"
+        icon="◧"
         title="Module notes"
         rows={filteredModuleRows}
         emptyHint="Nothing yet — write in a module's scratchpad on its Overview tab."
         query={query}
         renderRow={({ module, text }) => (
-          <button key={module.id} type="button" className="notes-overview-row" onClick={() => onOpenModule?.(module.viewId)}>
-            <strong>{module.title}</strong>
-            <span>{preview(text)}</span>
-          </button>
+          <NoteRow
+            key={module.id}
+            icon={<SectionIcon tone="module">◧</SectionIcon>}
+            title={module.title}
+            chips={[
+              <Chip key="code" tone="module">
+                {module.code}
+              </Chip>,
+            ]}
+            snippet={preview(text)}
+            onOpen={() => onOpenModule?.(module.viewId)}
+          />
         )}
       />
 
       <NotesSection
+        tone="card"
+        icon="▤"
         title="Card notes"
         rows={filteredCardRows}
         emptyHint="Nothing yet — notes you add on a card's drawer show up here."
         query={query}
         renderRow={({ card, note }) => (
-          <button key={note.id} type="button" className="notes-overview-row" onClick={() => onOpenCard?.(card.id)}>
-            <strong>{card.title}</strong>
-            <span>{preview(note.text)}</span>
-          </button>
+          <NoteRow
+            key={note.id}
+            icon={<SectionIcon tone="card">▤</SectionIcon>}
+            title={card.title}
+            chips={[
+              card.moduleGroup && (
+                <Chip key="module" tone="card">
+                  {card.moduleGroup}
+                </Chip>
+              ),
+              ...(card.tags ?? []).slice(0, 3).map((tag) => <Chip key={tag}>{tag}</Chip>),
+            ].filter(Boolean)}
+            snippet={preview(note.text)}
+            onOpen={() => onOpenCard?.(card.id)}
+          />
         )}
       />
 
       <NotesSection
+        tone="resource"
+        icon="▥"
         title="Resource notes"
         rows={filteredResourceRows}
         emptyHint="Nothing yet — notes on a Materials-tab resource show up here."
         query={query}
         renderRow={({ resource, note }) => (
-          <button key={resource.id} type="button" className="notes-overview-row" onClick={() => onOpenResource?.(resource.id)}>
-            <strong>{resource.title}</strong>
-            <small>{resource.moduleTitle}</small>
-            <span>{preview(note)}</span>
-          </button>
+          <NoteRow
+            key={resource.id}
+            icon={<SectionIcon tone="resource">▥</SectionIcon>}
+            title={resource.title}
+            chips={[
+              <Chip key="type" tone="resource">
+                {resource.type}
+              </Chip>,
+              <Chip key="module">{resource.moduleTitle}</Chip>,
+            ]}
+            snippet={preview(note)}
+            onOpen={() => onOpenResource?.(resource.id)}
+          />
         )}
       />
 
       <NotesSection
+        tone="knowledge"
+        icon="◈"
         title="Knowledge — marked to revisit"
         rows={filteredRevisitRows}
         emptyHint='Nothing flagged — mark a concept note "Revisit" from any module’s Knowledge tab.'
         query={query}
-        renderRow={({ module, note }) => (
-          <button key={note.id} type="button" className="notes-overview-row" onClick={() => onOpenKnowledgeNote?.(note)}>
-            <strong>{note.title}</strong>
-            <small>{module.title}</small>
-          </button>
-        )}
+        renderRow={({ module, note }) => {
+          const kind = kindMeta(note.kind)
+          return (
+            <NoteRow
+              key={note.id}
+              icon={
+                <span className={`notes-kind-dot kind-${note.kind}`} aria-hidden="true">
+                  {kind.icon}
+                </span>
+              }
+              title={note.title}
+              chips={[
+                <Chip key="topic" tone="knowledge">
+                  {note.topic}
+                </Chip>,
+                <Chip key="module">{module.title}</Chip>,
+              ]}
+              onOpen={() => onOpenKnowledgeNote?.(note)}
+            />
+          )
+        }}
       />
     </div>
   )

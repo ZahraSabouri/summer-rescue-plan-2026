@@ -73,18 +73,6 @@
   border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-.gk-composer-text {
-  width: 100%;
-  padding: 10px 12px;
-  font: inherit;
-  font-size: 0.95rem;
-  color: var(--input-ink);
-  resize: vertical;
-  background: var(--input-bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-
 .gk-composer-row {
   display: flex;
   flex-wrap: wrap;
@@ -230,10 +218,25 @@
 
 .gk-entry-text {
   margin: 0 0 8px;
+}
+
+/* MarkdownPreview's .md-doc is built for a full document reading pane
+   (generous padding); an entry here is one sentence in a card, so that
+   padding gets stripped back down to nothing. */
+.gk-entry-text .md-doc {
+  padding: 0;
+  gap: 4px;
+}
+
+.gk-entry-text .md-p {
   font-size: 1.02rem;
   font-weight: 500;
   line-height: 1.5;
   color: var(--ink);
+}
+
+.gk-entry-text .md-p:last-child {
+  margin-bottom: 0;
 }
 
 .gk-tag-row {

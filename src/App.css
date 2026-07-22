@@ -1286,14 +1286,60 @@ button:disabled {
   gap: 6px;
 }
 
+/* A sane default everywhere RichTextField is dropped in — new usages (like
+   General Knowledge) don't need their own bespoke ancestor-scoped textarea
+   rule just to look like a real input. */
+.rich-text-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--input-ink);
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
 .rich-text-toolbar {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
 }
 
 .rich-text-toolbar button {
   min-width: 30px;
+}
+
+/* Colour swatches: a small fixed set (utils/markdown.js TEXT_COLORS), shown
+   as filled squares rather than text buttons so the toolbar stays compact. */
+.rich-text-swatch {
+  width: 24px;
+  min-width: 24px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+}
+
+.rich-text-swatch::after {
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
+  content: '';
+  border-radius: 999px;
+  background: var(--swatch-color);
+}
+
+.rich-text-swatch.swatch-red { --swatch-color: var(--red); }
+.rich-text-swatch.swatch-amber { --swatch-color: var(--amber); }
+.rich-text-swatch.swatch-green { --swatch-color: var(--green); }
+.rich-text-swatch.swatch-blue { --swatch-color: var(--blue); }
+
+.rich-text-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--line);
 }
 
 .rich-text-preview-toggle {
@@ -5244,7 +5290,8 @@ h1,
 }
 /* The trailing "N done" chip earns a stronger, positive treatment than the
    plain muted counts on the resource/knowledge panels — it is the one thing
-   this toggle most needs to say at a glance. */
+   this toggle most needs to say at a glance. Applies to both the module-level
+   done-cards toggle and the card-level done-checklist toggle below. */
 .done-details > summary > span:last-child {
   padding: 3px 10px;
   color: var(--accent-strong);
@@ -5264,6 +5311,12 @@ h1,
 .card-knowledge-panel[open] > summary::after,
 .done-details[open] > summary::after {
   content: '−';
+}
+
+/* The card-level done-checklist toggle is a `.done-details` too (same look),
+   just nested a step further inside the Checklist section. */
+.card-checklist-done-panel {
+  margin-top: 8px;
 }
 .card-resource-panel-body {
   display: grid;
@@ -9649,6 +9702,13 @@ button.countdown-chip:hover {
   background: var(--accent-soft);
   border-radius: 4px;
 }
+
+/* Coloured text: utils/markdown.js TEXT_COLORS is the only source of truth
+   for which names are valid, so this list only ever needs to track that one. */
+.md-color-red { color: var(--red); }
+.md-color-amber { color: var(--amber); }
+.md-color-green { color: var(--green); }
+.md-color-blue { color: var(--blue); }
 
 .md-quote {
   margin: 0 0 12px;

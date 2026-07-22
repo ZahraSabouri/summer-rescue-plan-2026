@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { TEXT_COLORS } from '../utils/markdown'
 import { MarkdownPreview } from './MarkdownDoc'
 
 // A Markdown + toolbar text field: buttons wrap/insert the same Markdown
@@ -18,6 +19,8 @@ function wrapSelection(value, start, end, [open, close]) {
   const text = `${value.slice(0, start)}${open}${selected}${close}${value.slice(end)}`
   return { text, selStart: start + open.length, selEnd: start + open.length + selected.length }
 }
+
+const COLOR_LABELS = { red: 'Red', amber: 'Amber', green: 'Green', blue: 'Blue' }
 
 function prefixLines(value, start, end, prefix) {
   const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1
@@ -55,6 +58,18 @@ export function RichTextField({ id, value, onChange, rows = 4, placeholder = '',
     const el = ref.current
     if (!el) return
     replace(prefixLines(value ?? '', el.selectionStart, el.selectionEnd, '- '))
+  }
+
+  function heading() {
+    const el = ref.current
+    if (!el) return
+    replace(prefixLines(value ?? '', el.selectionStart, el.selectionEnd, '## '))
+  }
+
+  function color(name) {
+    const el = ref.current
+    if (!el) return
+    replace(wrapSelection(value ?? '', el.selectionStart, el.selectionEnd, [`{${name}:`, '}']))
   }
 
   return (
@@ -105,6 +120,27 @@ export function RichTextField({ id, value, onChange, rows = 4, placeholder = '',
         >
           • List
         </button>
+        <button
+          type="button"
+          className="secondary-button compact-button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={heading}
+          title="Heading"
+        >
+          H
+        </button>
+        <span className="rich-text-toolbar-divider" aria-hidden="true" />
+        {TEXT_COLORS.map((name) => (
+          <button
+            key={name}
+            type="button"
+            className={`secondary-button compact-button rich-text-swatch swatch-${name}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => color(name)}
+            title={`${COLOR_LABELS[name]} text`}
+            aria-label={`${COLOR_LABELS[name]} text`}
+          />
+        ))}
         <button
           type="button"
           className={`secondary-button compact-button rich-text-preview-toggle${preview ? ' active' : ''}`}

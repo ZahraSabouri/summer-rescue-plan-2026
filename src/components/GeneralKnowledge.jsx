@@ -8,6 +8,8 @@ import {
   moduleForTag,
   searchEntries,
 } from '../utils/generalKnowledge'
+import { MarkdownPreview } from './MarkdownDoc'
+import { RichTextField } from './RichTextField'
 import './GeneralKnowledge.css'
 
 const TAG_OPTIONS_ID = 'gk-tag-options'
@@ -47,10 +49,9 @@ function EntryComposer({ entry, referenceDate, onSubmit, onCancel }) {
 
   return (
     <div className={`gk-composer${isEditing ? ' is-editing' : ''}`}>
-      <textarea
-        className="gk-composer-text"
+      <RichTextField
         value={text}
-        onChange={(event) => setText(event.target.value)}
+        onChange={setText}
         placeholder="What did you figure out?"
         rows={isEditing ? 3 : 2}
       />
@@ -106,7 +107,9 @@ function EntryCard({ entry, studyModules, onEdit, onDelete, onToggleStar, onOpen
           </button>
         </div>
       </div>
-      <p className="gk-entry-text">{entry.text}</p>
+      <div className="gk-entry-text">
+        <MarkdownPreview source={entry.text} />
+      </div>
       {entry.tags.length > 0 && (
         <div className="gk-tag-row">
           {entry.tags.map((tag) => {

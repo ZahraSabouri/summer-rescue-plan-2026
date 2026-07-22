@@ -407,6 +407,8 @@ export function CardDetailDrawer({
 
   const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const doneItems = checklistDoneCount(card)
+  const openChecklistItems = card.checklist.filter((item) => !item.done)
+  const doneChecklistItems = card.checklist.filter((item) => item.done)
   const kind = cardKind(card)
   const evidenceExpected = requiresEvidence(card)
   const overdue = Boolean(referenceDate && isOverdue(card, referenceDate))
@@ -479,6 +481,57 @@ export function CardDetailDrawer({
   function discardChecklistEdit(item) {
     setChecklistText((current) => ({ ...current, [item.id]: item.text }))
     setEditingChecklistId(null)
+  }
+
+  function renderChecklistItem(item) {
+    const editing = editingChecklistId === item.id
+    return (
+      <div key={item.id} className={`checklist-edit-row${editing ? ' editing' : ''}${item.done ? ' is-done' : ''}`}>
+        <input
+          type="checkbox"
+          checked={item.done}
+          onChange={() => onChecklistToggle(card.id, item.id)}
+          aria-label={`Toggle ${item.text}`}
+        />
+        {editing ? (
+          <>
+            <input
+              value={checklistText[item.id] ?? item.text}
+              onChange={(event) => setChecklistText((current) => ({ ...current, [item.id]: event.target.value }))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') saveChecklistEdit(item)
+                if (event.key === 'Escape') discardChecklistEdit(item)
+              }}
+            />
+            <div className="checklist-row-actions">
+              <button type="button" className="secondary-button compact-button" onClick={() => saveChecklistEdit(item)}>
+                Save
+              </button>
+              <button type="button" className="ghost-button compact-button" onClick={() => discardChecklistEdit(item)}>
+                Discard
+              </button>
+              <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
+                Delete
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <button type="button" className="checklist-text-button" onClick={() => beginChecklistEdit(item)}>
+              {item.text}
+            </button>
+            <div className="checklist-row-actions">
+              <button type="button" className="secondary-button compact-button" onClick={() => beginChecklistEdit(item)}>
+                Edit
+              </button>
+              <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    )
   }
 
   function saveEvidence() {
@@ -842,59 +895,24 @@ export function CardDetailDrawer({
               Checklist <span>{doneItems}/{card.checklist.length}</span>
             </h3>
             <div className="checklist editable">
-              {card.checklist.map((item) => {
-                const editing = editingChecklistId === item.id
-                return (
-                  <div key={item.id} className={`checklist-edit-row${editing ? ' editing' : ''}${item.done ? ' is-done' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      onChange={() => onChecklistToggle(card.id, item.id)}
-                      aria-label={`Toggle ${item.text}`}
-                    />
-                    {editing ? (
-                      <>
-                        <input
-                          value={checklistText[item.id] ?? item.text}
-                          onChange={(event) =>
-                            setChecklistText((current) => ({ ...current, [item.id]: event.target.value }))
-                          }
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') saveChecklistEdit(item)
-                            if (event.key === 'Escape') discardChecklistEdit(item)
-                          }}
-                        />
-                        <div className="checklist-row-actions">
-                          <button type="button" className="secondary-button compact-button" onClick={() => saveChecklistEdit(item)}>
-                            Save
-                          </button>
-                          <button type="button" className="ghost-button compact-button" onClick={() => discardChecklistEdit(item)}>
-                            Discard
-                          </button>
-                          <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
-                            Delete
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" className="checklist-text-button" onClick={() => beginChecklistEdit(item)}>
-                          {item.text}
-                        </button>
-                        <div className="checklist-row-actions">
-                          <button type="button" className="secondary-button compact-button" onClick={() => beginChecklistEdit(item)}>
-                            Edit
-                          </button>
-                          <button type="button" className="text-button danger" onClick={() => onChecklistDelete(card.id, item.id)}>
-                            Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )
-              })}
+              {openChecklistItems.length > 0 ? (
+                openChecklistItems.map(renderChecklistItem)
+              ) : (
+                <p className="empty-state">Nothing left on this checklist.</p>
+              )}
             </div>
+            {doneChecklistItems.length > 0 && (
+              <details className="done-details card-checklist-done-panel">
+                <summary>
+                  <span>
+                    <strong>Done</strong>
+                    <small>Checked-off items for this card</small>
+                  </span>
+                  <span>{doneChecklistItems.length} done</span>
+                </summary>
+                <div className="checklist editable">{doneChecklistItems.map(renderChecklistItem)}</div>
+              </details>
+            )}
             <div className="checklist-add">
               <input
                 value={checklistDraft}

@@ -40,6 +40,12 @@ export function Inline({ nodes }) {
             <Inline nodes={node.children} />
           </u>
         )
+      case 'color':
+        return (
+          <span key={index} className={`md-color-${node.color}`}>
+            <Inline nodes={node.children} />
+          </span>
+        )
       case 'link':
         return (
           <a key={index} href={node.href} target="_blank" rel="noreferrer">

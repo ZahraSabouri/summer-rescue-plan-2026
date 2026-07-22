@@ -6,7 +6,12 @@
 // emphasis/code/links/math. Anything it does not recognise stays literal text,
 // which is the right failure mode for pasted material.
 
-const SPECIALS = new Set(['`', '$', '*', '_', '~', '[', '+'])
+// A small fixed palette, not arbitrary CSS colors: the rich-text toolbar
+// offers exactly these as swatches, and {word:...} only matches one of them,
+// so coloured text can never carry an arbitrary/unsafe style value.
+export const TEXT_COLORS = ['red', 'amber', 'green', 'blue']
+
+const SPECIALS = new Set(['`', '$', '*', '_', '~', '[', '+', '{'])
 
 // Sticky patterns so the scanner can advance by index instead of re-slicing a
 // multi-kilobyte note on every character.
@@ -19,6 +24,9 @@ const INLINE_RULES = [
   // No standard Markdown syntax for underline; ++text++ is unused elsewhere
   // in this parser and is what the rich-text toolbar's Underline button emits.
   { type: 'underline', re: /\+\+([\s\S]+?)\+\+/y, nest: true },
+  // Same story for colour: {red:text} is this parser's own convention, not
+  // standard Markdown, emitted by the toolbar's colour swatches.
+  { type: 'color', re: new RegExp(`\\{(${TEXT_COLORS.join('|')}):([\\s\\S]+?)\\}`, 'y') },
   { type: 'em', re: /\*([^*\n]+)\*/y, nest: true },
   { type: 'em', re: /_([^_\n]+)_/y, nest: true },
   { type: 'link', re: /\[([^\]]*)\]\(([^)\s]+)\)/y },
@@ -55,6 +63,7 @@ export function parseInline(input) {
         const end = rule.re.lastIndex
         flush()
         if (rule.type === 'link') out.push({ type: 'link', href: match[2], children: parseInline(match[1]) })
+        else if (rule.type === 'color') out.push({ type: 'color', color: match[1], children: parseInline(match[2]) })
         else if (rule.nest) out.push({ type: rule.type, children: parseInline(match[1]) })
         else out.push({ type: rule.type, value: match[1] })
         i = end
@@ -69,6 +78,33 @@ export function parseInline(input) {
 
   flush()
   return out
+}
+
+const COLOR_SPAN = new RegExp(`\\{(?:${TEXT_COLORS.join('|')}):([\\s\\S]*?)\\}`, 'g')
+
+// A short, human-readable digest for list rows and previews — strips every
+// syntax marker this parser recognises rather than rendering or truncating
+// raw source, so a preview never shows literal #/**/{color:...} punctuation.
+export function stripMarkdown(source) {
+  return String(source ?? '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/~~~[\s\S]*?~~~/g, ' ')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(COLOR_SPAN, '$1')
+    .replace(/\*\*([\s\S]+?)\*\*/g, '$1')
+    .replace(/__([\s\S]+?)__/g, '$1')
+    .replace(/~~([\s\S]+?)~~/g, '$1')
+    .replace(/\+\+([\s\S]+?)\+\+/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    .replace(/_([^_\n]+)_/g, '$1')
+    .replace(/\[([^\]]*)\]\([^)\s]+\)/g, '$1')
+    .replace(/\$([^$\n]+)\$/g, '$1')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+[.)]\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export function slugify(text) {
