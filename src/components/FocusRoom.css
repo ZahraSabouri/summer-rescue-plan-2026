@@ -331,6 +331,30 @@
   font-size: 0.76rem;
 }
 
+.focus-room-break-prompt {
+  width: min(100%, 520px);
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  text-align: center;
+}
+.focus-room-break-prompt span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.focus-room-break-prompt p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
 .focus-room-brief {
   display: grid;
   gap: 14px;
@@ -590,6 +614,53 @@
   color: var(--muted);
   text-decoration: line-through;
 }
+.focus-room-checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.focus-room-checklist li label {
+  flex: 1;
+  min-width: 0;
+}
+.focus-room-item-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.focus-room-item-timer span {
+  font-family: var(--font-num);
+  font-size: 11px;
+  color: var(--muted);
+}
+.focus-room-item-timer span.is-running {
+  color: var(--accent);
+  font-weight: 700;
+}
+.focus-room-item-timer button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.focus-room-item-timer button.is-running {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.focus-room-item-timer button:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  color: var(--accent);
+}
 .focus-room-notes li,
 .focus-room-evidence li {
   padding: 8px 10px;
@@ -652,6 +723,40 @@
   font-size: 13px;
 }
 
+.focus-room-queue ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.focus-room-queue button {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.focus-room-queue button:hover,
+.focus-room-queue button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.focus-room-queue button strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.focus-room-queue button small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 /* Focus rewards: points, streak, forest ===================================== */
 .focus-room-rewards {
   margin-top: 16px;
@@ -708,6 +813,75 @@
   margin-top: 6px;
   color: var(--muted);
   font-size: 12px;
+}
+
+/* Session stats & history ==================================================== */
+.focus-room-stats {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+.focus-room-stats-today {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.focus-room-stats-today strong {
+  font-size: 18px;
+  font-family: var(--font-num);
+}
+.focus-room-stats-today span {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.focus-room-stats-history > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.focus-room-stats-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 36px;
+  margin-bottom: 10px;
+}
+.focus-room-stats-bars span {
+  flex: 1;
+  min-width: 4px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+  opacity: 0.75;
+}
+.focus-room-stats-history ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.focus-room-stats-history li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.focus-room-stats-history li strong {
+  color: var(--ink);
+  font-family: var(--font-num);
 }
 
 /* Focus guard: pause & nudge overlay ======================================== */

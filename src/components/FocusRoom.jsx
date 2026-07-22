@@ -4,7 +4,9 @@ import './FocusRoom.css'
 import { checklistDoneCount, formatDate, requiresEvidence } from '../utils/progress'
 import { focusRewards } from '../utils/focusRewards'
 import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
+import { AmbientSoundPlayer } from './AmbientSoundPlayer'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
+import { MusicPopover } from './MusicPopover'
 import { RichTextField } from './RichTextField'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -14,6 +16,21 @@ const MODE_LABELS = {
   long: 'Long break',
 }
 
+const BREAK_PROMPTS = {
+  short: [
+    'Stand up and stretch your neck and shoulders.',
+    'Look at something 20+ feet away for 20 seconds — rest your eyes.',
+    'Refill your water and drink a full glass.',
+    'Take 10 slow breaths: in for 4, hold for 4, out for 4.',
+  ],
+  long: [
+    'Get up and walk for a few minutes, away from the screen.',
+    'Do a full stretch: neck, shoulders, wrists, and back.',
+    'Step outside or open a window for fresh air.',
+    'Eat or drink something, and let your eyes rest fully.',
+  ],
+}
+
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
 function formatBytes(size) {
@@ -21,6 +38,14 @@ function formatBytes(size) {
   if (!bytes) return ''
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
   return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`
+}
+
+function formatMinutes(value) {
+  const minutes = Math.max(0, Math.round(Number(value) || 0))
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`
 }
 
 function formatStamp(value) {
@@ -190,6 +215,8 @@ export function FocusRoom({
   onOpenResource,
   linkedNotes = [],
   onExit,
+  queue = [],
+  onSwitchCard,
   theme,
   onThemeChange,
 }) {
@@ -211,6 +238,14 @@ export function FocusRoom({
   const [attachmentStatus, setAttachmentStatus] = useState('idle')
   const [attachmentError, setAttachmentError] = useState('')
 
+  // A lightweight, room-local stopwatch per checklist item — not persisted
+  // anywhere, just an on-screen aid for noticing which sub-tasks are eating
+  // the time. Only one item runs at a time; starting another folds the
+  // previous one's elapsed time into its running total first.
+  const [activeItemTimer, setActiveItemTimer] = useState(null) // { itemId, startedAt }
+  const [itemSeconds, setItemSeconds] = useState({})
+  const [itemTick, setItemTick] = useState(0)
+
   useEffect(() => {
     setNoteDraft('')
     setNoteText({})
@@ -220,8 +255,34 @@ export function FocusRoom({
     setEditingEvidenceId(null)
     setAttachmentStatus('idle')
     setAttachmentError('')
+    setActiveItemTimer(null)
+    setItemSeconds({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCard?.id])
+
+  useEffect(() => {
+    if (!activeItemTimer) return undefined
+    const tick = window.setInterval(() => setItemTick((value) => value + 1), 1000)
+    return () => window.clearInterval(tick)
+  }, [activeItemTimer])
+
+  function toggleItemTimer(itemId) {
+    setActiveItemTimer((current) => {
+      if (current) {
+        const elapsed = Math.round((Date.now() - current.startedAt) / 1000)
+        setItemSeconds((seconds) => ({ ...seconds, [current.itemId]: (seconds[current.itemId] ?? 0) + elapsed }))
+      }
+      if (current?.itemId === itemId) return null
+      return { itemId, startedAt: Date.now() }
+    })
+  }
+
+  function itemElapsedSeconds(itemId) {
+    const banked = itemSeconds[itemId] ?? 0
+    if (activeItemTimer?.itemId !== itemId) return banked
+    void itemTick // read to force a re-render each second while this item is timing
+    return banked + Math.round((Date.now() - activeItemTimer.startedAt) / 1000)
+  }
 
   useEffect(() => {
     exitRef.current = onExit
@@ -470,6 +531,9 @@ export function FocusRoom({
     `${activeCard.actualHours || 0}h logged`,
   ].filter(Boolean)
 
+  const cardSessions = activeCard.focusSessions ?? []
+  const maxCardSessionMinutes = Math.max(1, ...cardSessions.slice(0, 8).map((session) => session.minutes || 0))
+
   const totalSeconds = Math.max(1, Number(durations?.[mode] ?? 1) * 60)
   const progress = Math.max(0, Math.min(1, 1 - remaining / totalSeconds))
   const moduleName = MODULE_LABELS[activeCard.moduleGroup] || activeCard.module || activeCard.moduleGroup || 'Study'
@@ -586,6 +650,8 @@ export function FocusRoom({
           <strong>{moduleName}</strong>
         </div>
         <div className="focus-room-topbar-actions">
+          <AmbientSoundPlayer />
+          <MusicPopover theme={theme} />
           {onThemeChange && <ThemeToggle theme={theme} onChange={onThemeChange} />}
           <button ref={closeRef} type="button" className="focus-room-exit" onClick={onExit}>
             Exit <kbd>Esc</kbd>
@@ -666,6 +732,14 @@ export function FocusRoom({
                 {running ? 'Pause' : mode === 'focus' ? 'Start focus' : 'Start break'}
               </button>
             </div>
+
+            {mode !== 'focus' && (
+              <div className="focus-room-break-prompt" role="note">
+                <span>While you rest</span>
+                <p>{BREAK_PROMPTS[mode][sessions % BREAK_PROMPTS[mode].length]}</p>
+              </div>
+            )}
+
             <p className="focus-room-session-count">
               {sessions} focus {sessions === 1 ? 'block' : 'blocks'} completed this app session
             </p>
@@ -777,6 +851,37 @@ export function FocusRoom({
                 </small>
               </div>
             </div>
+
+            <div className="focus-room-stats" aria-label="Session stats and history">
+              <div className="focus-room-stats-today">
+                <strong>{formatMinutes(rewards.today.minutes)}</strong>
+                <span>focused today, across every card</span>
+              </div>
+              {cardSessions.length > 0 ? (
+                <div className="focus-room-stats-history">
+                  <span>This card’s sessions</span>
+                  <div className="focus-room-stats-bars" aria-hidden="true">
+                    {cardSessions.slice(0, 8).reverse().map((session, index) => (
+                      <span
+                        key={session.id ?? `${session.at}-${index}`}
+                        style={{ height: `${Math.max(12, Math.min(100, (session.minutes / maxCardSessionMinutes) * 100))}%` }}
+                        title={`${formatMinutes(session.minutes)} · ${formatStamp(session.at)}`}
+                      />
+                    ))}
+                  </div>
+                  <ul>
+                    {cardSessions.slice(0, 5).map((session, index) => (
+                      <li key={session.id ?? `${session.at}-${index}`}>
+                        <span>{formatStamp(session.at)}</span>
+                        <strong>{formatMinutes(session.minutes)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="muted">No sessions logged on this card yet — the first one will show up here.</p>
+              )}
+            </div>
           </section>
 
           <aside className="focus-room-brief" aria-label="Card finish and schedule boundaries">
@@ -793,16 +898,52 @@ export function FocusRoom({
               <section className="focus-room-checklist">
                 <span>Checklist <em>{checklistDoneCount(activeCard)}/{checklist.length}</em></span>
                 <ul>
-                  {checklist.map((item) => (
-                    <li key={item.id} className={item.done ? 'is-done' : ''}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(item.done)}
-                          onChange={() => onChecklistToggle?.(activeCard.id, item.id)}
-                        />
-                        <span>{item.text}</span>
-                      </label>
+                  {checklist.map((item) => {
+                    const elapsed = itemElapsedSeconds(item.id)
+                    const isTiming = activeItemTimer?.itemId === item.id
+                    return (
+                      <li key={item.id} className={item.done ? 'is-done' : ''}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(item.done)}
+                            onChange={() => onChecklistToggle?.(activeCard.id, item.id)}
+                          />
+                          <span>{item.text}</span>
+                        </label>
+                        <div className="focus-room-item-timer">
+                          {elapsed > 0 && <span className={isTiming ? 'is-running' : ''}>{formatTimer(elapsed)}</span>}
+                          <button
+                            type="button"
+                            className={isTiming ? 'is-running' : ''}
+                            onClick={() => toggleItemTimer(item.id)}
+                            aria-label={isTiming ? `Pause timing ${item.text}` : `Time this sub-task: ${item.text}`}
+                            title={isTiming ? 'Pause' : 'Time this sub-task'}
+                          >
+                            {isTiming ? '⏸' : '▶'}
+                          </button>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
+
+            {queue.length > 0 && (
+              <section className="focus-room-queue" aria-label="What's next">
+                <span>Next up</span>
+                <ul>
+                  {queue.map((next) => (
+                    <li key={next.id}>
+                      <button type="button" onClick={() => onSwitchCard?.(next.id)} title="Switch the room to this card">
+                        <strong>{next.title}</strong>
+                        <small>
+                          {[next.moduleGroup, next.estimatedHours ? `${next.estimatedHours}h` : '', next.dueDate ? `Due ${formatDate(next.dueDate)}` : '']
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </small>
+                      </button>
                     </li>
                   ))}
                 </ul>

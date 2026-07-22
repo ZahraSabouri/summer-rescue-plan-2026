@@ -1624,6 +1624,18 @@ export default function App() {
     focusBridgeRef.current.send = (id) => {
       const card = tracker.cards.find((entry) => entry.id === id)
       if (!card) return
+      // A glance-ahead queue for the room's "Next up" panel — same ordering
+      // (due date, then plan sortOrder) the rest of the app already uses to
+      // decide what's next, just filtered to what's left and not this card.
+      const queue = sortCards(tracker.cards.filter((entry) => !entry.done && entry.id !== id))
+        .slice(0, 3)
+        .map((entry) => ({
+          id: entry.id,
+          title: entry.title,
+          moduleGroup: entry.moduleGroup,
+          estimatedHours: entry.estimatedHours,
+          dueDate: entry.dueDate || entry.startDate || '',
+        }))
       postFocusMessage('snapshot', {
         cardId: id,
         card,
@@ -1632,6 +1644,7 @@ export default function App() {
         nextBoundary: activeTimerCardId === id ? focusExecutionContext.nextBlock ?? null : null,
         linkedNotes: resolveLinkedNotesForCard(card),
         theme,
+        queue,
       })
     }
     focusBridgeRef.current.apply = (message) => {

@@ -42,9 +42,14 @@ const ResourceReader = lazy(() => import('./ModuleWorkspace').then((module) => (
 // one piece of state this tab drives directly: it hydrates them from the main
 // tab once, then streams changes back so trees and points still persist.
 export function FocusRoomTab() {
-  const cardId = focusRoomCardId()
+  // Stateful (not a plain const) so picking a card from the "Next up" queue
+  // can move the room to a different card without a full tab reload — see
+  // switchToCard below, which updates this, the URL hash, and re-requests a
+  // snapshot for the new id.
+  const [cardId, setCardId] = useState(() => focusRoomCardId())
   const [snapshot, setSnapshot] = useState(null)
   const [status, setStatus] = useState(cardId ? 'connecting' : 'offline') // connecting | live | offline | closed
+  const [queue, setQueue] = useState([])
   const rewardsHydratedRef = useRef(false)
   const lastRewardsSentRef = useRef('')
   // This tab boots with no idea what the main tab's theme is (it's a fresh
@@ -71,6 +76,7 @@ export function FocusRoomTab() {
           nextBoundary: message.nextBoundary ?? null,
           linkedNotes: message.linkedNotes ?? [],
         })
+        setQueue(message.queue ?? [])
         if (message.theme) setTheme(message.theme)
         setStatus('live')
       }
@@ -131,6 +137,22 @@ export function FocusRoomTab() {
   function handleThemeChange(next) {
     setTheme(next)
     forward('set-theme', { theme: next })
+  }
+
+  // Move the room to a different card without closing the tab — picked from
+  // the "Next up" queue. Clears the stale snapshot so the fallback "Connecting…"
+  // state shows instead of the old card while the new one loads, updates the
+  // URL so a reload reopens the right card, and lets the existing
+  // request-snapshot effect (keyed on cardId) do the rest.
+  function switchToCard(nextCardId) {
+    if (!nextCardId || nextCardId === cardId) return
+    setSnapshot(null)
+    setQueue([])
+    setStatus('connecting')
+    setOpenResourceIdState(null)
+    setCardId(nextCardId)
+    const nextHash = roomHash(nextCardId, '')
+    if (window.location.hash !== nextHash) window.history.pushState(null, '', nextHash)
   }
 
   function handleChecklistToggle(id, itemId) {
@@ -314,6 +336,8 @@ export function FocusRoomTab() {
         onEvidenceFileAdd={handleAddEvidenceFile}
         onOpenResource={setOpenResourceId}
         onExitRoom={exit}
+        queue={queue}
+        onSwitchCard={switchToCard}
         theme={theme}
         onThemeChange={handleThemeChange}
       />

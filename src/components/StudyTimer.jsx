@@ -72,6 +72,8 @@ export function StudyTimer({
   variant = 'bar',
   linkedNotes = [],
   onExitRoom,
+  queue = [],
+  onSwitchCard,
   theme,
   onThemeChange,
 }) {
@@ -568,6 +570,8 @@ export function StudyTimer({
         resources={resources}
         onOpenResource={onOpenResource}
         linkedNotes={linkedNotes}
+        queue={queue}
+        onSwitchCard={onSwitchCard}
         theme={theme}
         onThemeChange={onThemeChange}
         onExit={() => {
