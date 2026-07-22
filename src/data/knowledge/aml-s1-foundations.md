@@ -47,34 +47,42 @@ Deep learning is Part 2 of this module. Part 1 is everything else.
 
 The class test is a **computer** test. That means running, reading and repairing code under time pressure — not writing essays about it.
 
-@@ id=s1-five-stage-process | title=The five-stage ML process | kind=concept | topic=S1 · The process | key | tags=pipeline,exam,workflow | cards=card-001,card-005
-The backbone of the whole module. Memorise the order — exam tasks are usually "something is wrong at stage N".
+@@ id=s1-five-stage-process | title=The five-stage ML process (slide diagram) | kind=concept | topic=S1 · The process | key | tags=pipeline,exam,workflow | cards=card-001,card-005
+The backbone of the whole module — but read the diagram carefully. It is easy to misremember as one single loop, when it is actually three separate things bolted together: a chain of 5 numbered stages, a **feedback loop** that can return to any of the first three, and a **separate deployment arrow** that has nothing to do with that loop.
 
 ```text
 Understand application / define problem
             ↓
-   Data collection
-            ↓
-   Data preprocessing
-            ↓
-   Data modelling (machine learning)
-            ↓
-   Model evaluation ──unsatisfied──┐
+   1  Data collection            ◄─┐
             ↓                      │
-   Model application               │
-            ↓                      │
-   New / unseen data               │
-            └──────────────────────┘
+   2  Data preprocessing         ◄─┤   "unsatisfied" — evaluation can
+            ↓                      │   send you back to ANY of these
+   3  Data modelling (ML)        ◄─┘   three, not just the stage before it
+            ↓
+   4  Model evaluation ── unsatisfied? ── loops back to 1, 2, or 3
+            │
+            │ satisfied
+            ↓
+   5  Model application   ◄──────────────  New / unseen data
+                                            (a separate, one-way input —
+                                             this is deployment, not a loop)
 ```
 
-The loop matters: **evaluation feeding back** is what makes this iterative rather than a straight line. If the model is unsatisfactory you go back and change preprocessing or modelling — you do not go back and change the test set.
+Three things worth being precise about, because each is a realistic way to misread this slide:
+
+* **The feedback loop has three possible targets, not one.** If evaluation is unsatisfactory, the slide draws red arrows back to data collection, preprocessing, *and* modelling — because the fault could live in any of them. Poor performance caused by not having the right data at all sends you back to stage 1, not just to re-tuning stage 3's model.
+* **"New / unseen data" is not part of the loop.** It feeds in once, straight into Model application, and represents using the *finished, satisfied* model on live data. It never touches evaluation. If it did — if production data could influence how the model gets retrained — that would be the same leakage problem as `fit_transform` on the test set, just at deployment time instead of split time.
+* **There is no separate "EDA" box on this diagram.** Exploratory analysis is real Session 1 content (see the EDA plotting recipes among the S1 code cheatsheets) — it just is not drawn as its own stage here. It lives inside "data collection" / getting to know the data, before preprocessing proper starts. The lab notebook's *own* wording (next note below) does name EDA as a separate step; that is a different, coarser-grained source describing the same process, not a contradiction.
+
+The UMich course video (this card's video resource) frames the identical shape even more compactly, as **Represent → Train → Evaluate → Refine**: build a feature representation, fit, score, and — if unsatisfied — go back and change something upstream of where the number came from. Different course, same idea: the labels change, the shape (build → measure → revise upstream) does not. That is the actual thing worth carrying into the exam — not one exact wording.
 
 ## Check yourself
-1. Which stage does the "unsatisfied" arrow return to? :: Back into preprocessing/modelling — you revise how you prepared the data or which model you used. You never tune against the test set.
-2. Give the five stages in order. :: Get data → know the data (EDA) → process the data (preprocessing) → build model(s) → evaluate.
+1. Your model scores badly, not because of preprocessing or the algorithm, but because the raw dataset never captured the feature that actually predicts the target. Which stage do you return to, and why won't a better scaler or a different classifier fix it? :: Data collection. No amount of `scaler.fit()` or swapping `SVC()` for something else can invent information that was never collected — the loop has to go all the way back to stage 1.
+2. Why is it wrong to imagine "New/unseen data" flowing back into "Model evaluation"? :: They are different arrows for different purposes. New/unseen data feeds forward into Model application — deployment, using the already-finished model. If it fed back into evaluation instead, you would effectively be tuning your model against production data, which is the deployment-time version of test-set leakage.
+3. The lab notebook calls its own steps "get data, know the data (EDA), process the data, build model(s), evaluate" — where does "EDA" sit on the diagram above? :: Nowhere as its own box — it is folded into "data collection", before preprocessing starts. The lab's wording is a different, five-step retelling of the same process: finer-grained near the start (it names EDA explicitly), coarser at the end (it stops at evaluation; the diagram continues on to application and new data).
 
 @@ id=s1-lab-five-steps | title=The lab's own wording of the process | kind=cheatsheet | topic=S1 · The process | key | tags=pipeline,lab
-Lab 1 states it as five steps. This is the phrasing to reproduce:
+Lab 1 states it as five steps. This is a different, coarser source from the slide diagram above (s1-five-stage-process): it starts once you already know the problem, and it stops at evaluation — it never separately draws "model application" or "new/unseen data", and it names EDA as its own step where the slide does not. Same underlying process, different granularity. This is also the exact phrasing to reproduce for the card's evidence file, AMLS1workflow.md:
 
 | Step | Name | What you actually do |
 | --- | --- | --- |

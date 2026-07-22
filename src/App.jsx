@@ -2180,17 +2180,6 @@ export default function App() {
               <Icon name="chevron" />
               <span>Collapse</span>
             </button>
-            {navCollapsed && (
-              <button
-                type="button"
-                className={`nav-lock-btn${navLocked ? ' is-locked' : ''}`}
-                onClick={() => setNavLocked((value) => !value)}
-                title={navLocked ? 'Locked collapsed — click to allow hover-to-expand' : 'Hover-to-expand — click to lock collapsed'}
-                aria-pressed={navLocked}
-              >
-                {navLocked ? '🔒' : '🔓'}
-              </button>
-            )}
           </div>
         </div>
       </aside>
