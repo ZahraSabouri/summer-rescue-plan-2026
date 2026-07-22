@@ -1,0 +1,146 @@
+/* The header icon + its URL popover live in normal flow; the floating player
+   itself is portalled to document.body so position:fixed always tracks the
+   viewport, never an ancestor with its own transform/stacking context. */
+
+.video-player-wrap {
+  position: relative;
+}
+
+.video-player-editor {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+}
+
+.video-player-editor label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.video-player-editor input {
+  width: 100%;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--input-ink);
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.video-player-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+}
+
+.video-player-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* The floating box itself: no backdrop, not modal — it should feel like a
+   picture-in-picture window sitting on top of whatever page you're on. */
+.floating-video-player {
+  position: fixed;
+  z-index: 60;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+}
+
+.floating-video-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 10px;
+  cursor: grab;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  touch-action: none;
+}
+
+.floating-video-player.is-dragging .floating-video-header {
+  cursor: grabbing;
+}
+
+.floating-video-handle {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.floating-video-label {
+  flex: 1;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.floating-video-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.floating-video-close:hover {
+  color: var(--red);
+  background: var(--chip-bg);
+}
+
+.floating-video-body {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.floating-video-body iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* An iframe otherwise swallows pointermove while the cursor crosses it,
+   which would stop the drag tracking dead the moment it reached the video. */
+.floating-video-player.is-dragging .floating-video-body iframe {
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .video-player-editor {
+    width: 220px;
+  }
+}

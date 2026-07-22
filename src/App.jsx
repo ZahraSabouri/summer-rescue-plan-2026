@@ -6,9 +6,11 @@ import { AppIntro } from './components/AppIntro'
 import { CardDetailDrawer } from './components/CardDetailDrawer'
 import { CommandPalette } from './components/CommandPalette'
 import { FilterBar } from './components/FilterBar'
+import { FloatingVideoPlayer } from './components/FloatingVideoPlayer'
 import { MusicPopover } from './components/MusicPopover'
 import { NotificationCenter } from './components/NotificationCenter'
 import { StudyTimer } from './components/StudyTimer'
+import { ThemeToggle } from './components/ThemeToggle'
 import { FocusStatsBadge } from './components/FocusStats'
 import { FocusToasts } from './components/FocusToasts'
 import { ExamDateStatus, ModuleExamDateFields } from './components/ModuleExamDates'
@@ -2101,7 +2103,13 @@ export default function App() {
   if (standaloneResource) {
     return (
       <Suspense fallback={<ViewLoading label="Loading resource" />}>
-        <ResourceReader resource={standaloneResource} onClose={closeResource} standalone />
+        <ResourceReader
+          resource={standaloneResource}
+          onClose={closeResource}
+          standalone
+          theme={theme}
+          onThemeChange={(next) => tracker.updateSettings({ theme: next })}
+        />
       </Suspense>
     )
   }
@@ -2303,6 +2311,7 @@ export default function App() {
               onOpenResource={openResource}
             />
             <MusicPopover theme={theme} />
+            <FloatingVideoPlayer />
             <NotificationCenter
               notifications={displayNotifications}
               referenceDate={referenceDate}
@@ -2311,15 +2320,7 @@ export default function App() {
               onSetRead={setDisplayNotificationRead}
               onMarkAllRead={markAllDisplayNotificationsRead}
             />
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => tracker.updateSettings({ theme: theme === 'dark' ? 'light' : 'dark' })}
-              aria-label="Toggle dark mode"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-            </button>
+            <ThemeToggle theme={theme} onChange={(next) => tracker.updateSettings({ theme: next })} />
             <button type="button" className="icon-button" onClick={() => setSettingsOpen(true)} aria-label="Settings and data" title="Settings and data">
               <Icon name="settings" />
             </button>
@@ -2719,6 +2720,8 @@ export default function App() {
         onNavigateMeta={openCardFacet}
         moduleOptions={moduleOptions}
         phaseOptions={phaseOptions}
+        theme={theme}
+        onThemeChange={(next) => tracker.updateSettings({ theme: next })}
       />
 
       <AddCardDialog
@@ -2745,12 +2748,22 @@ export default function App() {
 
       {activeResource && (
         <Suspense fallback={<ViewLoading label="Loading resource" />}>
-          <ResourceReader resource={activeResource} onClose={closeResource} />
+          <ResourceReader
+            resource={activeResource}
+            onClose={closeResource}
+            theme={theme}
+            onThemeChange={(next) => tracker.updateSettings({ theme: next })}
+          />
         </Suspense>
       )}
       {!activeResource && attachmentResource && (
         <Suspense fallback={<ViewLoading label="Loading attachment" />}>
-          <ResourceReader resource={attachmentResource} onClose={() => setAttachmentResource(null)} />
+          <ResourceReader
+            resource={attachmentResource}
+            onClose={() => setAttachmentResource(null)}
+            theme={theme}
+            onThemeChange={(next) => tracker.updateSettings({ theme: next })}
+          />
         </Suspense>
       )}
 

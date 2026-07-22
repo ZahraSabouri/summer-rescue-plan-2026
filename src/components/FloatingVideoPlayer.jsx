@@ -48,24 +48,25 @@ function withAutoplay(embedUrl) {
 }
 
 export function FloatingVideoPlayer() {
-  const [rawUrl, setRawUrl] = useState('')
-  const [visible, setVisible] = useState(false)
-  const [position, setPosition] = useState(defaultPosition)
+  // Restored via lazy initial state (read once, synchronously, at mount)
+  // rather than an effect + setState — the same trick this app already uses
+  // for srp-nav-collapsed etc. After mount, every open/close/move writes back.
+  const [rawUrl, setRawUrl] = useState(() => loadSaved()?.rawUrl ?? '')
+  const [visible, setVisible] = useState(() => {
+    const saved = loadSaved()
+    return Boolean(saved?.visible && saved?.rawUrl)
+  })
+  const [position, setPosition] = useState(() => {
+    const saved = loadSaved()
+    if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') return clamp(saved.x, saved.y)
+    return defaultPosition()
+  })
   const [editing, setEditing] = useState(false)
   const [draftUrl, setDraftUrl] = useState('')
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
   const dragOffset = useRef(null)
   const boxRef = useRef(null)
-
-  // Restore once on mount — after this, every open/close/move writes back.
-  useEffect(() => {
-    const saved = loadSaved()
-    if (!saved) return
-    if (saved.rawUrl) setRawUrl(saved.rawUrl)
-    if (typeof saved.x === 'number' && typeof saved.y === 'number') setPosition(clamp(saved.x, saved.y))
-    setVisible(Boolean(saved.visible && saved.rawUrl))
-  }, [])
 
   // A window resize can strand the player off-screen (e.g. shrinking from a
   // wide monitor to a laptop) — keep it inside the viewport at all times.

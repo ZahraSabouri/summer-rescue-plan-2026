@@ -3470,6 +3470,65 @@ h1,
   transform: translateY(-1px);
 }
 
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.theme-switch-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--panel-2);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.theme-switch:hover .theme-switch-track {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+}
+.theme-switch:focus-visible .theme-switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-switch-mark {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  color: var(--muted);
+  transform: translateY(-50%);
+  transition: color 0.2s ease;
+}
+.theme-switch-mark.sun {
+  left: 5px;
+}
+.theme-switch-mark.moon {
+  right: 5px;
+}
+.theme-switch:not(.is-dark) .theme-switch-mark.sun {
+  color: var(--accent-2);
+}
+.theme-switch.is-dark .theme-switch-mark.moon {
+  color: var(--accent);
+}
+.theme-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow-1);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.theme-switch.is-dark .theme-switch-thumb {
+  transform: translateX(20px);
+}
+
 /* ---- Fields ---- */
 .app-shell input,
 .app-shell select,
