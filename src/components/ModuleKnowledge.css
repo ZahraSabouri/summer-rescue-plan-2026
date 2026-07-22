@@ -224,6 +224,13 @@
   color: var(--blue);
 }
 
+/* The reader's own manual triage flag — visually distinct from the automatic
+   due/unread review flags above so the two concepts never look like one. */
+.kn-revisit-flag {
+  font-weight: 700;
+  color: var(--accent);
+}
+
 /* Editorial "this one matters" marker, distinct from the reader's own star. */
 .kn-key-mark {
   margin-right: 4px;
@@ -363,8 +370,40 @@
 .kn-reader-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-top: 14px;
+}
+
+/* Manual unread/read/revisit marker. Kept visually apart from the review-chip
+   in the header (spaced-review scheduling) and from starred (the reader's
+   bookmark) — three different questions, three different controls. */
+.kn-status-toggle {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.kn-status-option {
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--line);
+}
+
+.kn-status-option:last-child {
+  border-right: 0;
+}
+
+.kn-status-option.active {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
 }
 
 .kn-reader-actions .secondary-button.is-starred {

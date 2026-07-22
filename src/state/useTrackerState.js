@@ -905,6 +905,10 @@ export function useTrackerState(baseCards) {
     )
   }
 
+  function setKnowledgeStatus(noteId, status) {
+    updateKnowledge((knowledge) => patchNoteMeta(knowledge, noteId, { status }))
+  }
+
   function markKnowledgeReviewed(noteId, confidence = 'ok') {
     updateKnowledge((knowledge) => {
       const previous = normaliseNoteMeta(knowledge.meta[noteId])
@@ -1869,6 +1873,7 @@ export function useTrackerState(baseCards) {
     saveKnowledgeNote,
     deleteKnowledgeNote,
     toggleKnowledgeStar,
+    setKnowledgeStatus,
     markKnowledgeReviewed,
     rateKnowledgeQuestion,
     setKnowledgeCardLinks,

@@ -20,6 +20,16 @@ const FILTERS = [
   { id: 'key', label: 'Key' },
   { id: 'due', label: 'Due' },
   { id: 'starred', label: 'Starred' },
+  { id: 'revisit', label: 'Revisit' },
+]
+
+// The reader's own manual triage flag — deliberately separate from starred,
+// from reviewStatus()'s due/scheduled ladder, and from the notification
+// center's read/unread. See utils/knowledge.js NOTE_STATUSES.
+const STATUS_OPTIONS = [
+  { id: 'unread', label: 'Unread' },
+  { id: 'read', label: 'Read' },
+  { id: 'revisit', label: 'Revisit' },
 ]
 
 const EMPTY_DRAFT = { id: '', title: '', kind: 'concept', topic: '', tags: '', body: '' }
@@ -49,6 +59,7 @@ function NoteRailItem({ note, active, onSelect }) {
           {kind.label}
           {note.review.state === 'due' && <span className="kn-due-flag"> · due</span>}
           {note.review.state === 'new' && <span className="kn-new-flag"> · unread</span>}
+          {note.meta.status === 'revisit' && <span className="kn-revisit-flag"> · revisit</span>}
         </small>
       </span>
       {note.meta.starred && (
@@ -272,6 +283,7 @@ function NoteReader({
   wide,
   onToggleWide,
   onToggleStar,
+  onSetStatus,
   onMarkReviewed,
   onRate,
   onEdit,
@@ -325,6 +337,18 @@ function NoteReader({
           </div>
         )}
         <div className="kn-reader-actions">
+          <div className="kn-status-toggle" role="group" aria-label="Revisit status">
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`kn-status-option${note.meta.status === option.id ? ' active' : ''}`}
+                onClick={() => onSetStatus(note.id, option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className={`secondary-button${note.meta.starred ? ' is-starred' : ''}`}
@@ -454,6 +478,7 @@ export function ModuleKnowledge({
   onSaveNote,
   onDeleteNote,
   onToggleStar,
+  onSetStatus,
   onMarkReviewed,
   onRateQuestion,
   onSetCardLinks,
@@ -495,6 +520,7 @@ export function ModuleKnowledge({
     if (filter === 'key') return searched.filter((note) => note.priority === 'high')
     if (filter === 'due') return searched.filter((note) => note.review.state !== 'scheduled')
     if (filter === 'starred') return searched.filter((note) => note.meta.starred)
+    if (filter === 'revisit') return searched.filter((note) => note.meta.status === 'revisit')
     return searched
   }, [filter, notes, query])
 
@@ -632,6 +658,7 @@ export function ModuleKnowledge({
             wide={wide}
             onToggleWide={() => setWide((value) => !value)}
             onToggleStar={onToggleStar}
+            onSetStatus={onSetStatus}
             onMarkReviewed={onMarkReviewed}
             onRate={onRateQuestion}
             onEdit={startEdit}

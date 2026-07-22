@@ -32,6 +32,7 @@ const lazyNamed = (loader, name) => lazy(() => loader().then((module) => ({ defa
 const ModuleWorkspace = lazyNamed(() => import('./components/ModuleWorkspace'), 'ModuleWorkspace')
 const ResourceReader = lazyNamed(() => import('./components/ModuleWorkspace'), 'ResourceReader')
 const GeneralKnowledge = lazyNamed(() => import('./components/GeneralKnowledge'), 'GeneralKnowledge')
+const NotesOverview = lazyNamed(() => import('./components/NotesOverview'), 'NotesOverview')
 const ProgressView = lazyNamed(() => import('./components/ProgressView'), 'ProgressView')
 const ScheduleView = lazyNamed(() => import('./components/ScheduleView'), 'ScheduleView')
 const StudyHub = lazyNamed(() => import('./components/StudyHub'), 'StudyHub')
@@ -141,7 +142,7 @@ function optionExists(options, value, except = '') {
 
 const NAV_GROUPS = [
   { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
-  { label: 'Knowledge', items: ['general-knowledge'] },
+  { label: 'Knowledge', items: ['general-knowledge', 'notes'] },
   { label: 'Planning', items: ['schedule', 'review', 'dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
   { label: 'Focus', items: ['rescue', 'areas', 'project', 'jobs', 'admin'] },
@@ -171,6 +172,10 @@ const VIEW_META = {
   'general-knowledge': {
     title: 'General Knowledge',
     subtitle: 'Things you have figured out, dated and tagged to wherever they came from.',
+  },
+  notes: {
+    title: 'Notes',
+    subtitle: 'Every module, card, and resource note, plus Knowledge concepts flagged to revisit — classified, not blended.',
   },
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
@@ -292,6 +297,15 @@ function Icon({ name }) {
           <path {...p} d="M21 8l-9-5-9 5v8l9 5 9-5V8Z" />
           <path {...p} d="M3 8l9 5 9-5M12 13v8" />
           <path {...p} d="M8 15l4 2 4-2" />
+        </>
+      )
+      break
+    case 'notes':
+      body = (
+        <>
+          <path {...p} d="M6 3h9l3 3v15H6Z" />
+          <path {...p} d="M15 3v3h3" />
+          <path {...p} d="M8.5 11h7M8.5 14.5h7M8.5 18h4" />
         </>
       )
       break
@@ -1255,6 +1269,7 @@ export default function App() {
     onSaveNote: tracker.saveKnowledgeNote,
     onDeleteNote: tracker.deleteKnowledgeNote,
     onToggleStar: tracker.toggleKnowledgeStar,
+    onSetStatus: tracker.setKnowledgeStatus,
     onMarkReviewed: tracker.markKnowledgeReviewed,
     onRateQuestion: tracker.rateKnowledgeQuestion,
     onSetCardLinks: tracker.setKnowledgeCardLinks,
@@ -1920,6 +1935,22 @@ export default function App() {
           onDelete={tracker.deleteGeneralKnowledgeEntry}
           onToggleStar={tracker.toggleGeneralKnowledgeStar}
           onOpenModule={openGlobalView}
+        />
+      )
+    }
+    if (activeView === 'notes') {
+      return (
+        <NotesOverview
+          moduleNotes={tracker.state.moduleNotes}
+          cards={tracker.cards}
+          studyModules={studyModules}
+          resourceProgress={tracker.state.resourceProgress}
+          knowledge={tracker.state.knowledge}
+          referenceDate={referenceDate}
+          onOpenModule={openGlobalView}
+          onOpenCard={openCard}
+          onOpenResource={openResource}
+          onOpenKnowledgeNote={openKnowledgeNote}
         />
       )
     }

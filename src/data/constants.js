@@ -65,6 +65,7 @@ export const VIEW_OPTIONS = [
   { id: 'schedule', label: 'Schedule' },
   { id: 'review', label: 'Review' },
   { id: 'general-knowledge', label: 'General Knowledge' },
+  { id: 'notes', label: 'Notes' },
   { id: 'aml', label: 'Applied ML' },
   { id: 'time-series', label: 'Time Series' },
   { id: 'team-project', label: 'Team Project' },

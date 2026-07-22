@@ -10,11 +10,13 @@ import {
   groupNotesByTopic,
   knowledgeSummary,
   normaliseKnowledge,
+  normaliseNoteMeta,
   notesForCard,
   parseNoteBundle,
   relatedNotesForCard,
   resolveModuleNotes,
   reviewStatus,
+  revisitNotes,
   searchNotes,
 } from '../src/utils/knowledge.js'
 
@@ -234,6 +236,35 @@ test('the seeded key notes resolve with priority preserved', () => {
   const resolved = resolveModuleNotes({ seeds, knowledge: emptyKnowledge(), moduleId: 'aml', referenceDate: TODAY })
   assert.equal(resolved[0].priority, 'high')
   assert.equal(resolved[0].meta.starred, false)
+})
+
+test('note status defaults to unread, accepts a valid value, and rejects garbage', () => {
+  assert.equal(normaliseNoteMeta({}).status, 'unread')
+  assert.equal(normaliseNoteMeta({ status: 'read' }).status, 'read')
+  assert.equal(normaliseNoteMeta({ status: 'revisit' }).status, 'revisit')
+  assert.equal(normaliseNoteMeta({ status: 'nonsense' }).status, 'unread')
+})
+
+test('note status is independent of starred, confidence, and reviewCount', () => {
+  const meta = normaliseNoteMeta({ status: 'revisit', starred: true, confidence: 'solid', reviewCount: 4 })
+  assert.equal(meta.status, 'revisit')
+  assert.equal(meta.starred, true)
+  assert.equal(meta.confidence, 'solid')
+  assert.equal(meta.reviewCount, 4)
+})
+
+test('revisitNotes filters to only notes manually marked revisit', () => {
+  const knowledge = normaliseKnowledge({
+    meta: {
+      'kn-aml-types': { status: 'revisit' },
+      'kn-aml-traps': { status: 'read' },
+    },
+  })
+  const resolved = resolveModuleNotes({ seeds: SEEDS, knowledge, moduleId: 'aml', referenceDate: TODAY })
+  assert.deepEqual(
+    revisitNotes(resolved).map((note) => note.id),
+    ['kn-aml-types'],
+  )
 })
 
 test('a fresh tracker state carries an empty knowledge store', () => {

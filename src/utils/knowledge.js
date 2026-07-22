@@ -85,6 +85,13 @@ export function normaliseNote(value, fallbackModuleId = '') {
   }
 }
 
+// A manual, reader-set triage flag — deliberately separate from reviewStatus()
+// (spaced-review scheduling), confidence (self-test rating), and the
+// notification center's own read/unread. "Unread" here just means "I haven't
+// manually looked at this yet," independent of whether spaced review has
+// scheduled it, and never flips on its own.
+export const NOTE_STATUSES = ['unread', 'read', 'revisit']
+
 export function normaliseNoteMeta(value) {
   const source = plainObject(value)
   const quiz = {}
@@ -97,6 +104,7 @@ export function normaliseNoteMeta(value) {
     lastReviewedAt: text(source.lastReviewedAt) || null,
     reviewCount: Math.max(0, Number(source.reviewCount) || 0),
     confidence: ['shaky', 'ok', 'solid'].includes(source.confidence) ? source.confidence : null,
+    status: NOTE_STATUSES.includes(source.status) ? source.status : 'unread',
     quiz,
   }
 }
@@ -201,6 +209,10 @@ export function searchNotes(notes, query) {
 export function notesForCard(notes, cardId) {
   if (!cardId) return []
   return notes.filter((note) => note.cardIds.includes(cardId))
+}
+
+export function revisitNotes(notes) {
+  return notes.filter((note) => note.meta.status === 'revisit')
 }
 
 // The seed content is authored per session ("AML S2 —"), lecture ("MAT700 — L3–L4"),

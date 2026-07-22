@@ -1,4 +1,5 @@
 import { normaliseResourceProgressEntry } from '../utils/resourceProgress.js'
+import { RichTextField } from './RichTextField'
 
 function learningState(progress) {
   if (progress.progressPercent >= 100) return 'Reviewed'
@@ -84,11 +85,11 @@ export function ResourceStudyEditor({
           </label>
           <label className="resource-progress-note">
             <span>Notes / questions</span>
-            <textarea
-              rows={compact ? 2 : 3}
+            <RichTextField
+              rows={compact ? 3 : 5}
               value={saved.note}
               placeholder="What made sense? What is unclear? What should you return to?"
-              onChange={(event) => update({ note: event.target.value })}
+              onChange={(next) => update({ note: next })}
             />
           </label>
         </div>
