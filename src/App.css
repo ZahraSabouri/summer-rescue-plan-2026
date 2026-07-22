@@ -1199,19 +1199,36 @@ button:disabled {
   gap: 8px;
 }
 
-.saved-evidence-list article {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: start;
-  padding: 9px;
+/* A slim meta row (index/timestamp + actions) on top, full-width content
+   below — actions never sit beside a tall entry's text again, regardless of
+   how much the entry contains (long text, a code block, ...). Shared shape
+   with the General Knowledge feed's entry cards (GeneralKnowledge.css
+   .gk-entry-top / .gk-entry-text). */
+.saved-evidence-list article,
+.note-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
 }
 
-.saved-evidence-list span {
+.entry-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.entry-body {
+  min-width: 0;
+}
+
+.evidence-index {
   display: inline-grid;
+  flex-shrink: 0;
   place-items: center;
   width: 22px;
   height: 22px;
@@ -1227,16 +1244,6 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
-.note-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-}
-
 .note-item time,
 .activity-log time {
   color: var(--muted);
@@ -1246,7 +1253,6 @@ button:disabled {
 }
 
 .note-item p {
-  margin-top: 4px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1264,11 +1270,6 @@ button:disabled {
 .note-item textarea {
   font-size: 14px;
   line-height: 1.5;
-}
-
-.saved-evidence-list article.editing,
-.note-item.editing {
-  align-items: start;
 }
 
 .saved-evidence-list article.editing textarea,
@@ -5206,7 +5207,8 @@ h1,
   gap: 8px;
 }
 .card-resource-panel > summary,
-.card-knowledge-panel > summary {
+.card-knowledge-panel > summary,
+.done-details > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5215,35 +5217,52 @@ h1,
   list-style: none;
 }
 .card-resource-panel > summary::-webkit-details-marker,
-.card-knowledge-panel > summary::-webkit-details-marker {
+.card-knowledge-panel > summary::-webkit-details-marker,
+.done-details > summary::-webkit-details-marker {
   display: none;
 }
 .card-resource-panel > summary > span:first-child,
-.card-knowledge-panel > summary > span:first-child {
+.card-knowledge-panel > summary > span:first-child,
+.done-details > summary > span:first-child {
   display: grid;
   gap: 2px;
 }
 .card-resource-panel > summary strong,
-.card-knowledge-panel > summary strong {
+.card-knowledge-panel > summary strong,
+.done-details > summary strong {
   font-size: 14px;
 }
 .card-resource-panel > summary small,
 .card-resource-panel > summary > span:last-child,
 .card-knowledge-panel > summary small,
-.card-knowledge-panel > summary > span:last-child {
+.card-knowledge-panel > summary > span:last-child,
+.done-details > summary small,
+.done-details > summary > span:last-child {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
 }
+/* The trailing "N done" chip earns a stronger, positive treatment than the
+   plain muted counts on the resource/knowledge panels — it is the one thing
+   this toggle most needs to say at a glance. */
+.done-details > summary > span:last-child {
+  padding: 3px 10px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
 .card-resource-panel > summary::after,
-.card-knowledge-panel > summary::after {
+.card-knowledge-panel > summary::after,
+.done-details > summary::after {
   content: '+';
   color: var(--accent);
   font-size: 18px;
   font-weight: 700;
 }
 .card-resource-panel[open] > summary::after,
-.card-knowledge-panel[open] > summary::after {
+.card-knowledge-panel[open] > summary::after,
+.done-details[open] > summary::after {
   content: '−';
 }
 .card-resource-panel-body {

@@ -910,7 +910,7 @@ export function CardDetailDrawer({
             </div>
           </section>
 
-          <section className="drawer-section">
+          <section className="drawer-section wide">
             <h3>{evidenceExpected ? 'Evidence' : 'Proof & attachments'}</h3>
             {!evidenceExpected && (
               <p className="muted">
@@ -950,67 +950,65 @@ export function CardDetailDrawer({
                   const editing = editingEvidenceId === item.id
                   return (
                     <article key={item.id} className={`evidence-item ${editing ? 'editing' : ''}`}>
-                      <span>{index + 1}</span>
-                      {editing ? (
-                        <>
+                      <div className="entry-meta-row">
+                        <span className="evidence-index">{index + 1}</span>
+                        <div className="checklist-row-actions">
+                          {editing ? (
+                            <>
+                              <button
+                                type="button"
+                                className="primary-button compact-button"
+                                onClick={() => saveEvidenceEdit(item)}
+                                disabled={!evidenceText[item.id]?.trim()}
+                              >
+                                Save
+                              </button>
+                              <button type="button" className="secondary-button compact-button" onClick={() => discardEvidenceEdit(item)}>
+                                Discard
+                              </button>
+                            </>
+                          ) : (
+                            !item.url && (
+                              <button type="button" className="text-button" onClick={() => beginEvidenceEdit(item)}>
+                                Edit
+                              </button>
+                            )
+                          )}
+                          <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                      <div className="entry-body">
+                        {editing ? (
                           <RichTextField
                             value={evidenceText[item.id] ?? item.text}
                             onChange={(next) => setEvidenceText((current) => ({ ...current, [item.id]: next }))}
                             rows={4}
                           />
-                          <div className="checklist-row-actions">
-                            <button
-                              type="button"
-                              className="primary-button compact-button"
-                              onClick={() => saveEvidenceEdit(item)}
-                              disabled={!evidenceText[item.id]?.trim()}
+                        ) : item.url ? (
+                          <p className="evidence-attachment">
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(event) => {
+                                // Plain click opens the in-app viewer; modified clicks
+                                // keep the browser's raw-tab behaviour.
+                                if (!onOpenAttachment || event.ctrlKey || event.metaKey || event.shiftKey) return
+                                event.preventDefault()
+                                onOpenAttachment(item)
+                              }}
                             >
-                              Save
-                            </button>
-                            <button type="button" className="secondary-button compact-button" onClick={() => discardEvidenceEdit(item)}>
-                              Discard
-                            </button>
-                            <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
-                              Delete
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          {item.url ? (
-                            <p className="evidence-attachment">
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(event) => {
-                                  // Plain click opens the in-app viewer; modified clicks
-                                  // keep the browser's raw-tab behaviour.
-                                  if (!onOpenAttachment || event.ctrlKey || event.metaKey || event.shiftKey) return
-                                  event.preventDefault()
-                                  onOpenAttachment(item)
-                                }}
-                              >
-                                <span className="type-badge">{item.fileType || 'FILE'}</span>
-                                <strong>{item.text}</strong>
-                                {item.size ? <small>{formatBytes(item.size)}</small> : null}
-                              </a>
-                            </p>
-                          ) : (
-                            <MarkdownPreview source={item.text} />
-                          )}
-                          <div className="checklist-row-actions">
-                            {!item.url && (
-                              <button type="button" className="text-button" onClick={() => beginEvidenceEdit(item)}>
-                                Edit
-                              </button>
-                            )}
-                            <button type="button" className="text-button danger" onClick={() => onEvidenceDelete(card.id, item.id)}>
-                              Delete
-                            </button>
-                          </div>
-                        </>
-                      )}
+                              <span className="type-badge">{item.fileType || 'FILE'}</span>
+                              <strong>{item.text}</strong>
+                              {item.size ? <small>{formatBytes(item.size)}</small> : null}
+                            </a>
+                          </p>
+                        ) : (
+                          <MarkdownPreview source={item.text} />
+                        )}
+                      </div>
                     </article>
                   )
                 })
@@ -1018,7 +1016,7 @@ export function CardDetailDrawer({
             </div>
           </section>
 
-          <section className="drawer-section">
+          <section className="drawer-section wide">
             <h3>Notes</h3>
             <div className="note-composer">
               <RichTextField
@@ -1037,8 +1035,38 @@ export function CardDetailDrawer({
                 const editing = editingNoteId === note.id
                 return (
                   <article key={note.id} className={`note-item ${editing ? 'editing' : ''}`}>
-                    <div>
+                    <div className="entry-meta-row">
                       <time>{formatStamp(note.at)}</time>
+                      <div className="checklist-row-actions">
+                        {editing ? (
+                          <>
+                            <button
+                              type="button"
+                              className="primary-button compact-button"
+                              onClick={() => saveNoteEdit(note)}
+                              disabled={!noteText[note.id]?.trim()}
+                            >
+                              Save
+                            </button>
+                            <button type="button" className="secondary-button compact-button" onClick={() => discardNoteEdit(note)}>
+                              Discard
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" className="text-button" onClick={() => beginNoteEdit(note)}>
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="text-button danger"
+                          onClick={() => onDeleteNote(card.id, note.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div className="entry-body">
                       {editing ? (
                         <RichTextField
                           value={noteText[note.id] ?? note.text}
@@ -1048,34 +1076,6 @@ export function CardDetailDrawer({
                       ) : (
                         <MarkdownPreview source={note.text} />
                       )}
-                    </div>
-                    <div className="checklist-row-actions">
-                      {editing ? (
-                        <>
-                          <button
-                            type="button"
-                            className="primary-button compact-button"
-                            onClick={() => saveNoteEdit(note)}
-                            disabled={!noteText[note.id]?.trim()}
-                          >
-                            Save
-                          </button>
-                          <button type="button" className="secondary-button compact-button" onClick={() => discardNoteEdit(note)}>
-                            Discard
-                          </button>
-                        </>
-                      ) : (
-                        <button type="button" className="text-button" onClick={() => beginNoteEdit(note)}>
-                          Edit
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="text-button danger"
-                        onClick={() => onDeleteNote(card.id, note.id)}
-                      >
-                        Delete
-                      </button>
                     </div>
                   </article>
                 )

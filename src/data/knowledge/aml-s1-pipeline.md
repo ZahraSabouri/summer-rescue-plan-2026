@@ -55,6 +55,20 @@ A loaded bunch has `.data`, `.target`, `.DESCR`, `.feature_names`, `.target_name
 
 Other loaders: `load_digits()`, `load_wine()`, `load_breast_cancer()`, `load_diabetes()` (regression).
 
+Ex1 also demonstrates a second way to reach the exact same Iris data — the UCI repository package, used later when a dataset has no built-in sklearn loader:
+
+```python
+from ucimlrepo import fetch_ucirepo
+
+iris = fetch_ucirepo(id=53)   # dataset id from the UCI ML Repository site
+X = iris.data.features        # pandas DataFrame, not a NumPy array
+y = iris.data.targets
+print(iris.metadata)          # source/citation info
+print(iris.variables)         # per-column descriptions — DESCR's equivalent here
+```
+
+The one difference worth keeping straight: `datasets.load_iris()` hands you NumPy arrays; `fetch_ucirepo(...).data.features` hands you a pandas DataFrame. Same data, different container — check which one you actually have before indexing into it.
+
 @@ id=s1-load-csv | title=Loading a CSV and first look | kind=cheatsheet | topic=S1 · Code recipes | key | tags=code,pandas,lab
 ```python
 import pandas as pd
@@ -216,7 +230,7 @@ The shopper dataset has none, which the lab notes as "very helpful". Do not assu
 ## Check yourself
 1. Which call gives the proportion rather than the count of missing values per column? :: `df.isna().mean()`.
 
-@@ id=s1-target-split | title=Splitting a DataFrame into X and y | kind=cheatsheet | topic=S1 · Code recipes | key | tags=code,pandas,exam
+@@ id=s1-target-split | title=Splitting a DataFrame into X and y | kind=cheatsheet | topic=S1 · Code recipes | key | tags=code,pandas,exam | cards=card-005
 ```python
 x = df.drop(columns=['Revenue'])   # everything except the target
 y = df.Revenue                     # or df['Revenue']
@@ -224,18 +238,23 @@ y = df.Revenue                     # or df['Revenue']
 
 Two ways to reach a column: `df.Revenue` (attribute style — fails on names with spaces or that clash with methods) and `df['Revenue']` (always works). Prefer the brackets.
 
-**The trap, straight out of the lab file:**
+**The trap, straight out of the lab file — and it is NOT pre-fixed there.** Lab 1 Ex2's actual cell, unmodified, no working line commented above it:
 
 ```python
-x = df.drop('Revenue', 1)          # ✗ TypeError on pandas 2.x
-x = df.drop(columns=['Revenue'])   # ✓ correct
+x = df.drop('Revenue', 1)          # this is literally what the notebook ships with
 ```
 
-Passing the axis positionally was deprecated and then removed. The lab has the broken line commented out directly above the working one — which tells you the marker knows about it.
+Run this today on Colab's current pandas and it dies with `TypeError: DataFrame.drop() takes from 1 to 2 positional arguments but 3 were given` — passing `axis` positionally was deprecated, then removed. Both of these fix it, and either is a correct exam answer:
+
+```python
+x = df.drop('Revenue', axis=1)     # smallest edit to the original line
+x = df.drop(columns=['Revenue'])   # equally correct, arguably clearer
+```
 
 ## Check yourself
-1. Why does `df.drop('Revenue', 1)` fail on modern pandas? :: Passing `axis` as a positional argument was removed. Use the `columns=` keyword.
+1. Why does `df.drop('Revenue', 1)` fail on modern pandas? :: Passing `axis` as a positional argument was removed. Use the `axis=` keyword, or `columns=`.
 2. When does `df.ColumnName` fail where `df['Column Name']` works? :: When the name contains spaces or special characters, or collides with an existing DataFrame method or attribute.
+3. You run Lab 1 Ex2 top to bottom for the first time and it dies on exactly this line. Did you break something? :: No — it's the notebook exactly as distributed, unmodified for the pandas version Colab now ships. Telling "this cell predates a pandas change" apart from "I introduced a bug" is itself the skill this trap tests.
 
 @@ id=s1-boolean-target | title=Converting a boolean target to 0/1 | kind=cheatsheet | topic=S1 · Code recipes | tags=code,pandas,preprocessing
 The lab's version:
@@ -306,22 +325,24 @@ Consequences to state in an exam answer:
 1. Which argument turns `value_counts()` into proportions? :: `normalize=True`.
 2. Name three consequences of a heavily imbalanced target. :: Accuracy becomes misleading; splits need stratifying; the model may learn to ignore the minority class entirely.
 
-@@ id=s1-correlation-heatmap | title=Correlation heatmap on mixed dtypes | kind=cheatsheet | topic=S1 · Code recipes | tags=code,eda,seaborn
+@@ id=s1-correlation-heatmap | title=Correlation heatmap on mixed dtypes | kind=cheatsheet | topic=S1 · Code recipes | tags=code,eda,seaborn | cards=card-005
+The lab's actual cell is just `sns.heatmap(df.corr())` — no guard, no fix. On today's pandas that raises `ValueError: could not convert string to float: 'Feb'`, because `Month` and `VisitorType` are text columns. Two equally correct fixes:
+
 ```python
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-corr = df.select_dtypes(include='number').corr()   # numeric columns only
+corr = df.corr(numeric_only=True)                 # the one-argument fix
+# corr = df.select_dtypes(include='number').corr()  # equivalent, more verbose
 
 plt.figure(figsize=(10, 8))
 sns.heatmap(corr, vmin=-1, vmax=1, cbar=True)
 plt.show()
 ```
 
-`df.corr()` on a frame containing text columns raises on modern pandas — `select_dtypes(include='number')` is the fix, and the lab's own updated cell shows exactly this repair.
-
 Also worth keeping: the lab's caveat that a correlation heatmap **does not mean much for categorical variables** even when they are stored as integers. `OperatingSystems` coded 1–8 correlates with nothing meaningfully; the numbers are labels, not quantities.
 
 ## Check yourself
-1. Why does `df.corr()` fail on the raw shopper frame? :: It contains non-numeric columns (`Month`, `VisitorType`). Restrict to numeric dtypes first.
+1. Why does `df.corr()` fail on the raw shopper frame, and what's the exact error? :: It contains non-numeric columns (`Month`, `VisitorType`); pandas raises `ValueError: could not convert string to float: 'Feb'` trying to correlate a text column.
 2. Why is the correlation of an integer-coded categorical feature misleading? :: The integers are arbitrary labels with no order or magnitude, so a linear correlation coefficient has no meaning.
+3. `numeric_only=True` and `select_dtypes(include='number').corr()` usually agree — but not on this dataset's `Weekend` column. Which one includes it, and why? :: `numeric_only=True` includes it — pandas treats booleans as numeric for correlation purposes. `select_dtypes(include='number')` excludes `bool` entirely, so it silently drops `Weekend` from the matrix. Worth a `df.dtypes` check before assuming the two are interchangeable.

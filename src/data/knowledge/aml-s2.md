@@ -1,4 +1,19 @@
-@@ id=s2-why | title=Why preprocessing dominates the work | kind=concept | topic=S2 · Foundations | key | tags=preprocessing,exam | cards=card-007
+@@ id=s2-pipeline-recap-eda-placement | title=Session 2's own recap of the pipeline — and where EDA actually sits | kind=concept | topic=S2 · Foundations | key | tags=pipeline,exam,workflow | cards=card-003,card-007
+Session 2 opens by redrawing the exact "Logical Process of Machine Learning" diagram from Session 1 — same boxes, one addition: **this version inserts EDA as its own box, between Data collection and Data preprocessing.**
+
+```text
+Data collection → EDA → Data preprocessing → Data modelling / machine learning → Model application
+                                                        ↑                              ↑
+                                              Model evaluation ← Unsatisfied      New/unseen data
+```
+
+This is genuinely useful, not just trivia: **the module's own two slide decks draw this diagram slightly differently.** Session 1's original (see s1-five-stage-process) has no EDA label anywhere on the page. Session 2's recap adds one, positioned exactly where "know the data" sits in the lab notebook's own five-step wording (s1-lab-five-steps) — between getting the data and processing it. If an exam question shows you either version of the diagram, this is why they don't look identical, and where EDA belongs regardless of which one you're handed.
+
+## Check yourself
+1. Session 1's diagram and Session 2's recap of "the same" diagram differ by exactly one label. Which one, and where does it sit? :: EDA — inserted between Data collection and Data preprocessing in Session 2's version, absent from Session 1's.
+2. A question shows you Session 1's version of the diagram (no EDA box) and asks "where would EDA happen in this pipeline?" What's the defensible answer, and how do you know? :: Between data collection and preprocessing — Session 2's own recap of the identical pipeline confirms this placement explicitly, even though Session 1's original drawing never labels it.
+
+@@ id=s2-why | title=Why preprocessing dominates the work | kind=concept | topic=S2 · Foundations | key | tags=preprocessing,exam | cards=card-003,card-007
 The session's opening claim, and a quotable exam line:
 
 > No quality data, no quality modelling results. Quality decisions must be based on quality data.
@@ -7,7 +22,10 @@ The session's opening claim, and a quotable exam line:
 
 This is why Week 2 exists and why most planted faults in a code test live here rather than in the model.
 
-@@ id=s2-dirty-data | title=Three ways real data is dirty | kind=concept | topic=S2 · Foundations | key | tags=validation,exam
+## Check yourself
+1. A classmate spends 90% of their lab time on `SimpleImputer`/encoding/scaling and 10% on `clf.fit()`, and worries they're "not doing enough modelling." Are they off track? :: No — that ratio is the point of this session, not a warning sign. The slides state preprocessing as the majority of real ML work; a fast `fit()` call after careful preprocessing is normal, not a shortcut you skipped.
+
+@@ id=s2-dirty-data | title=Three ways real data is dirty | kind=concept | topic=S2 · Foundations | key | tags=validation,exam | cards=card-003
 | Problem | Meaning | Slide example |
 | --- | --- | --- |
 | **Incompleteness** | missing attribute values, missing attributes of interest, or only aggregate data | `Postcode = ""` |
@@ -98,6 +116,7 @@ The mirror-image fact, from Session 4: **decision trees need no scaling at all.*
 ## Check yourself
 1. Give three reasons to scale features. :: Distance-based methods need comparable ranges; gradient descent converges faster; regularisation penalties are only fair on comparable scales.
 2. Which model family in this module does not need scaling, and why? :: Decision trees (and forests). They split one feature at a time, so relative scale never enters the comparison.
+3. You scale every feature before fitting a `DecisionTreeClassifier`, and accuracy is unchanged. You scale every feature before fitting an `SVC`, and accuracy changes a lot. Why the difference? :: A tree's splits compare one feature to a threshold at a time, so a monotonic rescaling of that feature doesn't change which side of the threshold any point falls on. An SVM's decision boundary depends on distances across *all* features at once, so whichever feature has the largest raw range dominates the distance until everything is on a comparable scale.
 
 @@ id=s2-minmax-zscore | title=Min-max vs z-score normalisation | kind=cheatsheet | topic=S2 · Transformation | key | tags=scaling,exam,formula
 **Min-max normalisation** maps $X$ from its original range $[\min, \max]$ to a new range $[new_{min}, new_{max}]$:
@@ -121,7 +140,7 @@ $$x' = \dfrac{x - \mu}{\sigma}$$
 1. Write the z-score formula. :: $x' = (x - \mu) / \sigma$.
 2. Why is min-max sensitive to outliers? :: The mapping is defined by the min and max, so a single extreme value stretches the range and compresses every other point into a narrow band.
 
-@@ id=s2-missing-four-strategies | title=Four strategies for missing data | kind=concept | topic=S2 · Missing data | key | tags=preprocessing,exam | cards=card-007
+@@ id=s2-missing-four-strategies | title=Four strategies for missing data | kind=concept | topic=S2 · Missing data | key | tags=preprocessing,exam | cards=card-003,card-007
 | Strategy | What it means |
 | --- | --- |
 | **Elimination** | discard records with missing values in one or more attributes |
@@ -213,7 +232,7 @@ One-hot on 64 categories costs 64 columns. Binary costs 6. The trade-off is inte
 1. How many columns does binary encoding need for 64 categories, and how many would one-hot need? :: 6 versus 64.
 2. What do you give up by using binary encoding? :: Interpretability — individual bit columns carry no meaning — and the clean independence that one-hot columns have.
 
-@@ id=s2-encoding-picker | title=Which encoder? | kind=cheatsheet | topic=S2 · Encoding | key | tags=encoding,recall,exam
+@@ id=s2-encoding-picker | title=Which encoder? | kind=cheatsheet | topic=S2 · Encoding | key | tags=encoding,recall,exam | cards=card-003
 ```text
 Does the category have a meaningful order?
 │
@@ -227,6 +246,11 @@ Does the category have a meaningful order?
 ```
 
 Then remember the model-side fact from Session 5: **tree-based methods handle categorical features straightforwardly**, while SVM, neural networks and k-NN **require numeric input and usually scaling too**.
+
+## Check yourself
+1. A column `Rating` has values {poor, fair, good, excellent}. You feed a k-NN model integer-encoded `{0,1,2,3}` instead of one-hot columns. Walk this through the decision tree above — was that the right call? :: Yes on the first branch (the category has a meaningful order, so integer/ordinal encoding is defensible) — but it's still asserting equal spacing between poor→fair, fair→good, good→excellent, which k-NN's distance calculation will take literally. Worth flagging as a judgement call, not a free pass, same as `s1-attribute-types`.
+2. `Country` has 190 distinct, unordered values. Following the tree above, what do you pick, and what would one-hot have cost you instead? :: No meaningful order, and "many" categories → binary encoding, roughly $\lceil \log_2 190 \rceil = 8$ columns. One-hot would have cost 190 columns, most of them near-empty for any given batch of rows.
+3. Why does the tree-based exception in the last line matter for an exam question that says "encode this column, then fit a `RandomForestClassifier`"? :: It doesn't mean skip encoding — sklearn's trees still need numbers, not raw strings. It means a plain ordinal/integer encoding is a defensible choice even for a *nominal* column here, where it would be a real mistake for k-NN or an SVM: a tree can carve out several threshold splits to approximate any grouping, so it isn't misled by the false ordering the way a distance- or margin-based model is.
 
 @@ id=s2-imbalanced | title=Imbalanced data: over- and undersampling | kind=concept | topic=S2 · Imbalanced data | key | tags=imbalance,exam | cards=card-007
 **Imbalanced data refers to classification problems where the class distribution is not uniform among the classes.** Typically two classes: the **majority (negative)** class and the **minority (positive)** class.
@@ -422,7 +446,7 @@ df['A2'] = df['A2'].astype(float)
 ## Check yourself
 1. `isna().sum()` returns all zeros but a numeric column has dtype object. What is going on? :: The column contains a non-numeric placeholder standing in for missing values, which pandas counts as present data.
 
-@@ id=s2-trap-encode-before-split | title=Trap: fitting an encoder or imputer before splitting | kind=traps | topic=S2 · Debugging | key | tags=leakage,debugging,exam
+@@ id=s2-trap-encode-before-split | title=Trap: fitting an encoder or imputer before splitting | kind=traps | topic=S2 · Debugging | key | tags=leakage,debugging,exam | cards=card-003
 The leakage rule is not only about scalers. **Every transformer that learns something from data can leak.**
 
 | Transformer | What it learns from the data | Leaks if fitted on everything |

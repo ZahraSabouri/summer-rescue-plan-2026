@@ -65,9 +65,9 @@ test('emptyGeneralKnowledge and listGeneralKnowledgeEntries round-trip', () => {
   assert.equal(list.length, 2)
 })
 
-test('createEntryId slugs the entry text and stays unique enough to key a map', () => {
+test('createEntryId slugs the entry text (truncated) and stays unique enough to key a map', () => {
   const id = createEntryId('I figured out that appeals close in Feb 2027')
-  assert.match(id, /^gk-i-figured-out-that-appeals-clos/)
+  assert.match(id, /^gk-i-figured-out-that-appea-/)
 })
 
 test('searchEntries matches on text and tags, case-insensitively', () => {

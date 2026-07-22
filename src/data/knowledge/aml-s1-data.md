@@ -88,7 +88,7 @@ These four are a tidy exam answer to "what should you look at before choosing an
 2. Which characteristic explains why a pattern can appear at one time-granularity and disappear at another? :: Resolution.
 3. You one-hot encode a categorical column with 200 rare categories, and your k-NN model's accuracy gets *worse*, even though you added information. Which characteristic explains this, and why does k-NN suffer more from it than a decision tree would? :: Dimensionality — you went from 1 column to 200 mostly-zero columns, which is also **sparsity**. In that high-dimensional space, Euclidean distances between points stop being meaningfully different from each other (the curse of dimensionality), so k-NN's whole mechanism — "closest points are similar" — degrades. A decision tree splits on one feature at a time, so it's far less sensitive to how many other sparse columns are sitting around unused in a given split.
 
-@@ id=s1-tabular-shape | title=Reading a tabular dataset correctly | kind=cheatsheet | topic=S1 · Data | key | tags=lab,code,pandas
+@@ id=s1-tabular-shape | title=Reading a tabular dataset correctly | kind=cheatsheet | topic=S1 · Data | key | tags=lab,code,pandas | cards=card-005
 The fruit dataset in the slides is the model of what tabular data looks like: one row per fruit, columns for `mass`, `height`, `width`, and a label column.
 
 First four things to run on any new table, in this order:
@@ -160,7 +160,7 @@ The dependency shape is the part worth keeping, more than any single row: **scik
 2. You load a CSV with `pd.read_csv`, then call `knn.fit(X_train, y_train)` a few lines later without ever calling `.values` or `.to_numpy()`. Does that break the dependency chain above? :: No — pandas objects wrap NumPy arrays internally and scikit-learn accepts them directly; the conversion still happens, it's just implicit rather than a line you wrote yourself.
 3. Why would a dataset that's mostly one-hot encoded zeros push you toward SciPy sparse matrices instead of a plain NumPy array? :: A dense NumPy array stores every zero explicitly, wasting memory and compute on entries that carry no information; a sparse matrix stores only the non-zero entries, which is exactly the "sparsity" characteristic in s1-structured-data-characteristics showing up as a real engineering decision.
 
-@@ id=s1-import-recall | title=Imports you must be able to type from memory | kind=cheatsheet | topic=S1 · Practical | key | tags=code,exam,recall
+@@ id=s1-import-recall | title=Imports you must be able to type from memory | kind=cheatsheet | topic=S1 · Practical | key | tags=code,exam,recall | cards=card-005
 In a timed computer test you cannot afford to look these up.
 
 ```python

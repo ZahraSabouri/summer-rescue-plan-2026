@@ -1,4 +1,4 @@
-@@ id=s1-debug-triage | title=Debugging triage: where to look first | kind=traps | topic=S1 · Debugging | key | tags=exam,debugging,strategy | cards=card-001
+@@ id=s1-debug-triage | title=Debugging triage: where to look first | kind=traps | topic=S1 · Debugging | key | tags=exam,debugging,strategy | cards=card-001,card-005
 When exam code fails, resist reading it top to bottom. Work the five stages backwards from the error:
 
 | Symptom | Stage at fault | First thing to check |
@@ -49,24 +49,24 @@ Two faults in one line: the test set influences its own transform, **and** the t
 
 Mnemonic: **fit once, transform many.**
 
-@@ id=s1-trap-drop-axis | title=Trap: df.drop with a positional axis | kind=traps | topic=S1 · Debugging | tags=pandas,debugging,exam
+@@ id=s1-trap-drop-axis | title=Trap: df.drop with a positional axis | kind=traps | topic=S1 · Debugging | tags=pandas,debugging,exam | cards=card-005
 ```python
 x = df.drop('Revenue', 1)          # ✗ TypeError on pandas 2.x
 x = df.drop(columns=['Revenue'])   # ✓
 x = df.drop('Revenue', axis=1)     # also works, but the keyword form is clearer
 ```
 
-Present verbatim in the Lab 1 Ex2 notebook, commented out above the corrected line. If the test hands you an older notebook, this is a likely planted breakage.
+Present verbatim, unmodified, in the actual Lab 1 Ex2 notebook — there is no corrected line commented anywhere nearby, so running the exercise for the first time on current pandas hits this for real: `TypeError: DataFrame.drop() takes from 1 to 2 positional arguments but 3 were given`. If the test hands you an older notebook, this is a likely planted breakage too.
 
-@@ id=s1-trap-corr-mixed | title=Trap: .corr() on non-numeric columns | kind=traps | topic=S1 · Debugging | tags=pandas,debugging
+@@ id=s1-trap-corr-mixed | title=Trap: .corr() on non-numeric columns | kind=traps | topic=S1 · Debugging | tags=pandas,debugging | cards=card-005
 ```python
-df.corr()                                     # ✗ raises on text columns
-df.select_dtypes(include='number').corr()     # ✓
+df.corr()                     # ✗ ValueError: could not convert string to float: 'Feb'
+df.corr(numeric_only=True)    # ✓ one-argument fix
 ```
 
-The shopper dataset has `Month` and `VisitorType` as strings. Same fix applies to `df.mean()`, `df.describe()` when you want numeric-only behaviour, and any aggregation that assumes numbers.
+The shopper dataset has `Month` and `VisitorType` as strings, and the lab's own cell calls `df.corr()` completely unguarded — the error above is what actually happens if you run it. `df.select_dtypes(include='number').corr()` is an equally valid alternative, with one gotcha: it drops `bool` columns (like `Weekend`) that `numeric_only=True` keeps. The same fix family applies to `df.mean()`, `df.describe()` when you want numeric-only behaviour, and any aggregation that assumes numbers.
 
-@@ id=s1-trap-split-order | title=Trap: unpacking train_test_split wrongly | kind=traps | topic=S1 · Debugging | key | tags=sklearn,debugging,exam
+@@ id=s1-trap-split-order | title=Trap: unpacking train_test_split wrongly | kind=traps | topic=S1 · Debugging | key | tags=sklearn,debugging,exam | cards=card-005
 ```python
 # ✗ silently wrong — y_train now holds test features
 X_train, y_train, X_test, y_test = train_test_split(X, y)

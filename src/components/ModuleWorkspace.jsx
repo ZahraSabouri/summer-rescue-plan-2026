@@ -1031,7 +1031,13 @@ export function ModuleWorkspace({
               </div>
               {doneCards.length > 0 && (
                 <details className="done-details">
-                  <summary>{doneCards.length} done cards</summary>
+                  <summary>
+                    <span>
+                      <strong>Done cards</strong>
+                      <small>Completed work for this module — come back to review or reopen one</small>
+                    </span>
+                    <span>{doneCards.length} done</span>
+                  </summary>
                   <div className="focus-list">
                     {doneCards.map((card) => (
                       <CardSummary key={card.id} card={card} compact {...actions} />
