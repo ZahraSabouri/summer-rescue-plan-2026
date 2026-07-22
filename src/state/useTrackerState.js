@@ -11,6 +11,7 @@ import {
 import { detailChanges } from '../utils/cardDiff'
 import { dayLog } from '../utils/dayLog'
 import { focusRewards } from '../utils/focusRewards'
+import { normaliseGeneralKnowledge, normaliseGeneralKnowledgeEntry } from '../utils/generalKnowledge'
 import { emptyKnowledge, normaliseKnowledge, normaliseNote, normaliseNoteMeta } from '../utils/knowledge'
 import { cleanWeeklyLifeCardTitle, recurringLifeCardIdentity } from '../utils/lifeCards'
 import { isTrackableCard, todayString } from '../utils/progress'
@@ -934,6 +935,52 @@ export function useTrackerState(baseCards) {
     })
   }
 
+  // --- General Knowledge (dated one-liners) ---------------------------------
+  function updateGeneralKnowledge(mutate) {
+    setState((current) => {
+      const knowledge = normaliseGeneralKnowledge(current.generalKnowledge)
+      const next = mutate(knowledge)
+      if (!next) return current
+      return { ...current, generalKnowledge: next, updatedAt: nowIso() }
+    })
+  }
+
+  // The caller is expected to have already set entry.id (createEntryId for a
+  // new entry, the existing id when editing) — same contract as
+  // saveKnowledgeNote above, so a fresh entry's id is known immediately for
+  // routing/selection without a round trip through state.
+  function saveGeneralKnowledgeEntry(entry) {
+    updateGeneralKnowledge((knowledge) => {
+      const previous = knowledge.entries[entry.id]
+      const clean = normaliseGeneralKnowledgeEntry({
+        ...entry,
+        createdAt: previous?.createdAt ?? entry.createdAt,
+        updatedAt: nowIso(),
+      })
+      if (!clean) return null
+      return { ...knowledge, entries: { ...knowledge.entries, [clean.id]: clean } }
+    })
+  }
+
+  function deleteGeneralKnowledgeEntry(id) {
+    updateGeneralKnowledge((knowledge) => {
+      const entries = { ...knowledge.entries }
+      delete entries[id]
+      return { ...knowledge, entries }
+    })
+  }
+
+  function toggleGeneralKnowledgeStar(id) {
+    updateGeneralKnowledge((knowledge) => {
+      const existing = knowledge.entries[id]
+      if (!existing) return null
+      return {
+        ...knowledge,
+        entries: { ...knowledge.entries, [id]: { ...existing, starred: !existing.starred, updatedAt: nowIso() } },
+      }
+    })
+  }
+
   function updateCard(cardId, patch, action = 'Updated card', details = '') {
     setState((current) => {
       const currentCard = getCardState(current, cardId)
@@ -1803,6 +1850,7 @@ export function useTrackerState(baseCards) {
         focusRewards: current.focusRewards ?? null,
         moduleNotes: current.moduleNotes ?? {},
         knowledge: normaliseKnowledge(current.knowledge),
+        generalKnowledge: normaliseGeneralKnowledge(current.generalKnowledge),
         updatedAt: nowIso(),
       }
     })
@@ -1824,6 +1872,9 @@ export function useTrackerState(baseCards) {
     markKnowledgeReviewed,
     rateKnowledgeQuestion,
     setKnowledgeCardLinks,
+    saveGeneralKnowledgeEntry,
+    deleteGeneralKnowledgeEntry,
+    toggleGeneralKnowledgeStar,
     updateCard,
     updateCardDetails,
     setStatus,

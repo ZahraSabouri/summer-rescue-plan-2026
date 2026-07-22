@@ -64,6 +64,7 @@ export const VIEW_OPTIONS = [
   { id: 'progress', label: 'Progress' },
   { id: 'schedule', label: 'Schedule' },
   { id: 'review', label: 'Review' },
+  { id: 'general-knowledge', label: 'General Knowledge' },
   { id: 'aml', label: 'Applied ML' },
   { id: 'time-series', label: 'Time Series' },
   { id: 'team-project', label: 'Team Project' },

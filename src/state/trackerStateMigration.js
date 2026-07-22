@@ -1,3 +1,4 @@
+import { emptyGeneralKnowledge, normaliseGeneralKnowledge } from '../utils/generalKnowledge.js'
 import { emptyKnowledge, normaliseKnowledge } from '../utils/knowledge.js'
 import { normaliseResourceProgressMap } from '../utils/resourceProgress.js'
 
@@ -117,6 +118,7 @@ export function createInitialTrackerState(referenceDate = localToday()) {
     addedCards: [],
     moduleNotes: {},
     knowledge: emptyKnowledge(),
+    generalKnowledge: emptyGeneralKnowledge(),
     notifications: {},
     resourceProgress: {},
     uploadedResources: [],
@@ -252,6 +254,9 @@ export function migrateTrackerState(value) {
     // Reference notes survive a plan reset: they describe the syllabus, not
     // the schedule that was thrown away.
     knowledge: normaliseKnowledge(value.knowledge),
+    // Same reasoning: a personal "things I've figured out" log has nothing to
+    // do with the schedule and survives a plan reset untouched.
+    generalKnowledge: normaliseGeneralKnowledge(value.generalKnowledge),
     // Generated alerts from the abandoned pre-reset plan are noise,
     // not user work. Rebuild them from the live cards after a plan revision.
     notifications: planChanged ? {} : notifications,

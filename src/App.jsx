@@ -31,6 +31,7 @@ const lazyNamed = (loader, name) => lazy(() => loader().then((module) => ({ defa
 
 const ModuleWorkspace = lazyNamed(() => import('./components/ModuleWorkspace'), 'ModuleWorkspace')
 const ResourceReader = lazyNamed(() => import('./components/ModuleWorkspace'), 'ResourceReader')
+const GeneralKnowledge = lazyNamed(() => import('./components/GeneralKnowledge'), 'GeneralKnowledge')
 const ProgressView = lazyNamed(() => import('./components/ProgressView'), 'ProgressView')
 const ScheduleView = lazyNamed(() => import('./components/ScheduleView'), 'ScheduleView')
 const StudyHub = lazyNamed(() => import('./components/StudyHub'), 'StudyHub')
@@ -140,6 +141,7 @@ function optionExists(options, value, except = '') {
 
 const NAV_GROUPS = [
   { label: 'Study', items: ['today', 'hub', 'aml', 'time-series', 'team-project', 'mat700'] },
+  { label: 'Knowledge', items: ['general-knowledge'] },
   { label: 'Planning', items: ['schedule', 'review', 'dashboard', 'progress', 'analytics'] },
   { label: 'Board', items: ['board', 'table', 'week', 'evidence'] },
   { label: 'Focus', items: ['rescue', 'areas', 'project', 'jobs', 'admin'] },
@@ -166,6 +168,10 @@ const VIEW_META = {
   progress: { title: 'Progress', subtitle: 'Trajectory, pace, and burn-down.' },
   schedule: { title: 'Schedule', subtitle: 'Hour-by-hour protected routines, study, project, and job blocks.' },
   review: { title: 'Review', subtitle: 'Walk back through past days — what was planned, what actually happened.' },
+  'general-knowledge': {
+    title: 'General Knowledge',
+    subtitle: 'Things you have figured out, dated and tagged to wherever they came from.',
+  },
   aml: { title: 'Applied ML', subtitle: 'Lab-first practice — the priority module.' },
   'time-series': { title: 'Time Series', subtitle: 'Exam-template drills, repeated to fluency.' },
   'team-project': { title: 'Team Project', subtitle: 'Protected CMT501 capacity; detailed project management stays elsewhere.' },
@@ -269,6 +275,14 @@ function Icon({ name }) {
         <>
           <path {...p} d="M4 12a8 8 0 1 0 2.3-5.6L4 8.5" />
           <path {...p} d="M4 4v4.5h4.5M12 8v4l3 2" />
+        </>
+      )
+      break
+    case 'general-knowledge':
+      body = (
+        <>
+          <path {...p} d="M12 6c-1.6-1.3-3.6-2-6-2v13c2.4 0 4.4.7 6 2 1.6-1.3 3.6-2 6-2V4c-2.4 0-4.4.7-6 2Z" />
+          <path {...p} d="M12 6v13" />
         </>
       )
       break
@@ -1893,6 +1907,19 @@ export default function App() {
           onToggleCardDone={tracker.toggleDone}
           selectedDate={routeDate}
           onSelectedDateChange={selectRouteDate}
+        />
+      )
+    }
+    if (activeView === 'general-knowledge') {
+      return (
+        <GeneralKnowledge
+          knowledge={tracker.state.generalKnowledge}
+          studyModules={studyModules}
+          referenceDate={referenceDate}
+          onSave={tracker.saveGeneralKnowledgeEntry}
+          onDelete={tracker.deleteGeneralKnowledgeEntry}
+          onToggleStar={tracker.toggleGeneralKnowledgeStar}
+          onOpenModule={openGlobalView}
         />
       )
     }
