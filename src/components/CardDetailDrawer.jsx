@@ -15,6 +15,7 @@ import { CardSessionTimer } from './CardSessionTimer'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
 import { RichTextField } from './RichTextField'
+import { ThemeToggle } from './ThemeToggle'
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
@@ -165,7 +166,7 @@ function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResour
 // the module's Knowledge tab). "Open in Knowledge tab" is still offered
 // inside, for review/editing/spaced-repetition — this is a lightweight
 // preview, not a replacement for that surface.
-function NoteReader({ note, onClose, onOpenInKnowledgeTab }) {
+function NoteReader({ note, onClose, onOpenInKnowledgeTab, theme, onThemeChange }) {
   useEffect(() => {
     function onKey(event) {
       if (event.key === 'Escape') onClose()
@@ -203,6 +204,7 @@ function NoteReader({ note, onClose, onOpenInKnowledgeTab }) {
                 Open in Knowledge tab
               </button>
             )}
+            {onThemeChange && <ThemeToggle theme={theme} onChange={onThemeChange} />}
             <button type="button" className="reader-btn reader-close" onClick={onClose} aria-label="Close reader">
               ✕
             </button>
@@ -257,6 +259,8 @@ export function CardDetailDrawer({
   moduleOptions = MODULE_OPTIONS,
   phaseOptions = PHASE_OPTIONS,
   onNavigateMeta,
+  theme,
+  onThemeChange,
 }) {
   const dialogRef = useRef(null)
   const [noteDraft, setNoteDraft] = useState('')
@@ -1263,6 +1267,8 @@ export function CardDetailDrawer({
                 }
               : null
           }
+          theme={theme}
+          onThemeChange={onThemeChange}
         />
       )}
     </div>,

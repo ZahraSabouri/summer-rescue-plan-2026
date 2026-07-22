@@ -720,6 +720,9 @@ export default function App() {
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = theme
     }
+    // The Focus Room is a separate browser tab/document, so it never sees this
+    // dataset assignment above — broadcast the change to any open room too.
+    postFocusMessage('theme', { theme })
   }, [theme])
 
   useEffect(() => {
@@ -1628,10 +1631,12 @@ export default function App() {
         currentBoundary: activeTimerCardId === id ? focusExecutionContext.block ?? null : null,
         nextBoundary: activeTimerCardId === id ? focusExecutionContext.nextBlock ?? null : null,
         linkedNotes: resolveLinkedNotesForCard(card),
+        theme,
       })
     }
     focusBridgeRef.current.apply = (message) => {
       if (message.action === 'toggle-checklist') tracker.toggleChecklistItem(message.cardId, message.itemId)
+      else if (message.action === 'set-theme') tracker.updateSettings({ theme: message.theme })
       else if (message.action === 'complete-session') {
         tracker.addFocusSession(message.cardId, message.minutes)
         setMessage(`Logged ${message.minutes} min focus session (Focus Room).`)

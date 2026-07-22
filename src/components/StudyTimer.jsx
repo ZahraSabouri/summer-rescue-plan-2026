@@ -72,6 +72,8 @@ export function StudyTimer({
   variant = 'bar',
   linkedNotes = [],
   onExitRoom,
+  theme,
+  onThemeChange,
 }) {
   const isRoom = variant === 'room'
   const [open, setOpen] = useState(false)
@@ -566,6 +568,8 @@ export function StudyTimer({
         resources={resources}
         onOpenResource={onOpenResource}
         linkedNotes={linkedNotes}
+        theme={theme}
+        onThemeChange={onThemeChange}
         onExit={() => {
           // Deliberate exit: log the current block before the tab closes.
           handleReset()

@@ -47,6 +47,15 @@ export function FocusRoomTab() {
   const [status, setStatus] = useState(cardId ? 'connecting' : 'offline') // connecting | live | offline | closed
   const rewardsHydratedRef = useRef(false)
   const lastRewardsSentRef = useRef('')
+  // This tab boots with no idea what the main tab's theme is (it's a fresh
+  // document, so document.documentElement starts with no data-theme at all).
+  // 'light' is just the pre-sync placeholder; the main tab's snapshot (and any
+  // live 'theme' broadcast) corrects it within one round trip.
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   // Ask the main tab for card data, retrying until it answers (it may be loading,
   // or the room may have been reopened from history before the app tab exists).
@@ -62,7 +71,11 @@ export function FocusRoomTab() {
           nextBoundary: message.nextBoundary ?? null,
           linkedNotes: message.linkedNotes ?? [],
         })
+        if (message.theme) setTheme(message.theme)
         setStatus('live')
+      }
+      if (message.type === 'theme' && message.theme) {
+        setTheme(message.theme)
       }
       if (message.type === 'rewards-init' && !rewardsHydratedRef.current) {
         rewardsHydratedRef.current = true
@@ -111,6 +124,14 @@ export function FocusRoomTab() {
   }, [snapshot])
 
   const forward = (action, extra = {}) => postFocusMessage('action', { action, cardId, ...extra })
+
+  // Optimistic like the other handlers below: flip the room's own theme
+  // immediately, then forward it so the main tab (the sole settings writer)
+  // persists it — same rule that already applies to checklist ticks and notes.
+  function handleThemeChange(next) {
+    setTheme(next)
+    forward('set-theme', { theme: next })
+  }
 
   function handleChecklistToggle(id, itemId) {
     // Optimistic: reflect the tick immediately; the main tab echoes the authoritative
@@ -293,10 +314,17 @@ export function FocusRoomTab() {
         onEvidenceFileAdd={handleAddEvidenceFile}
         onOpenResource={setOpenResourceId}
         onExitRoom={exit}
+        theme={theme}
+        onThemeChange={handleThemeChange}
       />
       {activeResource && (
         <Suspense fallback={null}>
-          <ResourceReader resource={activeResource} onClose={() => setOpenResourceId(null)} />
+          <ResourceReader
+            resource={activeResource}
+            onClose={() => setOpenResourceId(null)}
+            theme={theme}
+            onThemeChange={handleThemeChange}
+          />
         </Suspense>
       )}
     </>

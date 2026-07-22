@@ -16,6 +16,7 @@ import { averageResourceProgress } from '../utils/resourceProgress.js'
 import { CardSummary } from './CardSummary'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
 import { RichTextField } from './RichTextField'
+import { ThemeToggle } from './ThemeToggle'
 
 function percent(done, total) {
   if (!total) return 0
@@ -580,7 +581,7 @@ function ResourcePreview({ resource, frameRef }) {
   )
 }
 
-export function ResourceReader({ resource, onClose, standalone = false }) {
+export function ResourceReader({ resource, onClose, standalone = false, theme, onThemeChange }) {
   const frameRef = useRef(null)
   const html = isHtmlResource(resource)
   const appTabUrl = resourceAppTabUrl(resource)
@@ -634,6 +635,7 @@ export function ResourceReader({ resource, onClose, standalone = false }) {
                 Full-screen tab
               </a>
             )}
+            {onThemeChange && <ThemeToggle theme={theme} onChange={onThemeChange} />}
             <button type="button" className="reader-btn reader-close" onClick={onClose} aria-label="Close reader">
               ✕
             </button>

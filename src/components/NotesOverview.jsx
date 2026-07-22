@@ -3,9 +3,17 @@
 // note in a lightweight modal (the same reader-shell/reader-window pattern
 // CardDetailDrawer's "concept notes" chips already use to preview a Knowledge
 // note without leaving the card); "Open" inside that modal is the only thing
-// that actually navigates. Four sections stay visually separate on purpose —
-// module/card/resource notes and Knowledge "marked to revisit" are different
-// things and should never read as one blended list.
+// that actually navigates.
+//
+// Grouping is module/category-first, not type-first: each module's section
+// mixes its scratchpad, its cards' notes, its resources' notes, and its
+// Knowledge concepts flagged to revisit — everything you've written *about
+// that module* in one place — with a small coloured type badge on every row
+// so the mix stays legible. Cards that aren't module work at all (tagged
+// "history", or living in Admin/Health/General/Job Hunt) get their own
+// trailing sections instead of being folded into a module they don't belong
+// to. A tag cloud and a module/category filter are two independent facets
+// over the same data, not a single flat search box pretending to be both.
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { KNOWLEDGE_SEEDS } from '../data/knowledgeSeeds'
@@ -20,29 +28,61 @@ const SORTS = [
   { id: 'az', label: 'A–Z' },
 ]
 
-function preview(text, length = 140) {
+const MODULE_SHORT = { aml: 'ML', 'time-series': 'TS', 'team-project': 'TP', mat700: 'DM' }
+const TRAILING_GROUPS = [
+  { key: 'history', label: 'History', icon: '⏱' },
+  { key: 'life', label: 'Life', icon: '♡' },
+  { key: 'admin', label: 'Admin', icon: '▦' },
+  { key: 'jobs', label: 'Job Hunt', icon: '◆' },
+]
+
+const TYPE_META = {
+  module: { label: 'Module', tone: 'module', icon: '◧' },
+  card: { label: 'Card', tone: 'card', icon: '▤' },
+  resource: { label: 'Resource', tone: 'resource', icon: '▥' },
+  knowledge: { label: 'Concept', tone: 'knowledge', icon: '◈' },
+}
+
+function groupKeyForCard(card, moduleGroupToId) {
+  if ((card.tags ?? []).includes('history')) return 'history'
+  if (moduleGroupToId[card.moduleGroup]) return moduleGroupToId[card.moduleGroup]
+  if (card.moduleGroup === 'Admin') return 'admin'
+  if (card.moduleGroup === 'Health' || card.moduleGroup === 'General') return 'life'
+  if (card.moduleGroup === 'Job Hunt') return 'jobs'
+  return null
+}
+
+function snippet(text, length = 140) {
   const flat = stripMarkdown(text)
   if (!flat) return ''
   return flat.length <= length ? flat : `${flat.slice(0, length).trimEnd()}…`
 }
 
-function matches(query, ...fields) {
+function matchesQuery(query, item) {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
-  return fields.some((field) => String(field ?? '').toLowerCase().includes(needle))
+  return [item.title, item.snippet, ...item.tags].some((field) => String(field ?? '').toLowerCase().includes(needle))
 }
 
-function sortRows(rows, sort, dateOf, titleOf) {
-  const sorted = [...rows]
-  if (sort === 'az') sorted.sort((a, b) => titleOf(a).localeCompare(titleOf(b)))
-  else sorted.sort((a, b) => String(dateOf(b) ?? '').localeCompare(String(dateOf(a) ?? '')))
+function sortItems(items, sort) {
+  const sorted = [...items]
+  if (sort === 'az') sorted.sort((a, b) => a.title.localeCompare(b.title))
+  else sorted.sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
   return sorted
 }
 
-function SectionIcon({ tone, children }) {
+function TypeIcon({ item }) {
+  if (item.type === 'knowledge') {
+    return (
+      <span className={`notes-kind-dot kind-${item.kindClass}`} aria-hidden="true">
+        {item.kindIcon}
+      </span>
+    )
+  }
+  const meta = TYPE_META[item.type]
   return (
-    <span className={`notes-section-icon tone-${tone}`} aria-hidden="true">
-      {children}
+    <span className={`notes-section-icon tone-${meta.tone}`} aria-hidden="true">
+      {meta.icon}
     </span>
   )
 }
@@ -55,18 +95,25 @@ function Chip({ children, tone }) {
   )
 }
 
-function NoteRow({ icon, title, chips, snippet, onOpen }) {
+function NoteRow({ item, onOpen }) {
+  const typeMeta = TYPE_META[item.type]
   return (
     <button type="button" className="notes-overview-row" onClick={onOpen}>
-      {icon}
+      <TypeIcon item={item} />
       <span className="notes-overview-row-body">
         <span className="notes-overview-row-head">
-          <strong dir="auto">{title}</strong>
-          {chips?.length > 0 && <span className="notes-chip-row">{chips}</span>}
+          <strong dir="auto">{item.title}</strong>
+          <span className="notes-chip-row">
+            <Chip tone={typeMeta.tone}>{typeMeta.label}</Chip>
+            {item.extraChip && <Chip>{item.extraChip}</Chip>}
+            {item.tags.slice(0, 2).map((tag) => (
+              <Chip key={tag}>{tag}</Chip>
+            ))}
+          </span>
         </span>
-        {snippet && (
+        {item.snippet && (
           <span className="notes-overview-preview" dir="auto">
-            {snippet}
+            {item.snippet}
           </span>
         )}
       </span>
@@ -133,26 +180,31 @@ function NotePreviewModal({ eyebrow, title, body, openLabel, onOpen, onClose }) 
   )
 }
 
-function NotesSection({ tone, icon, title, allCount, rows, emptyHint, query, page, onShowMore, renderRow }) {
-  const visible = rows.slice(0, page)
+function GroupSection({ group, page, onShowMore, onOpenItem }) {
+  const visible = group.items.slice(0, page)
   return (
     <section className="notes-overview-section">
       <h3>
-        <SectionIcon tone={tone}>{icon}</SectionIcon>
-        {title}
-        <span className="notes-section-count">
-          {rows.length}
-          {rows.length !== allCount ? ` / ${allCount}` : ''}
+        <span className="notes-section-icon tone-group" aria-hidden="true">
+          {group.icon}
         </span>
+        {group.label}
+        {group.code && <span className="notes-group-code">{group.code}</span>}
+        <span className="notes-section-count">{group.items.length}</span>
       </h3>
-      {rows.length === 0 ? (
-        <p className="muted">{query ? 'Nothing here matches that search.' : emptyHint}</p>
+      {group.items.length === 0 ? (
+        <p className="muted">{group.emptyHint}</p>
       ) : (
         <>
-          <div className="notes-overview-list">{visible.map(renderRow)}</div>
-          {rows.length > visible.length && (
+          <div className="notes-overview-list">
+            {visible.map((item) => (
+              <NoteRow key={item.id} item={item} onOpen={() => onOpenItem(item)} />
+            ))}
+          </div>
+          {group.items.length > visible.length && (
             <button type="button" className="text-button notes-show-more" onClick={onShowMore}>
-              Show {Math.min(PAGE_SIZE, rows.length - visible.length)} more ({rows.length - visible.length} left)
+              Show {Math.min(PAGE_SIZE, group.items.length - visible.length)} more (
+              {group.items.length - visible.length} left)
             </button>
           )}
         </>
@@ -174,104 +226,145 @@ export function NotesOverview({
   onOpenKnowledgeNote,
 }) {
   const [query, setQuery] = useState('')
-  const [moduleFilter, setModuleFilter] = useState('')
+  const [groupFilter, setGroupFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState('')
   const [sort, setSort] = useState('newest')
-  const [pages, setPages] = useState({ module: PAGE_SIZE, card: PAGE_SIZE, resource: PAGE_SIZE, revisit: PAGE_SIZE })
+  const [pages, setPages] = useState({})
   const [previewNote, setPreviewNote] = useState(null)
 
-  // Any change to the active filter should start every section back at page
-  // one — otherwise "Show more" clicks from a previous, broader view leave
-  // stale, oversized pages once the result set shrinks. Adjusted during
-  // render (not an effect) — same pattern ModuleKnowledge.jsx uses for its
-  // focus-note handoff.
-  const filterSignature = `${query}|${moduleFilter}|${sort}`
-  const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature)
-  if (filterSignature !== lastFilterSignature) {
-    setLastFilterSignature(filterSignature)
-    setPages({ module: PAGE_SIZE, card: PAGE_SIZE, resource: PAGE_SIZE, revisit: PAGE_SIZE })
-  }
+  const rawGroups = useMemo(() => {
+    const moduleGroups = studyModules.map((module) => ({
+      key: module.id,
+      label: module.title,
+      code: MODULE_SHORT[module.id] ?? module.code,
+      icon: '◆',
+      emptyHint: `Nothing yet for ${module.title} — module, card, resource, and revisit-flagged concept notes will show up here.`,
+      items: [],
+    }))
+    const trailing = TRAILING_GROUPS.map((entry) => ({
+      ...entry,
+      code: '',
+      emptyHint: 'Nothing here yet.',
+      items: [],
+    }))
+    const byKey = Object.fromEntries([...moduleGroups, ...trailing].map((group) => [group.key, group]))
 
-  const moduleGroupToId = useMemo(
-    () => Object.fromEntries(studyModules.map((module) => [module.moduleGroup, module.id])),
-    [studyModules],
-  )
+    for (const module of studyModules) {
+      const text = moduleNotes[module.id] ?? ''
+      if (text.trim()) {
+        byKey[module.id].items.push({
+          id: `module-${module.id}`,
+          type: 'module',
+          title: module.title,
+          tags: [],
+          date: '',
+          snippet: snippet(text),
+          body: <MarkdownDoc source={text} />,
+          onOpen: () => onOpenModule?.(module.viewId),
+          openLabel: 'Open module',
+          eyebrow: 'Module note',
+        })
+      }
+      for (const resource of module.resources ?? []) {
+        const note = resourceProgress[resource.id]?.note ?? ''
+        if (!note.trim()) continue
+        byKey[module.id].items.push({
+          id: `resource-${resource.id}`,
+          type: 'resource',
+          title: resource.title,
+          tags: resource.tags ?? [],
+          extraChip: resource.type,
+          date: resourceProgress[resource.id]?.updatedAt ?? '',
+          snippet: snippet(note),
+          body: <MarkdownDoc source={note} />,
+          onOpen: () => onOpenResource?.(resource.id),
+          openLabel: 'Open resource',
+          eyebrow: 'Resource note',
+        })
+      }
+      const revisit = revisitNotes(
+        resolveModuleNotes({ seeds: KNOWLEDGE_SEEDS, knowledge, moduleId: module.id, referenceDate }),
+      )
+      for (const note of revisit) {
+        const kind = kindMeta(note.kind)
+        byKey[module.id].items.push({
+          id: `knowledge-${note.id}`,
+          type: 'knowledge',
+          title: note.title,
+          tags: note.tags ?? [],
+          extraChip: note.topic,
+          date: note.updatedAt ?? '',
+          snippet: '',
+          kindIcon: kind.icon,
+          kindClass: note.kind,
+          body: <MarkdownDoc source={note.body} />,
+          onOpen: () => onOpenKnowledgeNote?.(note),
+          openLabel: 'Open in Knowledge tab',
+          eyebrow: `${kind.icon} ${kind.label}`,
+        })
+      }
+    }
 
-  const moduleRows = useMemo(
-    () =>
-      studyModules
-        .map((module) => ({ module, text: moduleNotes[module.id] ?? '' }))
-        .filter((row) => row.text.trim()),
-    [moduleNotes, studyModules],
-  )
+    const moduleGroupToId = Object.fromEntries(studyModules.map((module) => [module.moduleGroup, module.id]))
+    for (const card of cards) {
+      const groupKey = groupKeyForCard(card, moduleGroupToId)
+      const target = groupKey ? byKey[groupKey] : null
+      if (!target) continue
+      for (const note of card.notes ?? []) {
+        target.items.push({
+          id: `card-${note.id}`,
+          type: 'card',
+          title: card.title,
+          tags: card.tags ?? [],
+          extraChip: card.moduleGroup,
+          date: note.at ?? '',
+          snippet: snippet(note.text),
+          body: <MarkdownDoc source={note.text} />,
+          onOpen: () => onOpenCard?.(card.id),
+          openLabel: 'Open card',
+          eyebrow: 'Card note',
+        })
+      }
+    }
 
-  const cardRows = useMemo(
-    () => cards.flatMap((card) => (card.notes ?? []).map((note) => ({ card, note }))),
-    [cards],
-  )
+    return [...moduleGroups, ...trailing]
+  }, [cards, knowledge, moduleNotes, onOpenCard, onOpenKnowledgeNote, onOpenModule, onOpenResource, referenceDate, resourceProgress, studyModules])
 
-  const resourceRows = useMemo(() => {
-    const index = studyModules.flatMap((module) =>
-      (module.resources ?? []).map((resource) => ({ ...resource, moduleId: module.id, moduleTitle: module.title })),
-    )
-    return index
-      .map((resource) => ({ resource, note: resourceProgress[resource.id]?.note ?? '' }))
-      .filter((row) => row.note.trim())
-  }, [resourceProgress, studyModules])
+  const allTags = useMemo(() => {
+    const set = new Set()
+    for (const group of rawGroups) {
+      for (const item of group.items) {
+        for (const tag of item.tags) set.add(tag)
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [rawGroups])
 
-  const revisitRows = useMemo(
-    () =>
-      studyModules.flatMap((module) =>
-        revisitNotes(resolveModuleNotes({ seeds: KNOWLEDGE_SEEDS, knowledge, moduleId: module.id, referenceDate })).map(
-          (note) => ({ module, note }),
-        ),
+  const totalCount = rawGroups.reduce((sum, group) => sum + group.items.length, 0)
+  const typeCounts = useMemo(() => {
+    const counts = { module: 0, card: 0, resource: 0, knowledge: 0 }
+    for (const group of rawGroups) {
+      for (const item of group.items) counts[item.type] += 1
+    }
+    return counts
+  }, [rawGroups])
+
+  const visibleGroups = rawGroups
+    .filter((group) => !groupFilter || group.key === groupFilter)
+    .map((group) => ({
+      ...group,
+      items: sortItems(
+        group.items.filter((item) => (!tagFilter || item.tags.includes(tagFilter)) && matchesQuery(query, item)),
+        sort,
       ),
-    [knowledge, referenceDate, studyModules],
-  )
+    }))
 
-  const byModule = {
-    module: (row) => row.module.id === moduleFilter,
-    card: (row) => moduleGroupToId[row.card.moduleGroup] === moduleFilter,
-    resource: (row) => row.resource.moduleId === moduleFilter,
-    revisit: (row) => row.module.id === moduleFilter,
+  function showMore(key) {
+    setPages((current) => ({ ...current, [key]: (current[key] ?? PAGE_SIZE) + PAGE_SIZE }))
   }
 
-  function scoped(rows, kind, searchFields, dateOf, titleOf) {
-    let list = moduleFilter ? rows.filter(byModule[kind]) : rows
-    list = list.filter((row) => matches(query, ...searchFields(row)))
-    return sortRows(list, sort, dateOf, titleOf)
-  }
-
-  const filteredModuleRows = scoped(
-    moduleRows,
-    'module',
-    (row) => [row.text, row.module.title],
-    (row) => row.module.title,
-    (row) => row.module.title,
-  )
-  const filteredCardRows = scoped(
-    cardRows,
-    'card',
-    (row) => [row.note.text, row.card.title, ...(row.card.tags ?? [])],
-    (row) => row.note.at,
-    (row) => row.card.title,
-  )
-  const filteredResourceRows = scoped(
-    resourceRows,
-    'resource',
-    (row) => [row.note, row.resource.title, row.resource.group, ...(row.resource.tags ?? [])],
-    (row) => row.resource.uploadedAt,
-    (row) => row.resource.title,
-  )
-  const filteredRevisitRows = scoped(
-    revisitRows,
-    'revisit',
-    (row) => [row.note.title, row.note.body, row.note.topic, ...(row.note.tags ?? [])],
-    (row) => row.note.updatedAt,
-    (row) => row.note.title,
-  )
-
-  function showMore(section) {
-    setPages((current) => ({ ...current, [section]: current[section] + PAGE_SIZE }))
+  function openItem(item) {
+    setPreviewNote(item)
   }
 
   return (
@@ -280,8 +373,13 @@ export function NotesOverview({
         <p className="eyebrow">Notes</p>
         <h2>Everything you've written, in one place</h2>
         <p className="notes-overview-sub">
-          Module scratchpads, card notes, resource notes, and Knowledge-tab concepts flagged to revisit — each stays
-          its own section below. Click a row to preview it here; open the real thing only if you want to edit it.
+          Grouped by module and category first — each section mixes that module's scratchpad, card notes, resource
+          notes, and Knowledge concepts flagged to revisit, so everything about one thing lives together. Click a
+          row to preview it here; open the real thing only if you want to edit it.
+        </p>
+        <p className="notes-overview-stats">
+          <strong>{totalCount}</strong> notes — {typeCounts.module} module · {typeCounts.card} card ·{' '}
+          {typeCounts.resource} resource · {typeCounts.knowledge} concept
         </p>
         <input
           type="search"
@@ -292,185 +390,73 @@ export function NotesOverview({
           aria-label="Search notes"
           dir="auto"
         />
-        <div className="notes-overview-controls">
-          <div className="notes-module-filter-row" role="group" aria-label="Filter by module">
+        <div className="notes-filter-facet">
+          <span className="notes-filter-facet-label">Category</span>
+          <div className="notes-module-filter-row" role="group" aria-label="Filter by module or category">
             <button
               type="button"
-              className={`notes-tag-filter${!moduleFilter ? ' active' : ''}`}
-              onClick={() => setModuleFilter('')}
+              className={`notes-tag-filter${!groupFilter ? ' active' : ''}`}
+              onClick={() => setGroupFilter('')}
             >
-              All modules
+              All
             </button>
-            {studyModules.map((module) => (
+            {rawGroups.map((group) => (
               <button
-                key={module.id}
+                key={group.key}
                 type="button"
-                className={`notes-tag-filter${moduleFilter === module.id ? ' active' : ''}`}
-                onClick={() => setModuleFilter(module.id === moduleFilter ? '' : module.id)}
+                className={`notes-tag-filter${groupFilter === group.key ? ' active' : ''}`}
+                onClick={() => setGroupFilter(group.key === groupFilter ? '' : group.key)}
               >
-                {module.title}
+                {group.label}
               </button>
             ))}
           </div>
-          <label className="notes-sort-select">
-            <span>Sort</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value)}>
-              {SORTS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
+        {allTags.length > 0 && (
+          <div className="notes-filter-facet">
+            <span className="notes-filter-facet-label">Tags</span>
+            <div className="notes-module-filter-row" role="group" aria-label="Filter by tag">
+              <button
+                type="button"
+                className={`notes-tag-filter${!tagFilter ? ' active' : ''}`}
+                onClick={() => setTagFilter('')}
+              >
+                All
+              </button>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`notes-tag-filter${tagFilter === tag ? ' active' : ''}`}
+                  onClick={() => setTagFilter(tag === tagFilter ? '' : tag)}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <label className="notes-sort-select">
+          <span>Sort</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value)}>
+            {SORTS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </header>
 
-      <NotesSection
-        tone="module"
-        icon="◧"
-        title="Module notes"
-        allCount={moduleRows.length}
-        rows={filteredModuleRows}
-        emptyHint="Nothing yet — write in a module's scratchpad on its Overview tab."
-        query={query}
-        page={pages.module}
-        onShowMore={() => showMore('module')}
-        renderRow={({ module, text }) => (
-          <NoteRow
-            key={module.id}
-            icon={<SectionIcon tone="module">◧</SectionIcon>}
-            title={module.title}
-            chips={[
-              <Chip key="code" tone="module">
-                {module.code}
-              </Chip>,
-            ]}
-            snippet={preview(text)}
-            onOpen={() =>
-              setPreviewNote({
-                eyebrow: 'Module note',
-                title: module.title,
-                body: <MarkdownDoc source={text} />,
-                openLabel: 'Open module',
-                onOpen: () => onOpenModule?.(module.viewId),
-              })
-            }
-          />
-        )}
-      />
-
-      <NotesSection
-        tone="card"
-        icon="▤"
-        title="Card notes"
-        allCount={cardRows.length}
-        rows={filteredCardRows}
-        emptyHint="Nothing yet — notes you add on a card's drawer show up here."
-        query={query}
-        page={pages.card}
-        onShowMore={() => showMore('card')}
-        renderRow={({ card, note }) => (
-          <NoteRow
-            key={note.id}
-            icon={<SectionIcon tone="card">▤</SectionIcon>}
-            title={card.title}
-            chips={[
-              card.moduleGroup && (
-                <Chip key="module" tone="card">
-                  {card.moduleGroup}
-                </Chip>
-              ),
-              ...(card.tags ?? []).slice(0, 3).map((tag) => <Chip key={tag}>{tag}</Chip>),
-            ].filter(Boolean)}
-            snippet={preview(note.text)}
-            onOpen={() =>
-              setPreviewNote({
-                eyebrow: 'Card note',
-                title: card.title,
-                body: <MarkdownDoc source={note.text} />,
-                openLabel: 'Open card',
-                onOpen: () => onOpenCard?.(card.id),
-              })
-            }
-          />
-        )}
-      />
-
-      <NotesSection
-        tone="resource"
-        icon="▥"
-        title="Resource notes"
-        allCount={resourceRows.length}
-        rows={filteredResourceRows}
-        emptyHint="Nothing yet — notes on a Materials-tab resource show up here."
-        query={query}
-        page={pages.resource}
-        onShowMore={() => showMore('resource')}
-        renderRow={({ resource, note }) => (
-          <NoteRow
-            key={resource.id}
-            icon={<SectionIcon tone="resource">▥</SectionIcon>}
-            title={resource.title}
-            chips={[
-              <Chip key="type" tone="resource">
-                {resource.type}
-              </Chip>,
-              <Chip key="module">{resource.moduleTitle}</Chip>,
-            ]}
-            snippet={preview(note)}
-            onOpen={() =>
-              setPreviewNote({
-                eyebrow: 'Resource note',
-                title: resource.title,
-                body: <MarkdownDoc source={note} />,
-                openLabel: 'Open resource',
-                onOpen: () => onOpenResource?.(resource.id),
-              })
-            }
-          />
-        )}
-      />
-
-      <NotesSection
-        tone="knowledge"
-        icon="◈"
-        title="Knowledge — marked to revisit"
-        allCount={revisitRows.length}
-        rows={filteredRevisitRows}
-        emptyHint='Nothing flagged — mark a concept note "Revisit" from any module’s Knowledge tab.'
-        query={query}
-        page={pages.revisit}
-        onShowMore={() => showMore('revisit')}
-        renderRow={({ module, note }) => {
-          const kind = kindMeta(note.kind)
-          return (
-            <NoteRow
-              key={note.id}
-              icon={
-                <span className={`notes-kind-dot kind-${note.kind}`} aria-hidden="true">
-                  {kind.icon}
-                </span>
-              }
-              title={note.title}
-              chips={[
-                <Chip key="topic" tone="knowledge">
-                  {note.topic}
-                </Chip>,
-                <Chip key="module">{module.title}</Chip>,
-              ]}
-              onOpen={() =>
-                setPreviewNote({
-                  eyebrow: `${kind.icon} ${kind.label}`,
-                  title: note.title,
-                  body: <MarkdownDoc source={note.body} />,
-                  openLabel: 'Open in Knowledge tab',
-                  onOpen: () => onOpenKnowledgeNote?.(note),
-                })
-              }
-            />
-          )
-        }}
-      />
+      {visibleGroups.map((group) => (
+        <GroupSection
+          key={group.key}
+          group={group}
+          page={pages[group.key] ?? PAGE_SIZE}
+          onShowMore={() => showMore(group.key)}
+          onOpenItem={openItem}
+        />
+      ))}
 
       {previewNote && (
         <NotePreviewModal

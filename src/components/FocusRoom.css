@@ -45,6 +45,12 @@
   gap: 4px;
 }
 
+.focus-room-topbar > .focus-room-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .focus-room-kicker,
 .focus-room-task > span,
 .focus-room-brief section > span,

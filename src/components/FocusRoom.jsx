@@ -6,6 +6,7 @@ import { focusRewards } from '../utils/focusRewards'
 import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { RichTextField } from './RichTextField'
+import { ThemeToggle } from './ThemeToggle'
 
 const MODE_LABELS = {
   focus: 'Focus',
@@ -189,6 +190,8 @@ export function FocusRoom({
   onOpenResource,
   linkedNotes = [],
   onExit,
+  theme,
+  onThemeChange,
 }) {
   const roomRef = useRef(null)
   const closeRef = useRef(null)
@@ -582,9 +585,12 @@ export function FocusRoom({
           <span className="focus-room-kicker">Summer Rescue · Focus Room</span>
           <strong>{moduleName}</strong>
         </div>
-        <button ref={closeRef} type="button" className="focus-room-exit" onClick={onExit}>
-          Exit <kbd>Esc</kbd>
-        </button>
+        <div className="focus-room-topbar-actions">
+          {onThemeChange && <ThemeToggle theme={theme} onChange={onThemeChange} />}
+          <button ref={closeRef} type="button" className="focus-room-exit" onClick={onExit}>
+            Exit <kbd>Esc</kbd>
+          </button>
+        </div>
       </header>
 
       <main className="focus-room-main">

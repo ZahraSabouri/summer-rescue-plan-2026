@@ -42,13 +42,32 @@
   border-radius: var(--radius-sm);
 }
 
-.notes-overview-controls {
+.notes-overview-stats {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.notes-overview-stats strong {
+  font-family: var(--font-num);
+  color: var(--ink);
+}
+
+.notes-filter-facet {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   margin-top: 4px;
+}
+
+.notes-filter-facet-label {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .notes-module-filter-row {
@@ -141,6 +160,21 @@
 .notes-section-icon.tone-card { --tone: var(--tone-card); }
 .notes-section-icon.tone-resource { --tone: var(--tone-resource); }
 .notes-section-icon.tone-knowledge { --tone: var(--tone-knowledge); }
+/* Group headers (a module or History/Life/Admin/Job Hunt) get a neutral tone
+   of their own — the colour-coding budget is spent on the per-row TYPE badge
+   instead, since a group now mixes module/card/resource/concept together. */
+.notes-section-icon.tone-group { --tone: var(--ink); background: color-mix(in srgb, var(--ink) 78%, transparent); }
+
+.notes-group-code {
+  padding: 1px 7px;
+  margin-left: -2px;
+  font-family: var(--font-num);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--chip-bg);
+  border-radius: var(--radius-pill);
+}
 
 .notes-overview-list {
   display: flex;
