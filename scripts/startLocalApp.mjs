@@ -20,7 +20,10 @@ try {
   process.exit(1)
 }
 const address = server.address()
-const host = address.address === '127.0.0.1' ? address.address : LOCAL_APP_HOST
+// A wildcard bind (0.0.0.0, used inside Docker so the host's port mapping has
+// something to reach) isn't itself a browsable URL — show the loopback name
+// that actually works, whether you're on the host or port-forwarded into it.
+const host = address.address === '127.0.0.1' ? address.address : LOCAL_APP_HOST === '0.0.0.0' ? '127.0.0.1' : LOCAL_APP_HOST
 const port = address.port ?? LOCAL_APP_PORT
 
 console.log(`Summer Rescue is ready at http://${host}:${port}/#/today`)

@@ -8986,14 +8986,28 @@ button.countdown-chip:hover {
   flex: 0 0 auto;
 }
 .card-control-fields > select {
-  flex: 1 1 108px;
+  flex: 1 1 90px;
   min-width: 90px;
 }
-.card-control-fields > .hours-field {
+/* Hours and Progress wrap as one unit, never split apart. Plain flex-wrap on
+   the four fields let the line break fall between them whenever Done+select
+   ran long — Progress would land alone on its own line with a wide gap of
+   empty space beside it, while Start/Details (a separate flex block, right-
+   aligned) sat below that, so the row above read as a left-aligned orphan
+   floating over right-aligned buttons: two disconnected pieces, not one
+   control cluster. Grouping them into a single flex item wraps them
+   together, so the pair always stays adjacent regardless of card width. */
+.card-control-fields > .hours-progress-group {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 8px;
+}
+.hours-progress-group > .hours-field {
   flex: 0 1 88px;
   min-width: 72px;
 }
-.card-control-fields > .hours-field.progress-percent-field {
+.hours-progress-group > .hours-field.progress-percent-field {
   flex: 0 1 118px;
   min-width: 96px;
 }

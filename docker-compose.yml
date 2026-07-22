@@ -14,3 +14,31 @@ services:
       - /app/node_modules
     environment:
       - VITE_DOCKER=1
+
+  # Fast path for actually USING the app (studying), as opposed to editing its
+  # source. `app` runs the Vite dev server, which ships ~100 unbundled,
+  # unminified modules per load (~7MB) so edits hot-reload instantly — great
+  # for active development, wasteful otherwise. This serves the same
+  # optimized production bundle `npm run app` uses natively (~16 requests,
+  # ~2MB), just reachable through the same container/port.
+  #
+  # Run `npm run build` on the HOST first, not in here: building through this
+  # bind mount measured ~60s (many small file writes crossing the Docker
+  # Desktop <-> Windows filesystem boundary) versus under 2s natively, since
+  # the same dist/ this container sees is also visible to the host. Rebuild
+  # on the host after source changes, then (re)start this service to pick it
+  # up — it won't build on its own. Doesn't run by default:
+  # `docker compose --profile prod up app-prod`.
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_DOCKER=1
+    command: npm run app:start
+    profiles: ["prod"]

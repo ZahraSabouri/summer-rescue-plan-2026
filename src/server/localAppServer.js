@@ -2,9 +2,19 @@ import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import http from 'node:http'
 import path from 'node:path'
+import process from 'node:process'
 import { APP_CSP, FRAMEABLE_ASSET_CSP, createLocalTrackerApi } from './localTrackerApi.js'
 
-export const LOCAL_APP_HOST = '127.0.0.1'
+// A process bound to 127.0.0.1 is unreachable from outside its own network
+// namespace — inside Docker that means the host's `-p 127.0.0.1:5173:5173`
+// port mapping has nothing to connect to. VITE_DOCKER (already set by
+// Dockerfile.dev for the dev server, see vite.config.js) doubles as the
+// signal here: bind wide only when actually running in the container. This
+// doesn't widen who can reach the app — docker-compose.yml's port mapping
+// already restricts the host side to 127.0.0.1 only, and localRequestAllowed
+// (localTrackerApi.js) independently rejects any request whose Host header
+// isn't a loopback name, regardless of which interface accepted the socket.
+export const LOCAL_APP_HOST = process.env.VITE_DOCKER ? '0.0.0.0' : '127.0.0.1'
 export const LOCAL_APP_PORT = 5173
 
 const CONTENT_TYPES = new Map([

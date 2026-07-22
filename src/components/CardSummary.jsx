@@ -103,30 +103,32 @@ export function CardSummary({
               ))}
             </select>
 
-            <label className="hours-field">
-              <span>Hours</span>
-              <input
-                type="number"
-                min="0"
-                step="0.25"
-                value={card.actualHours}
-                onChange={(event) => onHoursChange(card.id, event.target.value)}
-                aria-label={`Actual hours for card ${cardNumberLabel(card.number)}`}
-              />
-            </label>
-            <label className="hours-field progress-percent-field">
-              <span>Progress</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="5"
-                value={card.progressPercent}
-                onChange={(event) => onProgressChange?.(card.id, event.target.value)}
-                aria-label={`Progress percentage for card ${cardNumberLabel(card.number)}`}
-              />
-              <span>%</span>
-            </label>
+            <div className="hours-progress-group">
+              <label className="hours-field">
+                <span>Hours</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.25"
+                  value={card.actualHours}
+                  onChange={(event) => onHoursChange(card.id, event.target.value)}
+                  aria-label={`Actual hours for card ${cardNumberLabel(card.number)}`}
+                />
+              </label>
+              <label className="hours-field progress-percent-field">
+                <span>Progress</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={card.progressPercent}
+                  onChange={(event) => onProgressChange?.(card.id, event.target.value)}
+                  aria-label={`Progress percentage for card ${cardNumberLabel(card.number)}`}
+                />
+                <span>%</span>
+              </label>
+            </div>
             </>
           )}
         </div>
