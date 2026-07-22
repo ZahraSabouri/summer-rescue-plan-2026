@@ -93,6 +93,7 @@ function LinkedResourceStudyCard({
       <ResourceStudyEditor
         compact
         resourceId={resource.id}
+        title={resource.title}
         progress={progress}
         onProgressChange={onResourceProgressChange}
         onToggleReviewed={onResourceReviewedToggle}

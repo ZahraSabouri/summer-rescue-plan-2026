@@ -378,6 +378,7 @@ function ResourceCard({ resource, selected, progress, onSelect, onToggleReviewed
       </button>
       <ResourceStudyEditor
         resourceId={resource.id}
+        title={resource.title}
         progress={progress}
         onToggleReviewed={onToggleReviewed}
         onProgressChange={onProgressChange}
