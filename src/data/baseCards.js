@@ -26,9 +26,9 @@ export const baseCards = [
     "dueDate": "2026-07-04",
     "dueDateTime": "2026-07-04 12:00",
     "estimatedHours": 3.5,
-    "description": "Concepts before code. Watch the Applied ML course opener plus the UBC intro clips, read the S1 'Overview of Machine Learning' slides, then write the 5-stage workflow page from what you understand. No notebooks yet — running Lab 1 is a later card, once the workflow makes sense.",
+    "description": "Concepts before code. Watch the two short UBC introductions plus one 17-minute worked excerpt from the long Applied ML course, read the S1 slides, then write the 5-stage workflow page. No notebooks yet — running Lab 1 is a later card.",
     "checklist": [
-      "Watch UBC 1.0 + 2.1, then the course workflow segment (0:02–0:51)",
+      "Watch UBC 1.0 + 2.1, then only 34:51–51:58 of the long course",
       "Read the S1 'Overview of ML' slides; define supervised vs unsupervised and classification vs regression, with an example each",
       "Write the 5-stage workflow (data → EDA → preprocess → model → evaluate), one line per stage in your own words",
       "Closed-book: recite the 5 stages; list any term to resolve when you run Lab 1"
@@ -92,13 +92,13 @@ export const baseCards = [
     "estimatedHours": 2,
     "description": "Concepts before code. Read the S2 'Data preprocessing' slides and the preprocessing clips, then write the preprocessing concept notes: missing values, encoding, scaling, and the leakage trap. Running Lab 2 comes after.",
     "checklist": [
-      "Watch UBC 5.1 + 5.2 (preprocessing intro, imputation & scaling)",
-      "Read the S2 preprocessing slides; note the order missing → encode → scale → split",
+      "Watch UBC 5.1 + 5.2 + 5.4 (preprocessing, imputation/scaling and one-hot encoding)",
+      "Read the S2 slides; keep split before fitting any imputer, encoder or scaler",
       "Missing-values rule: drop vs impute (mean/median/mode), with reasoning",
       "Encoding rule: one-hot vs label/ordinal; Scaling: which models need it; Leakage: fit on train only"
     ],
     "evidenceRequirement": "AML_S2_preprocessing_concepts.md",
-    "doneCondition": "given a raw column you can state the leakage-safe missing → encode → scale plan",
+    "doneCondition": "given raw columns you can state a split-first, train-fitted preprocessing plan",
     "trackerNotes": "",
     "tags": []
   },
@@ -213,7 +213,7 @@ export const baseCards = [
     "estimatedHours": 3,
     "description": "Consolidate S2 into one exam-ready page. Using your S2 concept notes and the Lab 2 run, assemble the reusable leakage-safe preprocessing playbook and pressure-test it from memory. Completes AML S2.",
     "checklist": [
-      "Assemble the one-page playbook in order: missing → encode → scale → split, with leakage guarded (fit on train only)",
+      "Assemble the playbook in order: inspect/clean → split → train-fitted numeric/categorical branches inside Pipeline/ColumnTransformer",
       "From the Lab 2 run, add the two ways leakage actually sneaks in and the fix for each",
       "Mark which models need scaling and which don't",
       "Dry-run the playbook on a fresh column set (e.g. crx) from memory — no notes"

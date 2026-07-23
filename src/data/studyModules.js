@@ -58,17 +58,6 @@ function hero(file) {
   }
 }
 
-const amlVisual = local(
-  'aml',
-  'Project figures',
-  'Ensemble comparison figure',
-  '!Project/docs/Report/Final Report/assets/ensemble_comparison.png',
-  {
-    id: 'aml-visual-ensemble-comparison',
-    description: 'Final project model comparison visual for ensemble-method recall.',
-  },
-)
-
 const timeSeriesVisual = local(
   'timeSeries',
   'Visual maps',
@@ -376,119 +365,14 @@ const mat700TranscriptResources = [3, 4, 5, 6, 7].map((lecture) =>
   ),
 )
 
-const amlStudyNoteResources = [
-  local('aml', 'Study notes', 'Lab 1 Ex1 study notes', 'Study Notes/CMT307 Lab1 Ex1 Study Notes.md', {
-    description: 'Your notes for CMT307 Lab 1 exercise 1.',
-    tags: ['notes', 'lab'],
-  }),
-  local('aml', 'Study notes', 'Lab 1 Ex2 study notes', 'Study Notes/CMT307 Lab1 Ex2-1 Study Notes.md', {
-    description: 'Your notes for CMT307 Lab 1 exercise 2.',
-    tags: ['notes', 'lab'],
-  }),
-]
-
-const amlWeeklyMapResources = [
-  ['Session 1', 'Session 1 Machine learning overview & data preprocessing/CMT307-weekly-module-map Session1.pdf'],
-  ['Session 2', 'Session 2 Data Pre-processing/CMT307-weekly-module-map Session2.pdf'],
-  ['Session 3', 'Session 3 Regression, Generalisation & model evaluation/CMT307-weekly-module-map Session3.pdf'],
-  ['Session 4', 'Session 4 Classification/CMT307-weekly-module-map Session4.pdf'],
-  ['Session 5', 'Session 5 Ensemble Learning/CMT307-weekly-module-map Session5.pdf'],
-].map(([session, path]) =>
-  local('aml', 'Weekly maps', `${session} weekly module map`, path, {
-    description: `Roadmap for ${session}.`,
-    tags: ['map', 'session'],
-  }),
-)
-
-const amlBootcampExerciseResources = Array.from({ length: 9 }, (_, index) => {
-  const exercise = index + 1
-  const pdfNames = {
-    1: 'Exercise 1 Some Interpreter-based maths practice.pdf',
-    2: 'Exercise 2 Input, passing data to functions, and ifelse.pdf',
-    3: 'Exercise 3 Iterating, and working with strings.pdf',
-    4: 'Exercise 4 A Python-based address book.pdf',
-    5: 'Exercise 5 A four-of-a-kind game.pdf',
-    6: 'Exercise 6 An anagram finder.pdf',
-    7: 'Exercise 7 NumPy practice.pdf',
-    8: 'Exercise 8 Working with Pandas DataFrames.pdf',
-    9: 'Exercise 9 Working with Regular Expressions.pdf',
-  }
-  const notebookSuffix = exercise === 5 ? '(1)' : ''
-  return [
-    local('aml', 'Python bootcamp exercises', `Exercise ${exercise} brief`, `Python Bootcamp/Excercises/${pdfNames[exercise]}`, {
-      description: `Python bootcamp exercise ${exercise} brief.`,
-      tags: ['python', 'exercise'],
-    }),
-    local('aml', 'Python bootcamp exercises', `Exercise ${exercise} questions notebook`, `Python Bootcamp/Excercises/exercise-${exercise}_questions${notebookSuffix}.ipynb`, {
-      description: `Question notebook for Python bootcamp exercise ${exercise}.`,
-      tags: ['python', 'notebook', 'questions'],
-    }),
-    local('aml', 'Python bootcamp exercises', `Exercise ${exercise} answers notebook`, `Python Bootcamp/Excercises/exercise-${exercise}_answers${notebookSuffix}.ipynb`, {
-      description: `Answer notebook for Python bootcamp exercise ${exercise}.`,
-      tags: ['python', 'notebook', 'answers'],
-    }),
-  ]
-}).flat()
-
-const amlBootcampSlideResources = [
-  ['Introduction', 'python-bootcamp_introduction.html'],
-  ['01 first steps', 'python-bootcamp_01_first-steps-with-python.html'],
-  ['02 variables and expressions', 'python-bootcamp_02_vars-exprs-and-statements.html'],
-  ['03 conditional statements', 'python-bootcamp_03_conditional-statements.html'],
-  ['04 functions intro', 'python-bootcamp_04_intro-to-functions.html'],
-  ['05 repetition IO', 'python-bootcamp_05_repetition-input-and-output.html'],
-  ['06 function definition', 'python-bootcamp_06_function-definition.html'],
-  ['07 iteration', 'python-bootcamp_07_iteration.html'],
-  ['08 strings', 'python-bootcamp_08_strings.html'],
-  ['09 lists', 'python-bootcamp_09_lists.html'],
-  ['10 dictionaries', 'python-bootcamp_10_dictionaries.html'],
-  ['11 global variables', 'python-bootcamp_11_global-variables.html'],
-  ['12 tuples', 'python-bootcamp_12_tuples.html'],
-  ['13 files', 'python-bootcamp_13_files.html'],
-  ['14 advanced features', 'python-bootcamp_14_advanced-features.html'],
-  ['15 NumPy', 'python-bootcamp_15_numpy.html'],
-  ['17 regular expressions', 'python-bootcamp_17_regular-expressions(1).html'],
-].map(([title, file]) =>
-  local('aml', 'Python support', `Python bootcamp ${title}`, `Python Bootcamp/Lecture Slides/${file}`, {
-    description: `Python bootcamp slide deck: ${title}.`,
-    tags: ['python', 'slides'],
-  }),
-)
-
-const amlSupplementaryResources = [
-  local('aml', 'Supplementary reading', 'Data preprocessing reading', 'Session 2 Data Pre-processing/2020 Data preprocessing.pdf', {
-    description: 'Supplementary reading on data preprocessing.',
-    tags: ['reading', 'preprocessing'],
-  }),
-  local('aml', 'Supplementary reading', 'Model evaluation reading', 'Session 3 Regression, Generalisation & model evaluation/2020 Model Evaluation, Model Selection, and Algorithm Selection i.pdf', {
-    description: 'Supplementary reading on model evaluation and selection.',
-    tags: ['reading', 'evaluation'],
-  }),
-  local('aml', 'Supplementary reading', 'Hyperparameter optimization reading', 'Session 4 Classification/2023 - Bischl - Hyperparameter optimization  Foundations  algorithms  best practices  and open.pdf', {
-    description: 'Supplementary reading on hyperparameter optimization.',
-    tags: ['reading', 'hyperparameters'],
-  }),
-  local('aml', 'Supplementary reading', 'Avoid ML pitfalls guide', 'Session 5 Ensemble Learning/[2108.02497] How to avoid machine learning pitfalls_ a guide for academic researchers.html', {
-    description: 'Guide to avoiding common machine-learning pitfalls.',
-    tags: ['reading', 'pitfalls'],
-  }),
-  local('aml', 'Supplementary reading', 'Career in AI ebook', 'Session 5 Ensemble Learning/How to Build Your Career in AI eBook - Andrew Ng Collected Insights.html', {
-    description: 'Optional broader AI career reading.',
-    tags: ['reading', 'career'],
-  }),
-]
-
-// One resource per specific video, generated from the verified catalogue in
-// amlVideoLibrary.js. These used to be three whole-playlist entries, which meant
-// study progress recorded against "the Caltech playlist" applied to every card
-// that linked it. Splitting them makes progress mean one video.
+// The Material tab mirrors the live plan: one entry per required video and no
+// browse-only backlog. This keeps resource progress meaningful across cards.
 const SESSION_GROUP = {
   s1: 'Video — S1 workflow',
   s2: 'Video — S2 preprocessing',
   s3: 'Video — S3 regression & generalisation',
   s4: 'Video — S4 classification & tuning',
   s5: 'Video — S5 ensembles',
-  beyond: 'Video — Beyond the exam (not tested)',
 }
 
 const amlVideoLectureResources = AML_VIDEOS.map((video) =>
@@ -496,15 +380,9 @@ const amlVideoLectureResources = AML_VIDEOS.map((video) =>
     id: video.id,
     description:
       `${video.source}. ${video.minutes} min` +
-      (video.segmentLabel ? ` — watch ${video.segmentLabel} of the full course only.` : '.') +
-      (video.depth === 'deep' ? ' Full-length lecture: optional depth, not a first pass.' : ''),
-    tags: [
-      'video',
-      video.session,
-      ...(video.depth === 'deep' ? ['deep-dive'] : ['core']),
-      ...(video.segmentLabel ? ['segment'] : []),
-    ],
-    priority: video.depth === 'deep' ? 'normal' : 'high',
+      (video.segmentLabel ? ` — watch ${video.segmentLabel} of the full course only.` : '.'),
+    tags: ['video', video.session, 'required', ...(video.segmentLabel ? ['segment'] : [])],
+    priority: 'high',
     type: 'YOUTUBE',
     viewer: 'youtube',
     start: video.start,
@@ -520,15 +398,14 @@ export const STUDY_MODULES = [
     code: 'CMT307',
     label: 'Applied ML',
     title: 'Applied Machine Learning',
-    subtitle: 'Notebook-first recovery, open-book command pack, and project evidence.',
+    subtitle: 'Notebook-first recovery, selective concept videos, and an open-book command pack.',
     examShape: 'Open-book class-test style work: fast navigation, lab reconstruction, model choice, and leakage-safe reasoning.',
     accent: '--chart-aml',
     hero: hero('aml.svg'),
-    visual: amlVisual,
     objectives: [
       'Run each lab clean before expanding notes.',
       'Turn every lab into one reusable exam workflow or comparison table.',
-      'Keep the ASHRAE project as the concrete ensemble-learning anchor.',
+      'Use Lab 5 outputs as the concrete ensemble-learning and feature-importance anchor.',
     ],
     operatingRules: [
       'Use notebooks as the source of truth; slides explain only what the lab exposes.',
@@ -536,7 +413,6 @@ export const STUDY_MODULES = [
       'For open-book speed, build lookup paths rather than large prose notes.',
     ],
     resources: [
-      ...amlStudyNoteResources,
       local(
         'aml',
         'Session 1',
@@ -619,36 +495,7 @@ export const STUDY_MODULES = [
         'Session 5 Ensemble Learning/CMT307_Lab5_ensemble_learning_and_random_forests.ipynb',
         { description: 'Random forests and ensemble-learning reconstruction target.', tags: ['notebook', 'ensembles'] },
       ),
-      local('aml', 'Project', 'Project explanation', '!Project/docs/Project_Explained.md', {
-        description: 'Plain-English guide to the ASHRAE project pipeline.',
-        tags: ['project', 'evidence'],
-      }),
-      local('aml', 'Project', 'Final project report', '!Project/docs/Report/Final Report/Final Project Report.pdf', {
-        description: 'Final ASHRAE report for project evidence and ensemble examples.',
-        tags: ['project', 'report'],
-      }),
-      amlVisual,
-      local('aml', 'Project figures', 'Feature importance figure', '!Project/docs/Report/Final Report/assets/feat_imp.png', {
-        description: 'Feature-importance visual for model interpretation revision.',
-        tags: ['project', 'image'],
-      }),
-      local('aml', 'Project figures', 'Pipeline diagram', '!Project/docs/Report/Final Report/source/Pipeline.png', {
-        description: 'End-to-end data pipeline visual.',
-        tags: ['project', 'pipeline'],
-      }),
-      ...amlWeeklyMapResources,
       ...amlVideoLectureResources,
-      local('aml', 'Python support', 'Python bootcamp information', 'Python Bootcamp/Python Bootcamp Information.pdf', {
-        description: 'Fallback support if syntax, NumPy, or pandas slows lab execution.',
-        tags: ['python', 'support'],
-      }),
-      local('aml', 'Python support', 'Pandas bootcamp slide', 'Python Bootcamp/Lecture Slides/python-bootcamp_16_pandas.html', {
-        description: 'Pandas refresher for lab data handling.',
-        tags: ['python', 'pandas'],
-      }),
-      ...amlBootcampSlideResources,
-      ...amlBootcampExerciseResources,
-      ...amlSupplementaryResources,
     ],
     drills: [
       {

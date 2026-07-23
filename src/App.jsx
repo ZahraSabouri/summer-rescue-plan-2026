@@ -103,9 +103,9 @@ import { generateNotifications } from './utils/notifications'
 import { focusRewards } from './utils/focusRewards'
 import { listRollingBackups, readRollingBackup, recordRollingBackup } from './utils/rollingBackup'
 
-const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(rescueCards)
-const SEQUENCED_BASE_CARDS = applyCardStudySequences(PLANNED_BASE_CARDS)
-const ENRICHED_BASE_CARDS = attachCardResourceLinks(SEQUENCED_BASE_CARDS, STUDY_MODULES)
+const SEQUENCED_BASE_CARDS = applyCardStudySequences(rescueCards)
+const PLANNED_BASE_CARDS = applyAmlVideoStudyPlan(SEQUENCED_BASE_CARDS)
+const ENRICHED_BASE_CARDS = attachCardResourceLinks(PLANNED_BASE_CARDS, STUDY_MODULES)
 
 const LABEL_BY_ID = Object.fromEntries(VIEW_OPTIONS.map((view) => [view.id, view.label]))
 

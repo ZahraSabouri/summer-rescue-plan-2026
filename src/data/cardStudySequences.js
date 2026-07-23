@@ -26,7 +26,7 @@
 //
 // `minutes` are sized against card.estimatedHours AS COMPRESSED BY THE 20 JUL
 // FRESH-START RE-PLAN (summerRescuePlan.js: fitExamCardsToTimetable), not the
-// original, roomier hours in baseCards.js — e.g. card-001 shows 2.25h live,
+// original, roomier hours in baseCards.js — e.g. card-001 shows 2.75h live,
 // not the 3.5h its own checklist text was written against. Video-watch steps
 // stay at their real length (a video is what it is); read/write/test steps
 // are the ones cut, and cut for real — fewer notes per step, not just smaller
@@ -58,14 +58,14 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Watch UBC 1.0 and 2.1 back-to-back for vocabulary only, without taking notes yet."
       },
       {
-        "label": "Watch: course workflow segment (0:02–0:51)",
+        "label": "Watch: worked workflow excerpt (34:51–51:58)",
         "kind": "watch",
-        "minutes": 49,
+        "minutes": 17,
         "resourceIds": [
           "aml-video-course-s1-workflow"
         ],
-        "instruction": "This is the 5-stage workflow demonstrated end to end on a real dataset. Watch for the SHAPE of the pipeline (what comes before what) — the code syntax is not the point yet.",
-        "checklistText": "Watch the Applied ML workflow clip for how the 5 stages connect, ignoring code syntax for now."
+        "instruction": "Watch only this worked excerpt from the long course: example framing, data inspection and first model setup. Track how the problem becomes a runnable workflow; ignore code syntax for now.",
+        "checklistText": "Watch only 34:51–51:58 of the Applied ML course for example framing, data inspection and first-model setup."
       },
       {
         "label": "Read: S1 \"Overview of Machine Learning\" slides",
@@ -108,7 +108,7 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-003': {
     "concepts": [
-      "Preprocessing order: missing → encode → scale → split",
+      "Leakage-safe order: inspect and clean fixed placeholders → split → fit imputation/encoding/scaling on training data inside a Pipeline/ColumnTransformer → transform test",
       "Missing-values rule: drop vs impute (mean/median/mode) — with reasoning",
       "Encoding rule: one-hot vs label/ordinal — which and why",
       "Scaling rule: which model families need it, which don't",
@@ -116,15 +116,16 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: preprocessing intro + imputation & scaling",
+        "label": "Watch: preprocessing, imputation/scaling + one-hot encoding",
         "kind": "watch",
-        "minutes": 29,
+        "minutes": 38,
         "resourceIds": [
           "aml-video-ubc-5-1-preprocessing-intro",
-          "aml-video-ubc-5-2-imputation-scaling"
+          "aml-video-ubc-5-2-imputation-scaling",
+          "aml-video-ubc-5-4-one-hot-encoding"
         ],
-        "instruction": "Watch for the ORDER things happen in, not the code — that order is what the rest of this card asks you to write down.",
-        "checklistText": "Watch the imputation and scaling videos focused on the order operations happen in, not the code."
+        "instruction": "Watch for each transformer's purpose and inputs. Do not copy a pre-split preprocessing order: the split must happen before any data-dependent transformer is fitted.",
+        "checklistText": "Watch UBC 5.1, 5.2 and 5.4 for preprocessing choices, keeping the split-before-fit rule explicit."
       },
       {
         "label": "Read: S2 \"Data preprocessing\" slides",
@@ -137,8 +138,8 @@ export const CARD_STUDY_SEQUENCE = {
           "s2-why",
           "s2-dirty-data"
         ],
-        "instruction": "Read s2-why first — one line, and it's a quotable exam line. Skim the slides holding \"missing → encode → scale → split\" as the order to check every step against; s2-dirty-data if time allows.",
-        "checklistText": "Read the why-preprocessing note first, then skim the slides checking each step against the missing-encode-scale-split order."
+        "instruction": "Read s2-why first — one line, and it is a quotable exam line. Skim the slides while checking every learned operation against the safe sequence: split first, then fit imputation/encoding/scaling on training data only; s2-dirty-data if time allows.",
+        "checklistText": "Read the why-preprocessing note, then check the slides against split first and train-only fitting."
       },
       {
         "label": "Write: all four rules in one pass",
@@ -312,7 +313,7 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-007': {
     "concepts": [
-      "The full preprocessing order applied end-to-end on two real datasets: clean placeholder-missing values -> impute -> encode -> scale -> split",
+      "The leakage-safe workflow on two datasets: inspect and replace fixed placeholders → split → fit imputation/encoding/scaling on train inside a pipeline → transform test",
       "Spotting missing-value placeholders that isna() cannot see (crx's '?' markers hiding inside object-typed numeric columns)"
     ],
     "steps": [
@@ -334,7 +335,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Write: ordered preprocessing inventory",
         "kind": "write",
         "minutes": 25,
-        "instruction": "For each dataset, list every preprocessing operation in the exact order it ran, and tag each column touched as imputed / encoded / scaled. Use the ColumnTransformer note to see how the categorical and numeric branches fork by dtype.",
+        "instruction": "For each dataset, list every operation in the exact order it ran. Separate deterministic cleaning from learned transformations, put the split before fitting those transformations, and tag each column as imputed / encoded / scaled. Use the ColumnTransformer note to show the categorical and numeric branches.",
         "noteIds": [
           "s2-missing-four-strategies",
           "s2-encoding-onehot",
@@ -365,19 +366,20 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: sklearn Pipelines — the leakage fix",
+        "label": "Watch: Pipeline + ColumnTransformer — the leakage-safe pattern",
         "kind": "watch",
-        "minutes": 12,
-        "instruction": "Watch UBC 5.3 once through. This is the video that shows Pipeline.fit/transform as the mechanical reason leakage becomes structurally impossible — the concept your playbook's leakage section rests on.",
+        "minutes": 32,
+        "instruction": "Watch UBC 5.3 then 6.1. Follow how Pipeline controls fit/transform and how ColumnTransformer applies different train-fitted branches to numeric and categorical columns.",
         "resourceIds": [
-          "aml-video-ubc-5-3-sklearn-pipelines"
+          "aml-video-ubc-5-3-sklearn-pipelines",
+          "aml-video-ubc-6-1-column-transformer"
         ],
-        "checklistText": "Watch UBC 5.3 once for how Pipeline.fit/transform makes data leakage structurally impossible."
+        "checklistText": "Watch UBC 5.3 then 6.1 for the Pipeline/ColumnTransformer pattern that keeps fitting inside training folds."
       },
       {
         "label": "Read: scaling rule + which models need it",
         "kind": "read",
-        "minutes": 15,
+        "minutes": 12,
         "instruction": "Read both notes. Extract: the three reasons to scale, which model families require it vs which don't (trees), and when to pick min-max vs z-score.",
         "noteIds": [
           "s2-why-scale",
@@ -388,7 +390,7 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Read: leakage traps — the two sneak-in routes",
         "kind": "read",
-        "minutes": 15,
+        "minutes": 12,
         "instruction": "Read both. Note the two routes: (1) fitting any transformer — scaler, imputer, encoder, PCA — on the full dataset before splitting, and (2) running manual preprocessing outside a Pipeline so it silently re-fits during cross-validation/GridSearchCV.",
         "noteIds": [
           "s2-trap-encode-before-split",
@@ -399,8 +401,8 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Write: assemble the one-page playbook",
         "kind": "write",
-        "minutes": 50,
-        "instruction": "Produce AML_S2_preprocessing_playbook.md as one page under five headers: missing -> encode -> scale -> split -> leakage. Under each: the rule in one line plus the sklearn class or pattern. The leakage header states the two sneak-in routes and the Pipeline fix.",
+        "minutes": 45,
+        "instruction": "Produce AML_S2_preprocessing_playbook.md as one page under five headers: inspect/clean → split → numeric branch → categorical branch → leakage guard. Under each, give the rule plus the sklearn class or pattern. State that imputers, encoders and scalers are fitted on training folds through Pipeline/ColumnTransformer.",
         "noteIds": [
           "s2-missing-four-strategies",
           "s2-encoding-picker",
@@ -412,7 +414,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Dry-run: apply the playbook to crx from memory",
         "kind": "test",
         "minutes": 28,
-        "instruction": "Closed-book, no notebook: talk through crx column by column (A1-A15, Target) stating what each playbook header would do to it, in order missing -> encode -> scale -> split -> leakage. Flag any column you can't classify cold and go fix your playbook, not the slides.",
+        "instruction": "Closed-book, no notebook: talk through crx column by column (A1-A15, Target): identify fixed cleaning, make the split, then assign train-fitted numeric/categorical transformations inside the pipeline. Flag any column you cannot classify cold and fix the playbook, not the slides.",
         "checklistText": "Talk through crx column by column from memory, stating what your playbook does to each one, in order."
       }
     ]
@@ -426,16 +428,17 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: UBC 7.1 linear regression + 3.1/3.4 generalisation & tradeoff",
+        "label": "Watch: linear regression, generalisation, splitting + CV",
         "kind": "watch",
-        "minutes": 48,
-        "instruction": "Watch back to back for vocabulary and the shape of the fundamental tradeoff. Don't stop to take notes — the slides + notes step right after covers the detail.",
+        "minutes": 56,
+        "instruction": "Watch UBC 7.1, 3.1, 3.2 and 3.3 in this order. Follow the chain from model and generalisation to a held-out test set and then cross-validation; do not tune against the test set.",
         "resourceIds": [
           "aml-video-ubc-7-1-linear-regression",
           "aml-video-ubc-3-1-generalization",
-          "aml-video-ubc-3-4-fundamental-tradeoff"
+          "aml-video-ubc-3-2-data-splitting",
+          "aml-video-ubc-3-3-cross-validation"
         ],
-        "checklistText": "Watch UBC 7.1, 3.1, and 3.4 back-to-back for the shape of the fundamental tradeoff, no notes yet."
+        "checklistText": "Watch UBC 7.1, 3.1, 3.2 and 3.3 in order, tracking why the test set stays untouched until final evaluation."
       },
       {
         "label": "Read: S3 slides — linear model form and the loss",
@@ -553,40 +556,29 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-017': {
     "concepts": [
-      "Four classifier families (logistic regression, kNN, decision trees, SVM/RBF) and when each is appropriate",
-      "Confusion matrix and precision/recall/F1 definitions",
-      "Comparison-table shape: idea, when to use, key hyperparameter per classifier"
+      "RBF SVM: how C and gamma change regularisation and boundary complexity",
+      "Decision trees: split-based prediction, no scaling requirement, depth and overfitting",
+      "Hyperparameter search: define a search space, evaluate by cross-validation, keep the test set untouched",
+      "Comparison-table shape for logistic regression, kNN, decision tree and SVM using the S4 slides and prior notes"
     ],
     "steps": [
       {
-        "label": "Watch: the four classifier clips",
+        "label": "Watch: SVM, decision trees + tuning",
         "kind": "watch",
-        "minutes": 54,
-        "instruction": "Watch back to back. For each, note only: the core idea in one line, and the one hyperparameter you'd tune first.",
+        "minutes": 37,
+        "instruction": "Watch UBC 4.4, 2.3 and 8.1 in that order. Record the Lab 4 levers only: SVM C/gamma, tree depth/splitting, and why hyperparameters are selected by cross-validation rather than the test set.",
         "resourceIds": [
-          "aml-video-ubc-7-2-logistic-regression",
-          "aml-video-ubc-4-2-knn",
+          "aml-video-ubc-4-4-svm-rbf",
           "aml-video-ubc-2-3-decision-trees",
-          "aml-video-ubc-4-4-svm-rbf"
+          "aml-video-ubc-8-1-hyperparameter-opt"
         ],
-        "checklistText": "Watch the logistic regression, kNN, decision tree, and RBF SVM clips back to back, noting one key hyperparameter for each."
-      },
-      {
-        "label": "Watch: confusion matrix + precision/recall/F1",
-        "kind": "watch",
-        "minutes": 17,
-        "instruction": "These two are the source for the metrics definitions — no written note covers them. Write the confusion-matrix layout (TP/FP/FN/TN) and the precision/recall/F1 formulas as you watch.",
-        "resourceIds": [
-          "aml-video-ubc-9-2-confusion-matrix",
-          "aml-video-ubc-9-3-precision-recall-f1"
-        ],
-        "checklistText": "Watch UBC 9.2 and 9.3 and write out the confusion-matrix layout plus the precision/recall/F1 formulas as you go."
+        "checklistText": "Watch UBC 4.4, 2.3 and 8.1, recording the SVM, tree and cross-validated tuning levers used in Lab 4."
       },
       {
         "label": "Read: S4 slides + classifier-picker cheatsheet",
         "kind": "read",
-        "minutes": 15,
-        "instruction": "Skim the slides once for the summary verdicts, then lock in the appropriateness call (training/prediction cost, scaling, interpretability) from the cheatsheet table.",
+        "minutes": 20,
+        "instruction": "Use the slides to recover logistic regression and kNN without another video, then lock in the cost, scaling, interpretability and key-hyperparameter trade-offs for all four classifiers.",
         "resourceIds": [
           "aml-session-4-s4-classification-slides"
         ],
@@ -598,16 +590,16 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Write: AML_S4_classification_concepts.md + comparison-table skeleton",
         "kind": "write",
-        "minutes": 25,
-        "instruction": "One short paragraph per classifier family (idea, when to use, key hyperparameter) plus the confusion-matrix/precision/recall/F1 definitions, closed-book from what you just watched/read. Draft the comparison-table skeleton with one row per classifier and blank score columns for Lab 4 to fill.",
-        "checklistText": "Draft AML_S4_classification_concepts.md with one paragraph per classifier, then sketch the comparison-table skeleton for Lab 4."
+        "minutes": 30,
+        "instruction": "Write one short paragraph per classifier (idea, scaling need, when useful, first hyperparameter to tune), then draft one comparison-table row per classifier with blank score columns for Lab 4. Add one line saying the test set is not part of GridSearchCV.",
+        "checklistText": "Draft the four-classifier comparison skeleton and state why GridSearchCV must not use the test set."
       },
       {
-        "label": "Self-test: cold recall",
+        "label": "Self-test: classifier and tuning recall",
         "kind": "test",
-        "minutes": 9,
-        "instruction": "Closed-book: which classifier needs no scaling? Which is a black box? State precision and recall from the confusion matrix without looking. Flag anything shaky for Lab 4.",
-        "checklistText": "Closed-book, name which classifier skips scaling, which is a black box, and state precision/recall from memory."
+        "minutes": 15,
+        "instruction": "Closed-book: which classifier needs no scaling; what do C and gamma change; what tree setting most directly limits complexity; and why must the test set stay outside tuning? Flag shaky answers for the Lab 4 run.",
+        "checklistText": "Closed-book, answer the scaling, C/gamma, tree-complexity and test-set questions before starting Lab 4."
       }
     ]
   },
@@ -1147,15 +1139,17 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: metrics + class imbalance",
+        "label": "Watch: metrics, confusion matrix, P/R/F1 + imbalance",
         "kind": "watch",
-        "minutes": 23,
-        "instruction": "Watch both back to back as a refresher, not first-learning: why metrics matter beyond accuracy (9.1), then how class imbalance breaks accuracy specifically (9.4).",
+        "minutes": 40,
+        "instruction": "Watch UBC 9.1–9.4 in order. Build the chain from why accuracy can fail, through the confusion matrix and precision/recall/F1, to metric and remedy choices under imbalance.",
         "resourceIds": [
           "aml-video-ubc-9-1-metrics-motivation",
+          "aml-video-ubc-9-2-confusion-matrix",
+          "aml-video-ubc-9-3-precision-recall-f1",
           "aml-video-ubc-9-4-class-imbalance"
         ],
-        "checklistText": "Watch UBC 9.1 and 9.4 back to back as a refresher on why accuracy alone misleads under class imbalance."
+        "checklistText": "Watch UBC 9.1–9.4 in order, deriving precision, recall and F1 before applying them to imbalance."
       },
       {
         "label": "Read: metric choice, CV, imbalance notes",

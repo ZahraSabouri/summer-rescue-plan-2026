@@ -24,9 +24,5 @@ test('module resource catalogues exclude campaign-planning files', () => {
     .map((resource) => resource.title)
     .sort()
 
-  assert.deepEqual(retainedMarkdown, [
-    'Lab 1 Ex1 study notes',
-    'Lab 1 Ex2 study notes',
-    'Project explanation',
-  ])
+  assert.deepEqual(retainedMarkdown, [])
 })

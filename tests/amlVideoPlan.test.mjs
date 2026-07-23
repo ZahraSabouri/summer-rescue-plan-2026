@@ -1,0 +1,130 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import test from 'node:test'
+
+import { AML_VIDEOS, AML_VIDEO_BY_ID } from '../src/data/amlVideoLibrary.js'
+import { applyAmlVideoStudyPlan } from '../src/data/amlVideoPlan.js'
+import { applyCardStudySequences } from '../src/data/cardStudySequences.js'
+import { STUDY_MODULE_MAP } from '../src/data/studyModules.js'
+import { rescueCards } from '../src/data/summerRescuePlan.js'
+
+const plannedCards = applyAmlVideoStudyPlan(applyCardStudySequences(rescueCards))
+const amlCards = plannedCards.filter((card) => card.moduleGroup === 'Applied ML')
+const amlResources = STUDY_MODULE_MAP.aml.resources
+const resourceById = new Map(amlResources.map((resource) => [resource.id, resource]))
+
+function stepResourceIds(card) {
+  return [...new Set((card.studySequence?.steps ?? []).flatMap((step) => step.resourceIds ?? []))]
+}
+
+function videoIds(card) {
+  return stepResourceIds(card).filter((id) => AML_VIDEO_BY_ID.has(id))
+}
+
+test('AML catalogue is the minimal 24-video, 294-minute exam set', () => {
+  assert.equal(AML_VIDEOS.length, 24)
+  assert.equal(AML_VIDEOS.reduce((sum, video) => sum + video.minutes, 0), 294)
+  assert.equal(new Set(AML_VIDEOS.map((video) => video.id)).size, AML_VIDEOS.length)
+  assert.ok(AML_VIDEOS.every((video) => video.minutes > 0 && video.minutes <= 20))
+  assert.ok(AML_VIDEOS.every((video) => !/cs229|cs156|beyond/i.test(video.id)))
+
+  const excerpt = AML_VIDEO_BY_ID.get('aml-video-course-s1-workflow')
+  assert.deepEqual(
+    { start: excerpt.start, end: excerpt.end, minutes: excerpt.minutes },
+    { start: 2091, end: 3118, minutes: 17 },
+  )
+})
+
+test('every selected video belongs to exactly one ordered live-card watch step', () => {
+  const occurrences = new Map(AML_VIDEOS.map((video) => [video.id, 0]))
+
+  for (const card of amlCards) {
+    for (const step of card.studySequence?.steps ?? []) {
+      const ids = (step.resourceIds ?? []).filter((id) => AML_VIDEO_BY_ID.has(id))
+      if (ids.length) {
+        assert.equal(step.kind, 'watch', `${card.id}: video resources must live in watch steps`)
+        const expectedMinutes = [...new Set(ids)]
+          .reduce((sum, id) => sum + AML_VIDEO_BY_ID.get(id).minutes, 0)
+        assert.equal(step.minutes, expectedMinutes, `${card.id}: watch minutes must equal video duration`)
+      }
+      ids.forEach((id) => occurrences.set(id, occurrences.get(id) + 1))
+    }
+  }
+
+  assert.deepEqual(
+    [...occurrences.entries()].filter(([, count]) => count !== 1),
+    [],
+  )
+})
+
+test('video plan does not inject hidden optional resources or alter ordered checklist', () => {
+  const sequenced = applyCardStudySequences(rescueCards)
+  const planned = applyAmlVideoStudyPlan(sequenced)
+
+  for (const before of sequenced.filter((card) => card.moduleGroup === 'Applied ML')) {
+    const after = planned.find((card) => card.id === before.id)
+    assert.deepEqual(after.resourceIds, before.resourceIds, `${before.id}: video plan injected resources`)
+    assert.deepEqual(after.checklist, before.checklist, `${before.id}: video plan changed checklist order`)
+    assert.deepEqual(videoIds(after), videoIds(before))
+  }
+})
+
+test('AML Material tab contains only resources used by live ordered study steps', () => {
+  const referenced = new Set(amlCards.flatMap(stepResourceIds))
+
+  assert.equal(amlResources.length, 37)
+  assert.equal(amlResources.filter((resource) => resource.type === 'YOUTUBE').length, 24)
+  assert.deepEqual(
+    amlResources.filter((resource) => !referenced.has(resource.id)).map((resource) => resource.id),
+    [],
+  )
+
+  for (const id of referenced) {
+    assert.ok(resourceById.has(id), `live AML step references missing Material-tab resource ${id}`)
+  }
+})
+
+test('every ordered AML sequence fits inside its live card time budget', () => {
+  for (const card of amlCards.filter((candidate) => candidate.studySequence)) {
+    assert.ok(
+      card.studySequence.totalMinutes <= card.estimatedHours * 60,
+      `${card.id}: ${card.studySequence.totalMinutes} min exceeds ${card.estimatedHours * 60} min`,
+    )
+    assert.deepEqual(
+      card.checklist,
+      card.studySequence.steps.map((step) => step.checklistText ?? step.label),
+      `${card.id}: checklist and ordered steps diverged`,
+    )
+  }
+})
+
+test('preprocessing cards state split-first, train-fitted transformation order', () => {
+  const cards = ['card-003', 'card-007', 'card-008']
+    .map((id) => amlCards.find((card) => card.id === id))
+  const text = cards
+    .flatMap((card) => [
+      card.description,
+      card.doneCondition,
+      ...(card.studySequence?.concepts ?? []),
+      ...(card.studySequence?.steps ?? []).flatMap((step) => [step.instruction, step.checklistText]),
+    ])
+    .filter(Boolean)
+    .join('\n')
+
+  assert.doesNotMatch(text, /missing\s*(?:→|->)\s*encode\s*(?:→|->)\s*scale\s*(?:→|->)\s*split/i)
+  assert.match(text, /split before fit|split before fitting|split first|split-before-fit/i)
+  assert.match(text, /train(?:ing)?[- ]fitted|fit(?:ted)? on train(?:ing)?|training data only/i)
+})
+
+test('CMT307 source video list has no duplicate URLs', async () => {
+  const source = new URL(
+    '../../Module_Plans/CMT307/YouTube%20Videos.txt',
+    import.meta.url,
+  )
+  const urls = (await readFile(source, 'utf8'))
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  assert.equal(new Set(urls).size, urls.length)
+})
