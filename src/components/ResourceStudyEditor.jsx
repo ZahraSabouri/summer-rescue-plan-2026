@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { normaliseResourceProgressEntry } from '../utils/resourceProgress.js'
 import { stripMarkdown } from '../utils/markdown.js'
-import { RichTextField } from './RichTextField'
+import { LazyRichTextEditor } from './LazyRichTextEditor'
 
 function learningState(progress) {
   if (progress.progressPercent >= 100) return 'Reviewed'
@@ -69,7 +69,7 @@ function ResourceNotesModal({ title, note, onChange, onClose }) {
         </header>
         <div className="reader-body">
           <div className="resource-notes-modal-body">
-            <RichTextField
+            <LazyRichTextEditor
               rows={12}
               value={note}
               placeholder="What made sense? What is unclear? What should you return to?"

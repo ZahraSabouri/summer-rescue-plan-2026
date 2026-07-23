@@ -17,4 +17,20 @@ export default defineConfig({
   server: process.env.VITE_DOCKER
     ? { host: true, watch: { usePolling: true, interval: 100 } }
     : {},
+  build: {
+    rollupOptions: {
+      output: {
+        // React itself is a meaningful slice of the >500kB main-entry chunk
+        // warning — split it into its own cacheable vendor chunk rather than
+        // bundling it with app code that changes on every edit. This app
+        // builds with Rolldown (Vite's Rust bundler), which — unlike classic
+        // Rollup — requires manualChunks as a function, not an id-list object.
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom/') || id.includes('node_modules/react/')) {
+            return 'vendor-react'
+          }
+        },
+      },
+    },
+  },
 })

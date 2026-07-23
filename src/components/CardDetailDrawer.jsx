@@ -14,7 +14,7 @@ import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
 import { CardSessionTimer } from './CardSessionTimer'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
-import { RichTextField } from './RichTextField'
+import { LazyRichTextEditor } from './LazyRichTextEditor'
 import { ThemeToggle } from './ThemeToggle'
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -941,7 +941,7 @@ export function CardDetailDrawer({
               </p>
             )}
             <div className="note-composer">
-              <RichTextField
+              <LazyRichTextEditor
                 value={evidenceDraft}
                 onChange={setEvidenceDraft}
                 rows={evidenceExpected ? 5 : 3}
@@ -1004,7 +1004,7 @@ export function CardDetailDrawer({
                       </div>
                       <div className="entry-body">
                         {editing ? (
-                          <RichTextField
+                          <LazyRichTextEditor
                             value={evidenceText[item.id] ?? item.text}
                             onChange={(next) => setEvidenceText((current) => ({ ...current, [item.id]: next }))}
                             rows={4}
@@ -1042,7 +1042,7 @@ export function CardDetailDrawer({
           <section className="drawer-section wide">
             <h3>Notes</h3>
             <div className="note-composer">
-              <RichTextField
+              <LazyRichTextEditor
                 value={noteDraft}
                 onChange={setNoteDraft}
                 rows={3}
@@ -1091,7 +1091,7 @@ export function CardDetailDrawer({
                     </div>
                     <div className="entry-body">
                       {editing ? (
-                        <RichTextField
+                        <LazyRichTextEditor
                           value={noteText[note.id] ?? note.text}
                           onChange={(next) => setNoteText((current) => ({ ...current, [note.id]: next }))}
                           rows={3}
@@ -1197,7 +1197,7 @@ export function CardDetailDrawer({
                   </label>
                   <label className="span-2">
                     <span>Description</span>
-                    <RichTextField
+                    <LazyRichTextEditor
                       rows={4}
                       value={form.description}
                       onChange={(next) => updateForm('description', next)}
@@ -1205,7 +1205,7 @@ export function CardDetailDrawer({
                   </label>
                   <label className="span-2">
                     <span>Evidence requirement</span>
-                    <RichTextField
+                    <LazyRichTextEditor
                       rows={2}
                       value={form.evidenceRequirement}
                       onChange={(next) => updateForm('evidenceRequirement', next)}
@@ -1213,7 +1213,7 @@ export function CardDetailDrawer({
                   </label>
                   <label className="span-2">
                     <span>Done condition</span>
-                    <RichTextField
+                    <LazyRichTextEditor
                       rows={2}
                       value={form.doneCondition}
                       onChange={(next) => updateForm('doneCondition', next)}

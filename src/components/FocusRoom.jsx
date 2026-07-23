@@ -7,7 +7,7 @@ import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
 import { AmbientSoundPlayer } from './AmbientSoundPlayer'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { MusicPopover } from './MusicPopover'
-import { RichTextField } from './RichTextField'
+import { LazyRichTextEditor } from './LazyRichTextEditor'
 import { ThemeToggle } from './ThemeToggle'
 
 const MODE_LABELS = {
@@ -977,7 +977,7 @@ export function FocusRoom({
         <section className="focus-room-notes focus-room-notes-full">
           <span>Notes</span>
           <div className="note-composer">
-            <RichTextField
+            <LazyRichTextEditor
               value={noteDraft}
               onChange={setNoteDraft}
               rows={3}
@@ -996,7 +996,7 @@ export function FocusRoom({
                   <div>
                     <time>{formatStamp(note.at)}</time>
                     {editing ? (
-                      <RichTextField
+                      <LazyRichTextEditor
                         value={noteText[note.id] ?? note.text}
                         onChange={(next) => setNoteText((current) => ({ ...current, [note.id]: next }))}
                         rows={3}
@@ -1043,7 +1043,7 @@ export function FocusRoom({
             <p className="muted">Optional for this card — attach a screenshot, PDF, or a short note if you want a record.</p>
           )}
           <div className="note-composer">
-            <RichTextField
+            <LazyRichTextEditor
               value={evidenceDraft}
               onChange={setEvidenceDraft}
               rows={3}
@@ -1078,7 +1078,7 @@ export function FocusRoom({
                     <span>{index + 1}</span>
                     {editing ? (
                       <>
-                        <RichTextField
+                        <LazyRichTextEditor
                           value={evidenceText[item.id] ?? item.text}
                           onChange={(next) => setEvidenceText((current) => ({ ...current, [item.id]: next }))}
                           rows={4}

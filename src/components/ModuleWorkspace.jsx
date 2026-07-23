@@ -15,7 +15,7 @@ import { codeLanguage, isPlaceholderResourceUrl, isYouTube, youtubeEmbedUrl } fr
 import { averageResourceProgress } from '../utils/resourceProgress.js'
 import { CardSummary } from './CardSummary'
 import { ResourceStudyEditor } from './ResourceStudyEditor'
-import { RichTextField } from './RichTextField'
+import { LazyRichTextEditor } from './LazyRichTextEditor'
 import { ThemeToggle } from './ThemeToggle'
 
 function percent(done, total) {
@@ -1004,7 +1004,7 @@ export function ModuleWorkspace({
                 <h2>Module notes</h2>
               </div>
             </div>
-            <RichTextField
+            <LazyRichTextEditor
               className="module-note"
               value={moduleNote}
               onChange={(next) => onModuleNoteChange(module.id, next)}

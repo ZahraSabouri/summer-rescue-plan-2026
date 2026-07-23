@@ -1286,19 +1286,6 @@ button:disabled {
   gap: 6px;
 }
 
-/* A sane default everywhere RichTextField is dropped in — new usages (like
-   General Knowledge) don't need their own bespoke ancestor-scoped textarea
-   rule just to look like a real input. */
-.rich-text-field textarea {
-  width: 100%;
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--input-ink);
-  background: var(--input-bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-
 .rich-text-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1342,27 +1329,152 @@ button:disabled {
   background: var(--line);
 }
 
-.rich-text-preview-toggle {
-  margin-left: auto;
-}
-
-.rich-text-preview-toggle.active {
-  border-color: var(--accent-strong);
+/* ---- RichTextEditor (TipTap WYSIWYG) ---- */
+.rich-text-toolbar button.active {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
-.rich-text-preview {
-  min-height: 60px;
-  padding: 8px 10px;
-  border: 1px dashed var(--line);
-  border-radius: 6px;
+.rich-text-swatch.active::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rich-text-select {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rich-text-surface {
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--input-bg);
+}
+
+.rich-text-field-loading {
+  min-height: calc(var(--rte-rows, 4) * 1.6em + 16px);
+  border: 1px solid var(--line);
+  border-radius: 7px;
   background: var(--surface);
 }
 
-.rich-text-preview .md-doc-flat {
-  display: grid;
-  gap: 6px;
+.rich-text-md-toggle {
+  margin-left: auto;
+}
+
+.rich-text-md-hint {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.rich-text-raw-surface {
+  width: 100%;
+  min-height: calc(var(--rte-rows, 4) * 1.6em + 16px);
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--input-ink);
+  font-family: var(--font-num);
+  font-size: 0.92em;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.rich-text-surface .tiptap {
+  min-height: calc(var(--rte-rows, 4) * 1.6em + 16px);
+  padding: 8px 10px;
+  color: var(--input-ink);
+  outline: none;
+}
+
+.rich-text-surface .tiptap p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: var(--muted);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.rich-text-surface .tiptap p {
+  margin: 0 0 0.6em;
+}
+.rich-text-surface .tiptap p:last-child {
+  margin-bottom: 0;
+}
+.rich-text-surface .tiptap h2,
+.rich-text-surface .tiptap h3 {
+  margin: 0.4em 0;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.rich-text-surface .tiptap h2 {
+  font-size: 1.3em;
+}
+.rich-text-surface .tiptap h3 {
+  font-size: 1.12em;
+}
+.rich-text-surface .tiptap ul,
+.rich-text-surface .tiptap ol {
+  margin: 0 0 0.6em;
+  padding-left: 1.4em;
+}
+.rich-text-surface .tiptap blockquote {
+  margin: 0 0 0.6em;
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+}
+.rich-text-surface .tiptap code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--panel-2);
+  font-family: var(--font-num);
+  font-size: 0.92em;
+}
+.rich-text-surface .tiptap pre {
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--panel-2);
+  overflow-x: auto;
+}
+.rich-text-surface .tiptap pre code {
+  padding: 0;
+  background: none;
+}
+.rich-text-surface .tiptap hr {
+  margin: 0.8em 0;
+  border: 0;
+  border-top: 1px solid var(--line-strong);
+}
+.rich-text-surface .tiptap a {
+  color: var(--accent);
+}
+.rich-text-surface .tiptap table {
+  margin: 0 0 0.6em;
+  border-collapse: collapse;
+  width: 100%;
+}
+.rich-text-surface .tiptap th,
+.rich-text-surface .tiptap td {
+  min-width: 60px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+}
+.rich-text-surface .tiptap th {
+  background: var(--panel-2);
+  font-weight: 700;
+  text-align: left;
 }
 
 .edit-grid {
@@ -2882,9 +2994,9 @@ rect.heat-future { fill: transparent; stroke: var(--line); stroke-dasharray: 2 2
   line-height: 1.45;
 }
 
-/* .module-note now sits on the RichTextField wrapper (a toolbar + textarea),
-   not a bare textarea, so the border/background move here and the nested
-   textarea goes flush so the toolbar reads as part of the same box. */
+/* .module-note sits on the RichTextEditor wrapper (a toolbar + editing
+   surface), not a bare field, so the border/background move here and the
+   nested surface goes flush so the toolbar reads as part of the same box. */
 .module-note {
   border: 1px solid var(--line-strong);
   border-radius: 8px;
@@ -2892,14 +3004,14 @@ rect.heat-future { fill: transparent; stroke: var(--line); stroke-dasharray: 2 2
   padding: 8px 10px 10px;
 }
 
-.module-note textarea,
-.module-note .rich-text-preview {
-  min-height: 240px;
-  width: 100%;
+.module-note .rich-text-surface {
   border: none;
   border-radius: 0;
   background: transparent;
-  color: var(--input-ink);
+}
+
+.module-note .rich-text-surface .tiptap {
+  min-height: 240px;
   padding: 6px 0 0;
   line-height: 1.45;
 }
@@ -3053,10 +3165,16 @@ button:hover,
   flex: none;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 12px;
-  color: #fff;
-  background: var(--header-grad);
   box-shadow: var(--shadow-1);
+}
+.brand-mark img,
+.intro-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 .brand-text {
   display: grid;
@@ -4020,9 +4138,8 @@ h1,
   flex: none;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 14px;
-  color: #fff;
-  background: var(--header-grad);
   box-shadow: var(--shadow-1);
 }
 .intro-head-text .eyebrow {

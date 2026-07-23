@@ -9,7 +9,7 @@ import {
   searchEntries,
 } from '../utils/generalKnowledge'
 import { MarkdownPreview } from './MarkdownDoc'
-import { RichTextField } from './RichTextField'
+import { LazyRichTextEditor } from './LazyRichTextEditor'
 import './GeneralKnowledge.css'
 
 const TAG_OPTIONS_ID = 'gk-tag-options'
@@ -49,7 +49,7 @@ function EntryComposer({ entry, referenceDate, onSubmit, onCancel }) {
 
   return (
     <div className={`gk-composer${isEditing ? ' is-editing' : ''}`}>
-      <RichTextField
+      <LazyRichTextEditor
         value={text}
         onChange={setText}
         placeholder="What did you figure out?"

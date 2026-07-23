@@ -2165,7 +2165,7 @@ export default function App() {
       <aside className="app-sidebar" aria-label="Primary navigation">
         <a href={navHref('today')} className="sidebar-brand" onClick={(event) => handleNavClick(event, 'today')} title="Open Today">
           <span className="brand-mark">
-            <Icon name="brand" />
+            <img src="/summer-rescue-gazelle.png" alt="" />
           </span>
           <span className="brand-text">
             <strong>Summer Rescue</strong>

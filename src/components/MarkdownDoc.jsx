@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { parseMarkdown, splitNoteSections } from '../utils/markdown'
+import { FONT_CSS, SIZE_CSS, parseMarkdown, splitNoteSections } from '../utils/markdown'
 import { TexMath } from './TexMath'
 
 export function Inline({ nodes }) {
@@ -46,6 +46,20 @@ export function Inline({ nodes }) {
             <Inline nodes={node.children} />
           </span>
         )
+      case 'font':
+        return (
+          <span key={index} style={{ fontFamily: FONT_CSS[node.font] }}>
+            <Inline nodes={node.children} />
+          </span>
+        )
+      case 'size':
+        return (
+          <span key={index} style={{ fontSize: SIZE_CSS[node.size] }}>
+            <Inline nodes={node.children} />
+          </span>
+        )
+      case 'break':
+        return <br key={index} />
       case 'link':
         return (
           <a key={index} href={node.href} target="_blank" rel="noreferrer">

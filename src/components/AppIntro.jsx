@@ -31,10 +31,7 @@ export function AppIntro({
         />
         <header className="intro-head">
           <span className="intro-mark">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 3c3.6 2.8 5.6 5.6 5.6 9.2A5.6 5.6 0 0 1 6.4 12.2c0-1.5.5-2.8 1.4-4" />
-              <path d="M12 21v-8" />
-            </svg>
+            <img src="/summer-rescue-gazelle.png" alt="" />
           </span>
           <div className="intro-head-text">
             <p className="eyebrow">Summer Rescue Campaign 2026</p>
