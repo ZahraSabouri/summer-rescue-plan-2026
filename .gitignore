@@ -40,3 +40,18 @@ public/study-assets/
 
 # Scratch / sync probe files
 synccheck.txt
+
+# Local design-sync tooling, generated bundles, and machine-specific settings
+.design-sync/
+.ds-sync/
+ds-bundle/
+docs/.claude/
+
+# Raw/superseded gazelle artwork exports; the referenced v2 app assets are tracked
+docs/ChatGPT Image Jul 23, 2026, 01_28_48 PM.png
+docs/ChatGPT Image Jul 23, 2026, 01_31_35 PM.png
+public/apple-touch-icon.png
+public/favicon-32.png
+public/pwa/icon-192.png
+public/pwa/icon-512.png
+public/pwa/icon-maskable-512.png
