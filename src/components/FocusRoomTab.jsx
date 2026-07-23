@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { StudyTimer } from './StudyTimer'
 import { FloatingVideoPlayer } from './FloatingVideoPlayer'
 import { focusRewards } from '../utils/focusRewards'
+import { clampPercent, normaliseResourceProgressEntry } from '../utils/resourceProgress'
 import {
   FOCUS_TAB_HASH,
   focusRoomCardId,
@@ -73,6 +74,7 @@ export function FocusRoomTab() {
         setSnapshot({
           card: message.card,
           resources: message.resources ?? [],
+          resourceProgress: message.resourceProgress ?? {},
           currentBoundary: message.currentBoundary ?? null,
           nextBoundary: message.nextBoundary ?? null,
           linkedNotes: message.linkedNotes ?? [],
@@ -169,6 +171,48 @@ export function FocusRoomTab() {
     forward('toggle-checklist', { itemId })
   }
 
+  function handleCardProgressChange(id, progressPercent) {
+    const next = clampPercent(progressPercent)
+    setSnapshot((current) => (
+      current?.card
+        ? { ...current, card: { ...current.card, progressPercent: next } }
+        : current
+    ))
+    forward('set-card-progress', { progressPercent: next })
+  }
+
+  function handleStatusChange(id, statusValue) {
+    setSnapshot((current) => (
+      current?.card
+        ? {
+            ...current,
+            card: {
+              ...current.card,
+              status: statusValue,
+              done: statusValue === 'Done',
+            },
+          }
+        : current
+    ))
+    forward('set-status', { status: statusValue })
+  }
+
+  function handleToggleDone() {
+    setSnapshot((current) => {
+      if (!current?.card) return current
+      const done = !current.card.done
+      return {
+        ...current,
+        card: {
+          ...current.card,
+          done,
+          status: done ? 'Done' : current.card.previousStatus || 'Backlog',
+        },
+      }
+    })
+    forward('toggle-done')
+  }
+
   function handleCompleteSession(id, minutes) {
     forward('complete-session', { minutes })
     // Rewards are owned by this tab while it is open; record locally and let the
@@ -254,6 +298,39 @@ export function FocusRoomTab() {
     return Promise.resolve()
   }
 
+  function handleResourceProgressChange(resourceId, patch) {
+    setSnapshot((current) => {
+      if (!current) return current
+      const previous = normaliseResourceProgressEntry(current.resourceProgress?.[resourceId])
+      return {
+        ...current,
+        resourceProgress: {
+          ...(current.resourceProgress ?? {}),
+          [resourceId]: normaliseResourceProgressEntry({ ...previous, ...patch }),
+        },
+      }
+    })
+    forward('update-resource-progress', { resourceId, patch })
+  }
+
+  function handleResourceReviewedToggle(resourceId) {
+    setSnapshot((current) => {
+      if (!current) return current
+      const previous = normaliseResourceProgressEntry(current.resourceProgress?.[resourceId])
+      return {
+        ...current,
+        resourceProgress: {
+          ...(current.resourceProgress ?? {}),
+          [resourceId]: {
+            ...previous,
+            progressPercent: previous.progressPercent >= 100 ? 0 : 100,
+          },
+        },
+      }
+    })
+    forward('toggle-resource-reviewed', { resourceId })
+  }
+
   // Opening a resource (video/PDF/notebook) here needs no round trip to the
   // main tab — ResourceReader renders purely from the resource object itself,
   // which already arrived whole in the snapshot. Previously this tab had no
@@ -264,6 +341,7 @@ export function FocusRoomTab() {
 
   function setOpenResourceId(resourceId) {
     setOpenResourceIdState(resourceId || null)
+    if (resourceId) forward('mark-resource-opened', { resourceId })
     const nextHash = roomHash(cardId, resourceId || '')
     if (window.location.hash !== nextHash) window.history.pushState(null, '', nextHash)
   }
@@ -322,6 +400,7 @@ export function FocusRoomTab() {
         variant="room"
         activeCard={snapshot.card}
         resources={snapshot.resources}
+        resourceProgress={snapshot.resourceProgress}
         currentBoundary={snapshot.currentBoundary}
         nextBoundary={snapshot.nextBoundary}
         linkedNotes={snapshot.linkedNotes}
@@ -336,7 +415,12 @@ export function FocusRoomTab() {
         onEvidenceUpdate={handleUpdateEvidence}
         onEvidenceDelete={handleDeleteEvidence}
         onEvidenceFileAdd={handleAddEvidenceFile}
+        onResourceProgressChange={handleResourceProgressChange}
+        onResourceReviewedToggle={handleResourceReviewedToggle}
         onOpenResource={setOpenResourceId}
+        onCardProgressChange={handleCardProgressChange}
+        onStatusChange={handleStatusChange}
+        onToggleDone={handleToggleDone}
         onExitRoom={exit}
         queue={queue}
         onSwitchCard={switchToCard}

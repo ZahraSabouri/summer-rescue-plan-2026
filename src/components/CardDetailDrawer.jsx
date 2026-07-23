@@ -105,6 +105,7 @@ function LinkedResourceStudyCard({
 
 const STEP_KIND_LABEL = {
   watch: 'Watch',
+  codeAlong: 'Watch + code',
   read: 'Read',
   write: 'Write',
   do: 'Do',
@@ -124,7 +125,8 @@ function StudySequenceStep({ index, step, resourcesById, notesById, onOpenResour
           <strong>{step.label}</strong>
           <span className="study-sequence-step-meta">
             {STEP_KIND_LABEL[step.kind] ?? 'Do'}
-            {step.minutes ? ` · ~${step.minutes} min` : ''}
+            {step.minutes ? ` · ~${step.minutes} min${step.playbackMinutes ? ' total' : ''}` : ''}
+            {step.playbackMinutes ? ` · ${step.playbackMinutes} min video` : ''}
           </span>
         </div>
       </div>

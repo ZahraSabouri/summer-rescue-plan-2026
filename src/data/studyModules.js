@@ -379,9 +379,16 @@ const amlVideoLectureResources = AML_VIDEOS.map((video) =>
   remote('aml', SESSION_GROUP[video.session] ?? 'Video lectures', video.title, video.url, {
     id: video.id,
     description:
-      `${video.source}. ${video.minutes} min` +
-      (video.segmentLabel ? ` — watch ${video.segmentLabel} of the full course only.` : '.'),
-    tags: ['video', video.session, 'required', ...(video.segmentLabel ? ['segment'] : [])],
+      `${video.source}. ${video.minutes} min playback. ` +
+      (video.segmentLabel
+        ? `Required practical code-along section: ${video.segmentLabel}; the card reserves additional execution time.`
+        : 'Targeted supporting lesson; complete the linked coding action on its card.'),
+    tags: [
+      'video',
+      video.session,
+      'required',
+      ...(video.segmentLabel ? ['course-spine', 'code-along', 'segment'] : ['targeted-support']),
+    ],
     priority: 'high',
     type: 'YOUTUBE',
     viewer: 'youtube',
@@ -398,7 +405,7 @@ export const STUDY_MODULES = [
     code: 'CMT307',
     label: 'Applied ML',
     title: 'Applied Machine Learning',
-    subtitle: 'Notebook-first recovery, selective concept videos, and an open-book command pack.',
+    subtitle: 'Notebook-first recovery, a segmented practical course, and an open-book command pack.',
     examShape: 'Open-book class-test style work: fast navigation, lab reconstruction, model choice, and leakage-safe reasoning.',
     accent: '--chart-aml',
     hero: hero('aml.svg'),
@@ -408,8 +415,9 @@ export const STUDY_MODULES = [
       'Use Lab 5 outputs as the concrete ensemble-learning and feature-importance anchor.',
     ],
     operatingRules: [
-      'Use notebooks as the source of truth; slides explain only what the lab exposes.',
-      'Every study block must leave evidence: executed notebook, one-page sheet, or error-log entry.',
+      'Use labs as the practical source of truth and the segmented complete course as the main external teaching path.',
+      'Every course-video block must leave runnable cells, one deliberate parameter change, or an interpreted model output; transcript notes do not count.',
+      'Concept notes explain observed code behaviour and choices; they are not prose to memorise for the exam.',
       'For open-book speed, build lookup paths rather than large prose notes.',
     ],
     resources: [

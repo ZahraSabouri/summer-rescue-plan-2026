@@ -58,19 +58,20 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Watch UBC 1.0 and 2.1 back-to-back for vocabulary only, without taking notes yet."
       },
       {
-        "label": "Watch: worked workflow excerpt (34:51–51:58)",
-        "kind": "watch",
-        "minutes": 17,
+        "label": "Watch course: workflow, setup & first model (2:30–51:00)",
+        "kind": "codeAlong",
+        "minutes": 79,
+        "playbackMinutes": 49,
         "resourceIds": [
           "aml-video-course-s1-workflow"
         ],
-        "instruction": "Watch only this worked excerpt from the long course: example framing, data inspection and first model setup. Track how the problem becomes a runnable workflow; ignore code syntax for now.",
-        "checklistText": "Watch only 34:51–51:58 of the Applied ML course for example framing, data inspection and first-model setup."
+        "instruction": "Watch the full first exam-relevant section, pausing to reproduce the imports, dataframe inspection, X/y split, train_test_split, training-only plots, estimator fit and score in a scratch notebook. Do not transcribe the narration: leave runnable cells and one-line comments explaining each workflow boundary.",
+        "checklistText": "Watch and code along with 2:30–51:00 of the long course, leaving runnable import, split, training-only inspection, fit and score cells."
       },
       {
         "label": "Read: S1 \"Overview of Machine Learning\" slides",
         "kind": "read",
-        "minutes": 20,
+        "minutes": 10,
         "resourceIds": [
           "aml-session-1-s1-slides"
         ],
@@ -84,15 +85,15 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Skim the S1 slides once, then write one original example each for supervised, unsupervised, classification, and regression."
       },
       {
-        "label": "Write: the 5-stage workflow page",
-        "kind": "write",
-        "minutes": 25,
+        "label": "Do: rebuild the five-stage sklearn skeleton from blank",
+        "kind": "do",
+        "minutes": 35,
         "noteIds": [
           "s1-five-stage-process",
           "s1-module-shape"
         ],
-        "instruction": "Closed-book: one line per stage (data → EDA → preprocess → model → evaluate), in your own words. This is AML_S1_workflow.md — the evidence this card asks for. s1-module-shape is a 90-second read on what the class test actually looks like; worth it even under time pressure.",
-        "checklistText": "Write AML_S1_workflow.md closed-book: one line per stage from data to evaluation, then skim the exam-shape note."
+        "instruction": "Close the video and build a small runnable skeleton from blank: load data, inspect X/y, split, fit one sklearn estimator and score on held-out data. Add one markdown line before each stage explaining why it exists; save this as the practical AML_S1_workflow notebook/page.",
+        "checklistText": "From blank, rebuild a runnable load → inspect → split → fit → score skeleton and label why each stage exists."
       },
       {
         "label": "Self-test: closed-book recite",
@@ -116,21 +117,23 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: preprocessing, imputation/scaling + one-hot encoding",
-        "kind": "watch",
-        "minutes": 38,
+        "label": "Watch + code UBC 5.1–5.4: preprocessing sequence",
+        "kind": "codeAlong",
+        "minutes": 65,
+        "playbackMinutes": 50,
         "resourceIds": [
           "aml-video-ubc-5-1-preprocessing-intro",
           "aml-video-ubc-5-2-imputation-scaling",
+          "aml-video-ubc-5-3-sklearn-pipelines",
           "aml-video-ubc-5-4-one-hot-encoding"
         ],
-        "instruction": "Watch for each transformer's purpose and inputs. Do not copy a pre-split preprocessing order: the split must happen before any data-dependent transformer is fitted.",
-        "checklistText": "Watch UBC 5.1, 5.2 and 5.4 for preprocessing choices, keeping the split-before-fit rule explicit."
+        "instruction": "Watch 5.1–5.4 in playlist order and pause to type the imputer/scaler Pipeline plus OneHotEncoder pattern. Use a tiny mixed-type dataframe or the Lab 2 setup, split before fit, and verify that fit happens only through the training pipeline.",
+        "checklistText": "Watch and code UBC 5.1–5.4 in order, producing a split-first Pipeline with imputation, scaling and one-hot encoding."
       },
       {
         "label": "Read: S2 \"Data preprocessing\" slides",
         "kind": "read",
-        "minutes": 16,
+        "minutes": 10,
         "resourceIds": [
           "aml-session-2-s2-preprocessing-slides"
         ],
@@ -142,17 +145,17 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Read the why-preprocessing note, then check the slides against split first and train-only fitting."
       },
       {
-        "label": "Write: all four rules in one pass",
-        "kind": "write",
-        "minutes": 30,
+        "label": "Do: annotate the executable preprocessing skeleton",
+        "kind": "do",
+        "minutes": 15,
         "noteIds": [
           "s2-missing-four-strategies",
           "s2-encoding-picker",
           "s2-why-scale",
           "s2-trap-encode-before-split"
         ],
-        "instruction": "This card is short on time, so do all four rules as one tight pass rather than four separate write-ups: missing-values (drop vs impute mean/median/mode + when), encoding (one-hot vs ordinal + when), scaling (which model families need it and why — s2-why-scale gives you three ready reasons), and leakage (fit every transformer on train only — s2-trap-encode-before-split states it as the mistake it prevents). One paragraph each, in your own words. If something has to give, keep scaling and leakage — they're the two that show up as planted faults in the lab.",
-        "checklistText": "Write one paragraph each on missing-value handling, encoding choice, scaling need, and the fit-on-train-only leakage rule."
+        "instruction": "Annotate the code you just wrote with four short decision comments: why this imputation, why this encoding, whether this model needs scaling, and where train-only fitting is enforced. Concepts must explain the code; do not create four prose paragraphs.",
+        "checklistText": "Annotate the executable skeleton with the imputation, encoding, scaling and train-only-fit decisions."
       }
     ]
   },
@@ -366,15 +369,15 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: Pipeline + ColumnTransformer — the leakage-safe pattern",
-        "kind": "watch",
-        "minutes": 32,
-        "instruction": "Watch UBC 5.3 then 6.1. Follow how Pipeline controls fit/transform and how ColumnTransformer applies different train-fitted branches to numeric and categorical columns.",
+        "label": "Watch + code UBC 6.1: ColumnTransformer",
+        "kind": "codeAlong",
+        "minutes": 30,
+        "playbackMinutes": 20,
+        "instruction": "Continue from card-003's Pipeline code. Pause the video to build numeric and categorical branches inside ColumnTransformer, place that transformer inside the outer Pipeline, then fit and predict without manually transforming the test set.",
         "resourceIds": [
-          "aml-video-ubc-5-3-sklearn-pipelines",
           "aml-video-ubc-6-1-column-transformer"
         ],
-        "checklistText": "Watch UBC 5.3 then 6.1 for the Pipeline/ColumnTransformer pattern that keeps fitting inside training folds."
+        "checklistText": "Watch and code UBC 6.1, extending the earlier Pipeline with numeric/categorical branches and one fit/predict call."
       },
       {
         "label": "Read: scaling rule + which models need it",
@@ -399,10 +402,10 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Read both leakage notes and note the two sneak-in routes: pre-split fitting and manual out-of-pipeline preprocessing."
       },
       {
-        "label": "Write: assemble the one-page playbook",
-        "kind": "write",
+        "label": "Do: assemble an executable one-page playbook",
+        "kind": "do",
         "minutes": 45,
-        "instruction": "Produce AML_S2_preprocessing_playbook.md as one page under five headers: inspect/clean → split → numeric branch → categorical branch → leakage guard. Under each, give the rule plus the sklearn class or pattern. State that imputers, encoders and scalers are fitted on training folds through Pipeline/ColumnTransformer.",
+        "instruction": "Produce the playbook as a compact executable template, not prose: inspect/clean → split → numeric Pipeline → categorical Pipeline → ColumnTransformer → estimator Pipeline → fit/predict. Put the leakage rule beside the exact line that enforces it.",
         "noteIds": [
           "s2-missing-four-strategies",
           "s2-encoding-picker",
@@ -411,72 +414,72 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Write AML_S2_preprocessing_playbook.md with one rule line and sklearn pattern under each of the five headers."
       },
       {
-        "label": "Dry-run: apply the playbook to crx from memory",
+        "label": "Code from memory: rebuild the crx preprocessing skeleton",
         "kind": "test",
         "minutes": 28,
-        "instruction": "Closed-book, no notebook: talk through crx column by column (A1-A15, Target): identify fixed cleaning, make the split, then assign train-fitted numeric/categorical transformations inside the pipeline. Flag any column you cannot classify cold and fix the playbook, not the slides.",
-        "checklistText": "Talk through crx column by column from memory, stating what your playbook does to each one, in order."
+        "instruction": "Closed-book: rebuild the crx preprocessing skeleton from memory, including placeholder cleaning, split, column lists, numeric/categorical transformers and the outer Pipeline. Run it only after the skeleton is complete; repair the template wherever execution fails.",
+        "checklistText": "Rebuild and run the crx Pipeline skeleton from memory, then repair every failing line in the playbook."
       }
     ]
   },
   'card-011': {
     "concepts": [
-      "Linear regression as minimising OLS squared-error loss; the linear model form (w^Tx + b)",
-      "The fundamental tradeoff: overfitting vs underfitting, defined by training error and the train-test gap",
-      "Regularisation: ridge (L2) vs lasso (L1) vs elastic net, and when to prefer each",
-      "Why a cross-validated score is trusted over a test score you tuned against"
+      "Diagnose underfitting/overfitting from train and validation behaviour, then change model complexity in code",
+      "Fit and compare LinearRegression, Ridge and Lasso; connect the penalties to their observed coefficients",
+      "Use cross_val_score/validation_curve for selection while preserving the held-out test set"
     ],
     "steps": [
       {
-        "label": "Watch: linear regression, generalisation, splitting + CV",
-        "kind": "watch",
-        "minutes": 56,
-        "instruction": "Watch UBC 7.1, 3.1, 3.2 and 3.3 in this order. Follow the chain from model and generalisation to a held-out test set and then cross-validation; do not tune against the test set.",
+        "label": "Watch + code course: model complexity (1:15–2:00)",
+        "kind": "codeAlong",
+        "minutes": 55,
+        "playbackMinutes": 45,
+        "instruction": "Continue the long course at 1:15 and reproduce at least one train-versus-test complexity experiment. Change the controlling parameter, rerun, and label one underfit and one overfit result from the scores or boundary rather than memorising definitions.",
         "resourceIds": [
-          "aml-video-ubc-7-1-linear-regression",
-          "aml-video-ubc-3-1-generalization",
-          "aml-video-ubc-3-2-data-splitting",
-          "aml-video-ubc-3-3-cross-validation"
+          "aml-video-course-s3-overfitting"
         ],
-        "checklistText": "Watch UBC 7.1, 3.1, 3.2 and 3.3 in order, tracking why the test set stays untouched until final evaluation."
+        "checklistText": "Watch and code 1:15–2:00, producing one underfit and one overfit result by changing model complexity."
       },
       {
-        "label": "Read: S3 slides — linear model form and the loss",
-        "kind": "read",
-        "minutes": 20,
-        "instruction": "Skim the slides once for the linear-model form and OLS. Use the two notes to pin the exact loss formula and the four names for it (objective/loss/cost/error function).",
+        "label": "Watch + code course: linear, ridge & lasso (2:00–2:35)",
+        "kind": "codeAlong",
+        "minutes": 45,
+        "playbackMinutes": 35,
+        "instruction": "Code along with LinearRegression, Ridge and Lasso. Print train/test scores and coefficients, vary alpha once, and verify shrinkage versus exact-zero behaviour from the output. Keep scaling inside the pipeline for regularised models.",
         "resourceIds": [
-          "aml-session-3-s3-regression-and-evaluation-slides"
+          "aml-video-course-s3-linear-regression",
+          "aml-video-course-s3-ridge-lasso"
+        ],
+        "checklistText": "Watch and code 2:00–2:35, comparing OLS/Ridge/Lasso scores and coefficients after one alpha change."
+      },
+      {
+        "label": "Watch + code course: cross-validation (3:29–3:40)",
+        "kind": "codeAlong",
+        "minutes": 15,
+        "playbackMinutes": 11,
+        "instruction": "Type and run one cross_val_score or validation_curve example while watching. Print the fold scores, mean and spread; keep the final test set outside this selection loop.",
+        "resourceIds": [
+          "aml-video-course-s3-cross-validation"
+        ],
+        "checklistText": "Watch and code 3:29–3:40, printing fold scores plus their mean/spread without touching the test set."
+      },
+      {
+        "label": "Do: build the S3 executable comparison cell from blank",
+        "kind": "do",
+        "minutes": 20,
+        "instruction": "Using only the Lab 3 data-loading setup, write one clean cell sequence from blank that fits OLS, Ridge and Lasso, reports train/CV scores and prints coefficients. Use the slides/notes only afterward to label what the code demonstrated.",
+        "resourceIds": [
+          "aml-session-3-s3-regression-and-evaluation-slides",
+          "aml-session-3-lab-3-linear-models-notebook"
         ],
         "noteIds": [
           "s3-linear-model",
-          "s3-ols"
-        ],
-        "checklistText": "Skim the S3 slides once, then use the notes to pin the exact loss formula and its four names."
-      },
-      {
-        "label": "Write: AML_S3_regression_concepts.md",
-        "kind": "write",
-        "minutes": 40,
-        "instruction": "Closed-book: define overfitting/underfitting via the two-ability framing (training error / gap), state the regularisation definition precisely, contrast ridge vs lasso penalties and their effect on weights, note k-fold cross-validation (k=10 default), and log the metric table (MSE/RMSE/MAE/MAPE) with when to use each.",
-        "noteIds": [
-          "s3-generalisation",
-          "s3-regularisation",
+          "s3-ols",
           "s3-ridge-lasso-elastic",
           "s3-assessment-methods",
-          "s3-regression-metrics"
-        ],
-        "checklistText": "Write AML_S3_regression_concepts.md closed-book, covering overfitting, regularisation, ridge vs lasso, cross-validation, and the metrics table."
-      },
-      {
-        "label": "Self-test: why trust the CV score",
-        "kind": "test",
-        "minutes": 12,
-        "instruction": "Closed-book, one sentence: why a cross-validated/validation score is trustworthy while a test score you've tuned against is not. Check your line against the note only after writing it.",
-        "noteIds": [
           "s3-trap-test-set-tuning"
         ],
-        "checklistText": "Write one closed-book sentence on why a cross-validated score is trustworthy but a tuned test score isn't."
+        "checklistText": "From blank, fit OLS/Ridge/Lasso on the Lab 3 setup and report train/CV scores plus coefficients in one runnable sequence."
       }
     ]
   },
@@ -563,43 +566,63 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: SVM, decision trees + tuning",
-        "kind": "watch",
-        "minutes": 37,
-        "instruction": "Watch UBC 4.4, 2.3 and 8.1 in that order. Record the Lab 4 levers only: SVM C/gamma, tree depth/splitting, and why hyperparameters are selected by cross-validation rather than the test set.",
+        "label": "Watch + code course: kNN (0:51–1:15)",
+        "kind": "codeAlong",
+        "minutes": 27,
+        "playbackMinutes": 24,
+        "instruction": "Code along with KNeighborsClassifier. Run at least two k values, compare train/test scores and record how the boundary-complexity direction changes. Keep scaling in the implementation.",
         "resourceIds": [
-          "aml-video-ubc-4-4-svm-rbf",
-          "aml-video-ubc-2-3-decision-trees",
-          "aml-video-ubc-8-1-hyperparameter-opt"
+          "aml-video-course-s4-knn"
         ],
-        "checklistText": "Watch UBC 4.4, 2.3 and 8.1, recording the SVM, tree and cross-validated tuning levers used in Lab 4."
+        "checklistText": "Watch and code 0:51–1:15, comparing two k values with train/test scores and scaled features."
       },
       {
-        "label": "Read: S4 slides + classifier-picker cheatsheet",
-        "kind": "read",
-        "minutes": 20,
-        "instruction": "Use the slides to recover logistic regression and kNN without another video, then lock in the cost, scaling, interpretability and key-hyperparameter trade-offs for all four classifiers.",
+        "label": "Watch + code course: logistic & linear classifiers (2:35–2:55)",
+        "kind": "codeAlong",
+        "minutes": 24,
+        "playbackMinutes": 20,
+        "instruction": "Fit LogisticRegression while watching, print class predictions and predict_proba for a few rows, then change C once and compare the result. Keep scaling inside the pipeline.",
         "resourceIds": [
-          "aml-session-4-s4-classification-slides"
+          "aml-video-course-s4-logistic"
+        ],
+        "checklistText": "Watch and code 2:35–2:55, inspecting predict_proba and comparing two C values inside a scaled pipeline."
+      },
+      {
+        "label": "Watch + code course: SVM, C & gamma (2:55–3:30)",
+        "kind": "codeAlong",
+        "minutes": 43,
+        "playbackMinutes": 35,
+        "instruction": "Reproduce one linear SVM and one RBF SVM. Run low/high C and gamma settings, compare train/test scores or boundaries, and deliberately run one unscaled version so the scaling failure is visible in output.",
+        "resourceIds": [
+          "aml-video-course-s4-svm-kernels"
+        ],
+        "checklistText": "Watch and code 2:55–3:30, testing C/gamma directions and one deliberately unscaled SVM."
+      },
+      {
+        "label": "Watch + code course: decision trees (3:40–4:00)",
+        "kind": "codeAlong",
+        "minutes": 24,
+        "playbackMinutes": 20,
+        "instruction": "Fit a DecisionTreeClassifier at two max_depth values, compare train/test scores, inspect feature_importances_, and confirm that removing the scaler does not change the tree's split logic.",
+        "resourceIds": [
+          "aml-video-course-s4-decision-trees"
+        ],
+        "checklistText": "Watch and code 3:40–4:00, comparing two tree depths and inspecting feature_importances_ without scaling."
+      },
+      {
+        "label": "Do: assemble the four-classifier runnable comparison",
+        "kind": "do",
+        "minutes": 17,
+        "instruction": "Put kNN, logistic regression, RBF SVM and decision tree into one compact comparison loop or table using a single split. Record scaling path, first hyperparameter, train score and test score. Use the slides/cheatsheet only to verify the final labels.",
+        "resourceIds": [
+          "aml-session-4-s4-classification-slides",
+          "aml-session-4-lab-4-classification-notebook"
         ],
         "noteIds": [
-          "s4-classifier-picker"
+          "s4-classifier-picker",
+          "s4-gridsearch-code"
         ],
-        "checklistText": "Skim the S4 slides for verdicts, then lock in each classifier's cost/scaling/interpretability trade-offs from the cheatsheet."
-      },
-      {
-        "label": "Write: AML_S4_classification_concepts.md + comparison-table skeleton",
-        "kind": "write",
-        "minutes": 30,
-        "instruction": "Write one short paragraph per classifier (idea, scaling need, when useful, first hyperparameter to tune), then draft one comparison-table row per classifier with blank score columns for Lab 4. Add one line saying the test set is not part of GridSearchCV.",
-        "checklistText": "Draft the four-classifier comparison skeleton and state why GridSearchCV must not use the test set."
-      },
-      {
-        "label": "Self-test: classifier and tuning recall",
-        "kind": "test",
-        "minutes": 15,
-        "instruction": "Closed-book: which classifier needs no scaling; what do C and gamma change; what tree setting most directly limits complexity; and why must the test set stay outside tuning? Flag shaky answers for the Lab 4 run.",
-        "checklistText": "Closed-book, answer the scaling, C/gamma, tree-complexity and test-set questions before starting Lab 4."
+        "checklistText": "Build one runnable four-classifier comparison with scaling path, first hyperparameter and train/test scores."
       }
     ]
   },
@@ -694,24 +717,25 @@ export const CARD_STUDY_SEQUENCE = {
   'card-024': {
     "concepts": [
       "Why ensembles help: independent, better-than-random errors cancel out (No Free Lunch); four ways to diversify learners",
-      "Bagging vs boosting vs stacking: what each manipulates, how they combine predictions, and what each mainly reduces"
+      "Bagging vs boosting vs stacking: what each manipulates, how they combine predictions, and what each mainly reduces",
+      "Random forests vs gradient boosting: independent randomized trees versus sequential residual correction"
     ],
     "steps": [
       {
-        "label": "Watch: ensembles motivation + gradient boosted trees",
-        "kind": "watch",
-        "minutes": 18,
-        "instruction": "Watch back to back. Just get the shape of the argument: why combining independent, better-than-random models cancels error, and how gradient boosted trees differ from a vote (they sum residual-fitting trees).",
+        "label": "Watch course: random forests & gradient boosting (5:25–5:45)",
+        "kind": "codeAlong",
+        "minutes": 35,
+        "playbackMinutes": 20,
+        "instruction": "Watch the final exam-relevant course section while fitting RandomForestClassifier and GradientBoostingClassifier. Compare train/test scores, change n_estimators or learning_rate once, and inspect the forest's feature_importances_.",
         "resourceIds": [
-          "aml-video-ubc-11-1-ensembles-motivation",
-          "aml-video-ubc-11-2-gradient-boosted-trees"
+          "aml-video-course-s5-ensembles"
         ],
-        "checklistText": "Watch UBC 11.1 and 11.2 back to back and note why combining independent models beats a single one."
+        "checklistText": "Watch and code 5:25–5:45, comparing random forest and gradient boosting scores after one parameter change."
       },
       {
         "label": "Read: S5 slides + why combining helps",
         "kind": "read",
-        "minutes": 32,
+        "minutes": 28,
         "instruction": "Skim the slides once for structure, then lean on the three notes for the actual argument: what an ensemble is, the two conditions (independent + better than random) that make combining work, and the four ways to manufacture diversity.",
         "resourceIds": [
           "aml-session-5-s5-ensemble-slides"
@@ -724,21 +748,20 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Skim the S5 slides, then read the three notes for the two conditions that make ensembling work and the four diversity tricks."
       },
       {
-        "label": "Watch: interpretation + feature importance",
+        "label": "Watch UBC 12.2: clarify tree feature importance",
         "kind": "watch",
-        "minutes": 16,
-        "instruction": "Watch back to back. Note what feature importance actually measures (impurity reduction across trees) so you can name a misleading case next.",
+        "minutes": 9,
+        "instruction": "Use this short clip only as a focused clarification after the course section. Record what impurity-based feature importance measures and one reason it can mislead.",
         "resourceIds": [
-          "aml-video-ubc-12-1-interpretation-motivation",
           "aml-video-ubc-12-2-feature-importances"
         ],
-        "checklistText": "Watch UBC 12.1 and 12.2, noting that feature importance measures impurity reduction across trees."
+        "checklistText": "Watch UBC 12.2 and record what impurity-based feature importance measures plus one limitation."
       },
       {
-        "label": "Write: bagging vs boosting vs stacking table",
-        "kind": "write",
-        "minutes": 35,
-        "instruction": "Draft your own table first (data manipulation, training order, base-learner strength, combination rule, what's mainly reduced) from the four concept notes, then check it against s5-ensemble-comparison and fix any row you got wrong.",
+        "label": "Do: tie the ensemble table to executed outputs",
+        "kind": "do",
+        "minutes": 30,
+        "instruction": "Build the bagging/boosting/stacking table from the models you executed: training order, combination rule, parameter changed and observed train/test effect. Use the notes only to fill mechanisms the course code did not show directly.",
         "noteIds": [
           "s5-bagging",
           "s5-boosting",
@@ -749,11 +772,11 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Draft your own bagging/boosting/stacking comparison table from memory, then correct it against s5-ensemble-comparison."
       },
       {
-        "label": "Write: feature importance + a misleading case",
-        "kind": "write",
-        "minutes": 19,
-        "instruction": "In your own words: state what feature_importances_ measures, then give one concrete case where it misleads (e.g. two correlated features split the credit so both look weaker than the single underlying signal really is). Save both pieces into AML_S5_ensembles_concepts.md.",
-        "checklistText": "In AML_S5_ensembles_concepts.md, define feature_importances_ and give one concrete case where correlated features mislead it."
+        "label": "Do: interrogate feature importance",
+        "kind": "do",
+        "minutes": 18,
+        "instruction": "Print and sort feature_importances_, map values back to feature names, then write one warning grounded in output (for example, correlated features splitting credit). Save the code and the one-line interpretation together.",
+        "checklistText": "Print and sort feature_importances_ with feature names, then add one output-grounded warning about interpretation."
       }
     ]
   },
@@ -1139,22 +1162,20 @@ export const CARD_STUDY_SEQUENCE = {
     ],
     "steps": [
       {
-        "label": "Watch: metrics, confusion matrix, P/R/F1 + imbalance",
-        "kind": "watch",
-        "minutes": 40,
-        "instruction": "Watch UBC 9.1–9.4 in order. Build the chain from why accuracy can fail, through the confusion matrix and precision/recall/F1, to metric and remedy choices under imbalance.",
+        "label": "Watch course: complete model-evaluation section (4:00–5:20)",
+        "kind": "codeAlong",
+        "minutes": 120,
+        "playbackMinutes": 80,
+        "instruction": "Code along with the complete evaluation block. Produce a DummyClassifier baseline, confusion_matrix, classification_report, precision/recall/F1, a threshold or precision-recall curve, ROC/AUC and one regression metric example. Change one threshold and explain the observed precision/recall movement from output.",
         "resourceIds": [
-          "aml-video-ubc-9-1-metrics-motivation",
-          "aml-video-ubc-9-2-confusion-matrix",
-          "aml-video-ubc-9-3-precision-recall-f1",
-          "aml-video-ubc-9-4-class-imbalance"
+          "aml-video-course-s4-evaluation"
         ],
-        "checklistText": "Watch UBC 9.1–9.4 in order, deriving precision, recall and F1 before applying them to imbalance."
+        "checklistText": "Watch and code 4:00–5:20, producing baseline, confusion-matrix, P/R/F1, threshold, ROC/AUC and regression-metric outputs."
       },
       {
         "label": "Read: metric choice, CV, imbalance notes",
         "kind": "read",
-        "minutes": 20,
+        "minutes": 10,
         "instruction": "Fast skim, revision only: confusion matrix layout, precision/recall/F1 formulas, the 99.9%-accuracy imbalance example and its remedies, holdout/CV/leave-one-out, and the metric-choice-by-situation trap table. One line per note if you already know it cold.",
         "noteIds": [
           "s3-confusion-matrix",
@@ -1166,25 +1187,25 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Skim the five notes on confusion matrices, precision/recall/F1, CV methods, and the metric-choice trap table."
       },
       {
-        "label": "Do: 8 timed exam Qs",
+        "label": "Do: 5 timed metric-and-code questions",
         "kind": "test",
-        "minutes": 80,
-        "instruction": "Set a timer. Answer 8 exam-style questions covering metric choice by situation, CV setup/choice of k, and imbalance handling, closed-book, from memory. Write full justifications, not just the metric name.",
-        "checklistText": "Answer 8 timed, closed-book exam questions on metric choice, CV setup, and imbalance handling with full justifications."
+        "minutes": 50,
+        "instruction": "Answer five exam-style prompts that require both a metric decision and the sklearn call or output interpretation: imbalance, threshold trade-off, CV scoring, multiclass averaging and regression error. Work closed-book, then run the code to verify.",
+        "checklistText": "Answer five timed metric-and-code prompts closed-book, then run each snippet to verify the result."
       },
       {
         "label": "Mark against checklist",
         "kind": "test",
-        "minutes": 20,
+        "minutes": 15,
         "instruction": "Mark each answer against the correct reasoning, not just the right metric name: did you justify from the situation, name the CV method correctly, state the imbalance remedy?",
         "checklistText": "Mark each answer for correct reasoning: situation-based justification, correct CV method name, stated imbalance remedy."
       },
       {
-        "label": "Write: rewrite shaky reasoning clean",
-        "kind": "write",
-        "minutes": 22,
-        "instruction": "For every answer that was wrong, or right by luck, rewrite the justification cleanly in your own words — this is what should come out under real exam pressure.",
-        "checklistText": "Rewrite the justification for every wrong or luck-right answer cleanly in your own words."
+        "label": "Do: repair every wrong metric snippet",
+        "kind": "do",
+        "minutes": 15,
+        "instruction": "For every wrong or luck-right answer, correct the code and add one line explaining why that metric/scoring choice matches the scenario. Keep only executable repair examples.",
+        "checklistText": "Correct every wrong metric snippet and add one line connecting the scoring choice to the scenario."
       }
     ]
   },

@@ -66,7 +66,13 @@ export function StudyTimer({
   onEvidenceDelete,
   onEvidenceFileAdd,
   resources = [],
+  resourceProgress = {},
+  onResourceProgressChange,
+  onResourceReviewedToggle,
   onOpenResource,
+  onCardProgressChange,
+  onStatusChange,
+  onToggleDone,
   // 'bar' is the always-mounted top-bar timer. 'room' is the same engine running
   // inside a dedicated Focus Room tab, which renders the room and nothing else.
   variant = 'bar',
@@ -568,7 +574,13 @@ export function StudyTimer({
         onEvidenceDelete={onEvidenceDelete}
         onEvidenceFileAdd={onEvidenceFileAdd}
         resources={resources}
+        resourceProgress={resourceProgress}
+        onResourceProgressChange={onResourceProgressChange}
+        onResourceReviewedToggle={onResourceReviewedToggle}
         onOpenResource={onOpenResource}
+        onCardProgressChange={onCardProgressChange}
+        onStatusChange={onStatusChange}
+        onToggleDone={onToggleDone}
         linkedNotes={linkedNotes}
         queue={queue}
         onSwitchCard={onSwitchCard}

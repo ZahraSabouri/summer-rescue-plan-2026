@@ -14,7 +14,8 @@
 }
 
 .focus-room button,
-.focus-room input {
+.focus-room input,
+.focus-room select {
   font: inherit;
 }
 
@@ -385,6 +386,55 @@
   line-height: 1.6;
 }
 
+.focus-room-card-progress {
+  display: grid;
+  gap: 14px;
+}
+
+.focus-room-card-progress > label {
+  display: grid;
+  gap: 7px;
+}
+
+.focus-room-card-progress > label > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.focus-room-card-progress select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--panel);
+}
+
+.focus-room-progress-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 12px;
+}
+
+.focus-room-progress-control input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.focus-room-progress-control output {
+  color: var(--ink);
+  font-family: var(--font-num);
+  font-weight: 800;
+  text-align: right;
+}
+
+.focus-room-card-progress > button {
+  width: 100%;
+}
+
 .focus-room-boundaries {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -483,6 +533,10 @@
     grid-template-columns: 1fr;
   }
 
+  .focus-room-resource-grid {
+    grid-template-columns: 1fr;
+  }
+
   .focus-room-timer-panel {
     padding-bottom: 18px;
   }
@@ -513,6 +567,20 @@
 
   .focus-room-main {
     padding-block: 24px 36px;
+  }
+
+  .focus-room-section-head,
+  .focus-room-resource-card > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .focus-room-resource-summary {
+    justify-items: start;
+  }
+
+  .focus-room-resource-card > header > button {
+    width: 100%;
   }
 
   .focus-room-task {
@@ -697,6 +765,105 @@
 .focus-room-evidence-full .saved-evidence-list {
   margin-top: 12px;
 }
+
+.focus-room-resource-workspace {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.focus-room-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.focus-room-section-head > div:first-child > span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.focus-room-section-head h2 {
+  margin: 6px 0 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  font-weight: 560;
+}
+
+.focus-room-resource-summary {
+  min-width: 92px;
+  display: grid;
+  justify-items: end;
+}
+
+.focus-room-resource-summary strong {
+  color: var(--accent);
+  font-family: var(--font-num);
+  font-size: 1.65rem;
+}
+
+.focus-room-resource-summary small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.focus-room-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.focus-room-resource-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: var(--shadow-1);
+}
+
+.focus-room-resource-card > header {
+  min-height: 112px;
+  padding: 18px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.focus-room-resource-card > header > div {
+  min-width: 0;
+}
+
+.focus-room-resource-card h3 {
+  margin: 8px 0 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.focus-room-resource-card header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.focus-room-resource-card > header > button {
+  flex: 0 0 auto;
+}
+
+.focus-room-resource-card .resource-study-editor {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .focus-room-resource-list {
   display: flex;
   flex-wrap: wrap;
@@ -1222,4 +1389,26 @@
   margin: 0;
   max-width: 30rem;
   color: var(--muted);
+}
+
+@media (max-width: 980px) {
+  .focus-room-resource-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .focus-room-section-head,
+  .focus-room-resource-card > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .focus-room-resource-summary {
+    justify-items: start;
+  }
+
+  .focus-room-resource-card > header > button {
+    width: 100%;
+  }
 }

@@ -1640,6 +1640,7 @@ export default function App() {
         cardId: id,
         card,
         resources: allResources.filter((resource) => (card.resourceIds ?? []).includes(resource.id)),
+        resourceProgress: tracker.state.resourceProgress,
         currentBoundary: activeTimerCardId === id ? focusExecutionContext.block ?? null : null,
         nextBoundary: activeTimerCardId === id ? focusExecutionContext.nextBlock ?? null : null,
         linkedNotes: resolveLinkedNotesForCard(card),
@@ -1650,6 +1651,12 @@ export default function App() {
     focusBridgeRef.current.apply = (message) => {
       if (message.action === 'toggle-checklist') tracker.toggleChecklistItem(message.cardId, message.itemId)
       else if (message.action === 'set-theme') tracker.updateSettings({ theme: message.theme })
+      else if (message.action === 'set-card-progress') tracker.setCardProgress(message.cardId, message.progressPercent)
+      else if (message.action === 'set-status') tracker.setStatus(message.cardId, message.status)
+      else if (message.action === 'toggle-done') tracker.toggleDone(message.cardId)
+      else if (message.action === 'update-resource-progress') tracker.updateResourceProgress(message.resourceId, message.patch)
+      else if (message.action === 'toggle-resource-reviewed') tracker.toggleResourceProgress(message.resourceId)
+      else if (message.action === 'mark-resource-opened') tracker.markResourceOpened(message.resourceId)
       else if (message.action === 'complete-session') {
         tracker.addFocusSession(message.cardId, message.minutes)
         setMessage(`Logged ${message.minutes} min focus session (Focus Room).`)
@@ -1700,7 +1707,14 @@ export default function App() {
   useEffect(() => {
     if (!focusRoomCardId) return
     focusBridgeRef.current.send?.(focusRoomCardId)
-  }, [focusRoomCardId, activeTimerCard, focusExecutionContext, allResources, resolveLinkedNotesForCard])
+  }, [
+    focusRoomCardId,
+    activeTimerCard,
+    focusExecutionContext,
+    allResources,
+    resolveLinkedNotesForCard,
+    tracker.state.resourceProgress,
+  ])
 
   async function verifyDatabaseMirror() {
     if (!window.confirm('Rebuild the SQLite mirror from the audit event log? JSON remains authoritative.')) return

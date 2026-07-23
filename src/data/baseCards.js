@@ -12,7 +12,7 @@ export const baseCards = [
     "id": "card-001",
     "number": 1,
     "sortOrder": 1,
-    "title": "AML S1 — Learn the ML workflow: course video + S1 slides",
+    "title": "AML S1 — Build the ML workflow: course code-along + S1 review",
     "module": "Applied ML",
     "moduleGroup": "Applied ML",
     "phase": "Phase 2",
@@ -26,15 +26,15 @@ export const baseCards = [
     "dueDate": "2026-07-04",
     "dueDateTime": "2026-07-04 12:00",
     "estimatedHours": 3.5,
-    "description": "Concepts before code. Watch the two short UBC introductions plus one 17-minute worked excerpt from the long Applied ML course, read the S1 slides, then write the 5-stage workflow page. No notebooks yet — running Lab 1 is a later card.",
+    "description": "Use two short UBC clips for vocabulary, then code along with 2:30–51:00 of the long Applied ML course. Rebuild the load-inspect-split-fit-score skeleton from blank; use the S1 slides only to clarify the code's concepts.",
     "checklist": [
-      "Watch UBC 1.0 + 2.1, then only 34:51–51:58 of the long course",
-      "Read the S1 'Overview of ML' slides; define supervised vs unsupervised and classification vs regression, with an example each",
-      "Write the 5-stage workflow (data → EDA → preprocess → model → evaluate), one line per stage in your own words",
-      "Closed-book: recite the 5 stages; list any term to resolve when you run Lab 1"
+      "Watch UBC 1.0 + 2.1, then code along with 2:30–51:00 of the long Applied ML course",
+      "Reproduce import, inspection, split, fit and score cells while watching",
+      "Rebuild the runnable five-stage sklearn skeleton from blank",
+      "Use the S1 slides only to resolve concepts exposed by the code"
     ],
-    "evidenceRequirement": "AML_S1_workflow.md (written from slides + video)",
-    "doneCondition": "5-stage workflow written from concepts; core vocabulary defined",
+    "evidenceRequirement": "runnable AML_S1_workflow notebook/page with labelled code stages",
+    "doneCondition": "load, inspect, split, fit and score skeleton runs from blank; each boundary is explained",
     "trackerNotes": "",
     "tags": [
       "health"
@@ -76,7 +76,7 @@ export const baseCards = [
     "id": "card-003",
     "number": 3,
     "sortOrder": 3,
-    "title": "AML S2 — Learn preprocessing: S2 slides + preprocessing videos",
+    "title": "AML S2 — Build preprocessing: UBC 5.1–5.4 code-along",
     "module": "Applied ML",
     "moduleGroup": "Applied ML",
     "phase": "Phase 2",
@@ -90,15 +90,15 @@ export const baseCards = [
     "dueDate": "2026-07-05",
     "dueDateTime": "2026-07-05 10:30",
     "estimatedHours": 2,
-    "description": "Concepts before code. Read the S2 'Data preprocessing' slides and the preprocessing clips, then write the preprocessing concept notes: missing values, encoding, scaling, and the leakage trap. Running Lab 2 comes after.",
+    "description": "Code along with UBC 5.1–5.4 in playlist order and produce a split-first Pipeline with imputation, scaling and one-hot encoding. Use S2 notes only to justify the implementation choices before Lab 2.",
     "checklist": [
-      "Watch UBC 5.1 + 5.2 + 5.4 (preprocessing, imputation/scaling and one-hot encoding)",
+      "Watch and code UBC 5.1 → 5.2 → 5.3 → 5.4 in playlist order",
       "Read the S2 slides; keep split before fitting any imputer, encoder or scaler",
-      "Missing-values rule: drop vs impute (mean/median/mode), with reasoning",
-      "Encoding rule: one-hot vs label/ordinal; Scaling: which models need it; Leakage: fit on train only"
+      "Build a split-first Pipeline with imputation, scaling and OneHotEncoder",
+      "Annotate the exact code lines that enforce the four preprocessing decisions"
     ],
-    "evidenceRequirement": "AML_S2_preprocessing_concepts.md",
-    "doneCondition": "given raw columns you can state a split-first, train-fitted preprocessing plan",
+    "evidenceRequirement": "runnable AML_S2 preprocessing skeleton with four decision comments",
+    "doneCondition": "split-first Pipeline runs and its imputation, encoding, scaling and leakage decisions are justified",
     "trackerNotes": "",
     "tags": []
   },
@@ -211,15 +211,15 @@ export const baseCards = [
     "dueDate": "2026-07-06",
     "dueDateTime": "2026-07-06 16:30",
     "estimatedHours": 3,
-    "description": "Consolidate S2 into one exam-ready page. Using your S2 concept notes and the Lab 2 run, assemble the reusable leakage-safe preprocessing playbook and pressure-test it from memory. Completes AML S2.",
+    "description": "Convert the Lab 2 run into an executable, leakage-safe Pipeline/ColumnTransformer template, then rebuild and run it from memory on crx. Completes AML S2.",
     "checklist": [
-      "Assemble the playbook in order: inspect/clean → split → train-fitted numeric/categorical branches inside Pipeline/ColumnTransformer",
+      "Code UBC 6.1 and extend the Pipeline with numeric/categorical ColumnTransformer branches",
       "From the Lab 2 run, add the two ways leakage actually sneaks in and the fix for each",
       "Mark which models need scaling and which don't",
-      "Dry-run the playbook on a fresh column set (e.g. crx) from memory — no notes"
+      "Rebuild and run the complete crx Pipeline from memory — no notes"
     ],
-    "evidenceRequirement": "AML_S2_preprocessing_playbook.md",
-    "doneCondition": "given a raw CSV you can state the leakage-safe plan from the playbook, unaided",
+    "evidenceRequirement": "executable AML_S2 preprocessing playbook + successful crx rebuild",
+    "doneCondition": "given a raw CSV you can rebuild and run the leakage-safe Pipeline unaided",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -288,7 +288,7 @@ export const baseCards = [
     "id": "card-011",
     "number": 11,
     "sortOrder": 11,
-    "title": "AML S3 — Learn regression & evaluation: S3 slides + videos",
+    "title": "AML S3 — Code regression, regularisation & CV with the long course",
     "module": "Applied ML",
     "moduleGroup": "Applied ML",
     "phase": "Phase 2",
@@ -302,15 +302,15 @@ export const baseCards = [
     "dueDate": "2026-07-07",
     "dueDateTime": "2026-07-07 16:30",
     "estimatedHours": 3,
-    "description": "Concepts before code. Read the S3 'Regression, Generalisation & Model evaluation' slides and the regression/generalisation clips, then write the concept sheet. Lab 3 comes after.",
+    "description": "Code along with the long course's overfitting, OLS, Ridge/Lasso and cross-validation sections. Finish with one executable OLS/Ridge/Lasso comparison using the Lab 3 setup; slides and notes only verify what the outputs demonstrate.",
     "checklist": [
-      "Watch UBC 7.1 (linear regression) + 3.1 / 3.4 (generalisation, the fundamental tradeoff)",
-      "Read the S3 slides; note the linear-model form and the loss being minimised",
-      "Write: bias-variance, overfit vs underfit, regularisation (ridge/lasso), cross-validation, key metrics",
-      "One line: why a cross-validated score is the one you trust"
+      "Watch and code 1:15–2:00 of the long course: model complexity and train/test behaviour",
+      "Watch and code 2:00–2:35: OLS, Ridge, Lasso, scaling and coefficient effects",
+      "Watch and code 3:29–3:40: cross-validation and validation curves",
+      "From blank, run one OLS/Ridge/Lasso comparison with train/CV scores and coefficients"
     ],
-    "evidenceRequirement": "AML_S3_regression_concepts.md",
-    "doneCondition": "regression + generalisation + evaluation explained from concepts",
+    "evidenceRequirement": "runnable OLS/Ridge/Lasso comparison with train/CV scores and coefficients",
+    "doneCondition": "models run, alpha/coefficients are compared, and CV selection leaves the test set untouched",
     "trackerNotes": "",
     "tags": []
   },
@@ -442,7 +442,7 @@ export const baseCards = [
     "id": "card-017",
     "number": 17,
     "sortOrder": 17,
-    "title": "AML S4 — Learn classification: S4 slides + videos",
+    "title": "AML S4 — Code kNN, logistic, SVM & trees with the long course",
     "module": "Applied ML",
     "moduleGroup": "Applied ML",
     "phase": "Phase 2",
@@ -456,15 +456,15 @@ export const baseCards = [
     "dueDate": "2026-07-09",
     "dueDateTime": "2026-07-09 19:30",
     "estimatedHours": 3,
-    "description": "Concepts before code. Read the S4 Classification slides and the classifier clips (logistic, kNN, trees, SVM, metrics), then build the comparison-table skeleton. Lab 4 comes after.",
+    "description": "Code along with the long course's kNN, logistic regression, SVM and decision-tree sections. Change the key hyperparameters, expose scaling effects and finish with a runnable four-classifier comparison before Lab 4.",
     "checklist": [
-      "Watch UBC 7.2 (logistic) + 4.2 (kNN) + 2.3 (trees) + 4.4 (SVM RBF)",
-      "Read the S4 slides; note when each classifier is appropriate",
-      "Draft the comparison table: one row per classifier — idea, when to use, key hyperparameter",
-      "Note the confusion matrix + precision / recall / F1 definitions"
+      "Code the long-course kNN section at 0:51–1:15 and compare two k values",
+      "Code logistic/linear classifiers at 2:35–2:55 and inspect predict_proba plus two C values",
+      "Code SVM at 2:55–3:30 and decision trees at 3:40–4:00 with parameter changes",
+      "Build one runnable four-classifier train/test comparison"
     ],
-    "evidenceRequirement": "AML_S4_classification_concepts.md + comparison-table skeleton",
-    "doneCondition": "each classifier family + core metrics explained from concepts",
+    "evidenceRequirement": "runnable four-classifier comparison with parameter changes and train/test scores",
+    "doneCondition": "kNN/logistic/SVM/tree run and their scaling and complexity levers are demonstrated in output",
     "trackerNotes": "",
     "tags": []
   },
@@ -596,7 +596,7 @@ export const baseCards = [
     "id": "card-024",
     "number": 24,
     "sortOrder": 24,
-    "title": "AML S5 — Learn ensembles: S5 slides + videos",
+    "title": "AML S5 — Code random forests & boosting with the long course",
     "module": "Applied ML",
     "moduleGroup": "Applied ML",
     "phase": "Phase 2",
@@ -610,15 +610,15 @@ export const baseCards = [
     "dueDate": "2026-07-12",
     "dueDateTime": "2026-07-12 22:30",
     "estimatedHours": 3,
-    "description": "Concepts before code. Read the S5 Ensemble Learning slides and the ensemble clips (bagging, boosting, random forests, feature importance), then draft the bagging/boosting/stacking table. Lab 5 comes after.",
+    "description": "Code along with the long course's random-forest and gradient-boosting section, change one parameter, inspect feature importance and tie the ensemble comparison to executed outputs before Lab 5.",
     "checklist": [
-      "Watch UBC 11.1 + 11.2 (ensembles motivation, gradient boosted trees)",
-      "Read the S5 slides; note why combining models helps",
-      "Draft the bagging vs boosting vs stacking table",
-      "Note feature importance + one case where it misleads"
+      "Watch and code 5:25–5:45 of the long course: random forests and gradient boosting",
+      "Change one ensemble parameter and compare train/test scores",
+      "Tie the bagging/boosting/stacking table to executed outputs",
+      "Sort feature_importances_ by feature name and record one limitation"
     ],
-    "evidenceRequirement": "AML_S5_ensembles_concepts.md + bagging/boosting/stacking table",
-    "doneCondition": "ensemble ideas explained from concepts",
+    "evidenceRequirement": "executed RF/GB comparison + output-grounded ensemble and feature-importance table",
+    "doneCondition": "RF and GB run, one parameter effect is observed, and feature importance is interpreted cautiously",
     "trackerNotes": "",
     "tags": []
   },
@@ -1309,14 +1309,15 @@ export const baseCards = [
     "dueDate": "2026-07-26",
     "dueDateTime": "2026-07-26 11:00",
     "estimatedHours": 2.5,
-    "description": "Drill the evaluation questions that recur: metric choice, CV, imbalanced data.",
+    "description": "Code along with the long course's complete evaluation section, then solve timed metric-and-code questions on baselines, confusion matrices, P/R/F1, thresholds, ROC/AUC, CV and imbalance.",
     "checklist": [
-      "8 timed exam Qs on metrics/CV/imbalance",
+      "Code along with the long course evaluation section at 4:00–5:20",
+      "5 timed metric-and-code questions on baselines, P/R/F1, thresholds, ROC/AUC, CV and imbalance",
       "Mark against checklist",
       "Rewrite any shaky reasoning clean"
     ],
-    "evidenceRequirement": "timed metrics Q set + results",
-    "doneCondition": "evaluation Qs answered cleanly to time",
+    "evidenceRequirement": "executed evaluation notebook + five timed metric-and-code answers",
+    "doneCondition": "evaluation calls run correctly and each metric choice is justified from the scenario and output",
     "trackerNotes": "",
     "tags": [
       "exam"

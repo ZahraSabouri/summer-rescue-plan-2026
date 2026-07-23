@@ -4,13 +4,13 @@ import { AML_VIDEO_BY_ID } from './amlVideoLibrary.js'
 // order and their time. This table adds only the reason each selected set is
 // useful; it must never attach hidden "optional" videos to a card.
 export const CARD_VIDEO_FOCUS = {
-  'card-001': 'core terminology and the shape of an end-to-end ML workflow',
-  'card-003': 'preprocessing choices before applying them safely in Lab 2',
-  'card-008': 'Pipeline and ColumnTransformer as the mechanisms that keep preprocessing inside validation',
-  'card-011': 'linear regression, generalisation, data splitting and cross-validation',
-  'card-017': 'the SVM, decision-tree and tuning sections used directly in Lab 4',
-  'card-024': 'why ensembles help, how boosting differs, and how tree importance is interpreted',
-  'card-062': 'metric choice under class imbalance',
+  'card-001': 'course-first workflow, supported by concise prerequisite vocabulary',
+  'card-003': 'the coherent UBC 5.1-5.4 preprocessing sequence before Lab 2',
+  'card-008': 'ColumnTransformer as the multi-branch extension of the Pipeline learned on card-003',
+  'card-011': 'the complete course sections on generalisation, linear regression, regularisation and cross-validation',
+  'card-017': 'the complete course sections on kNN, logistic regression, SVMs and decision trees',
+  'card-024': 'the complete course ensemble section plus a focused feature-importance explanation',
+  'card-062': 'the complete course evaluation section: confusion matrices, precision/recall, ROC and imbalance',
   'card-076': 'how repeated tuning can overfit the validation set itself',
 }
 
@@ -46,7 +46,6 @@ function appendSentence(value, sentence) {
 function requiredVideos(card) {
   const ids = unique(
     (card.studySequence?.steps ?? [])
-      .filter((step) => step.kind === 'watch')
       .flatMap((step) => step.resourceIds ?? [])
       .filter((id) => AML_VIDEO_BY_ID.has(id)),
   )

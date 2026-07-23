@@ -4,11 +4,14 @@ import './FocusRoom.css'
 import { checklistDoneCount, formatDate, requiresEvidence } from '../utils/progress'
 import { focusRewards } from '../utils/focusRewards'
 import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
+import { averageResourceProgress, normaliseResourceProgressEntry } from '../utils/resourceProgress'
+import { STATUS_OPTIONS } from '../data/constants'
 import { AmbientSoundPlayer } from './AmbientSoundPlayer'
 import { FloatingVideoPlayer } from './FloatingVideoPlayer'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { MusicPopover } from './MusicPopover'
 import { LazyRichTextEditor } from './LazyRichTextEditor'
+import { ResourceStudyEditor } from './ResourceStudyEditor'
 import { ThemeToggle } from './ThemeToggle'
 
 const MODE_LABELS = {
@@ -116,6 +119,7 @@ function FocusRoomNote({ note, open, onToggle }) {
 
 const STEP_KIND_LABEL = {
   watch: 'Watch',
+  codeAlong: 'Watch + code',
   read: 'Read',
   write: 'Write',
   do: 'Do',
@@ -139,7 +143,8 @@ function FocusRoomSequenceStep({ index, step, resourcesById, notesById, onOpenRe
           <strong>{step.label}</strong>
           <span className="study-sequence-step-meta">
             {STEP_KIND_LABEL[step.kind] ?? 'Do'}
-            {step.minutes ? ` · ~${step.minutes} min` : ''}
+            {step.minutes ? ` · ~${step.minutes} min${step.playbackMinutes ? ' total' : ''}` : ''}
+            {step.playbackMinutes ? ` · ${step.playbackMinutes} min video` : ''}
           </span>
         </div>
       </div>
@@ -213,7 +218,13 @@ export function FocusRoom({
   onEvidenceDelete,
   onEvidenceFileAdd,
   resources = [],
+  resourceProgress = {},
+  onResourceProgressChange,
+  onResourceReviewedToggle,
   onOpenResource,
+  onCardProgressChange,
+  onStatusChange,
+  onToggleDone,
   linkedNotes = [],
   onExit,
   queue = [],
@@ -338,6 +349,16 @@ export function FocusRoom({
     if (!activeCard) return []
     return (activeCard.resourceIds ?? []).map((id) => resourcesById.get(id)).filter(Boolean)
   }, [activeCard, resourcesById])
+  const resourceCompletion = useMemo(
+    () => averageResourceProgress(linkedResources, resourceProgress),
+    [linkedResources, resourceProgress],
+  )
+  const reviewedResourceCount = useMemo(
+    () => linkedResources.filter(
+      (resource) => normaliseResourceProgressEntry(resourceProgress[resource.id]).progressPercent >= 100,
+    ).length,
+    [linkedResources, resourceProgress],
+  )
 
   // Which concept notes are expanded, keyed by note id — lifted here (rather
   // than local state inside each FocusRoomNote) so a concept chip clicked in
@@ -886,7 +907,43 @@ export function FocusRoom({
             </div>
           </section>
 
-          <aside className="focus-room-brief" aria-label="Card finish and schedule boundaries">
+          <aside className="focus-room-brief" aria-label="Card progress, finish, and schedule boundaries">
+            <section className="focus-room-card-progress">
+              <span>Card progress</span>
+              <label>
+                <span>Status</span>
+                <select
+                  value={activeCard.status || 'Backlog'}
+                  onChange={(event) => onStatusChange?.(activeCard.id, event.target.value)}
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Overall progress</span>
+                <div className="focus-room-progress-control">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={Number(activeCard.progressPercent ?? 0)}
+                    onChange={(event) => onCardProgressChange?.(activeCard.id, event.target.value)}
+                  />
+                  <output>{Number(activeCard.progressPercent ?? 0)}%</output>
+                </div>
+              </label>
+              <button
+                type="button"
+                className={activeCard.done ? 'secondary-button' : 'primary-button'}
+                onClick={() => onToggleDone?.(activeCard.id)}
+              >
+                {activeCard.done ? 'Reopen card' : 'Mark card done'}
+              </button>
+            </section>
+
             <section>
               <span>Finish line</span>
               <h2>{activeCard.doneCondition || 'No finish condition is recorded on this card.'}</h2>
@@ -952,20 +1009,6 @@ export function FocusRoom({
               </section>
             )}
 
-            {linkedResources.length > 0 && (
-              <section className="focus-room-resources">
-                <span>Resources</span>
-                <div className="focus-room-resource-list">
-                  {linkedResources.map((resource) => (
-                    <button key={resource.id} type="button" onClick={() => onOpenResource?.(resource.id)}>
-                      <span className="type-badge">{resource.type}</span>
-                      <strong>{resource.title}</strong>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {hasBoundaries && (
               <div className="focus-room-boundaries" aria-label="Schedule boundaries">
                 <Boundary label="Current boundary" boundary={currentBoundary} />
@@ -975,6 +1018,46 @@ export function FocusRoom({
 
           </aside>
         </div>
+
+        {linkedResources.length > 0 && (
+          <section className="focus-room-resource-workspace" aria-labelledby="focus-room-resources-title">
+            <div className="focus-room-section-head">
+              <div>
+                <span>Study resources</span>
+                <h2 id="focus-room-resources-title">Open, track, and annotate without leaving the room</h2>
+              </div>
+              <div className="focus-room-resource-summary" aria-label={`${resourceCompletion}% average resource progress`}>
+                <strong>{resourceCompletion}%</strong>
+                <small>{reviewedResourceCount}/{linkedResources.length} reviewed</small>
+              </div>
+            </div>
+            <div className="focus-room-resource-grid">
+              {linkedResources.map((resource) => (
+                <article key={resource.id} className="focus-room-resource-card">
+                  <header>
+                    <div>
+                      <span className="type-badge">{resource.type}</span>
+                      <h3>{resource.title}</h3>
+                      {(resource.group || resource.description) && (
+                        <p>{[resource.group, resource.description].filter(Boolean).join(' · ')}</p>
+                      )}
+                    </div>
+                    <button type="button" className="secondary-button" onClick={() => onOpenResource?.(resource.id)}>
+                      Open resource
+                    </button>
+                  </header>
+                  <ResourceStudyEditor
+                    resourceId={resource.id}
+                    title={resource.title}
+                    progress={resourceProgress[resource.id]}
+                    onProgressChange={onResourceProgressChange}
+                    onToggleReviewed={onResourceReviewedToggle}
+                  />
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="focus-room-notes focus-room-notes-full">
           <span>Notes</span>
@@ -1214,7 +1297,7 @@ export function FocusRoom({
 
       <footer className="focus-room-footer">
         <span>The timer keeps its current state when you exit.</span>
-        <span>No card is completed or replanned automatically.</span>
+        <span>Progress, notes, evidence, and resource learning are saved through the main Summer Rescue tab.</span>
       </footer>
     </section>,
     document.body,
