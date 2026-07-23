@@ -686,7 +686,7 @@ export const STUDY_MODULES = [
     id: 'time-series',
     viewId: 'time-series',
     moduleGroup: 'Time Series',
-    code: 'MAT508',
+    code: 'MA4508',
     label: 'Time Series',
     title: 'Time Series',
     subtitle: 'Formula-first paper practice: packs, templates, R snippets, and mock mapping.',

@@ -229,13 +229,14 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-002': {
     "concepts": [
+      "Lecture 1 task map: smoothing/decomposition, fitting, forecasting, and simulation",
       "SMA / centred MA / weighted MA / simple exponential smoothing — formula and when to use each",
       "Holt-Winters: the three update equations (level, trend, season)",
       "Additive vs multiplicative decomposition, one line each"
     ],
     "steps": [
       {
-        "label": "Read + redo: Pack A and Lectures 1–2, worked examples first",
+        "label": "Map L1, then work the core L2 examples",
         "kind": "do",
         "minutes": 50,
         "resourceIds": [
@@ -243,19 +244,23 @@ export const CARD_STUDY_SEQUENCE = {
           "timeSeries-lecture-notes-lecture-1-learning-material-notes",
           "timeSeries-lecture-notes-lecture-2-learning-material-notes"
         ],
-        "instruction": "This session is short: redo ONE worked example per method (SMA, CMA/WMA, SES, Holt-Winters) on paper from the method name alone before checking the solution — cover every method once rather than exhausting Pack A on the first one. Only loop back for a second example on a method that genuinely didn't land.",
-        "checklistText": "Redo one worked example per method — SMA, CMA/WMA, SES, Holt-Winters — from memory before checking solutions."
+        "noteIds": [
+          "ts-l1-overview"
+        ],
+        "instruction": "Read the L1 overview note and the lecture's syllabus/task slides first; L1 is an orientation lecture, so do not hunt for calculations that are not there. Then cover the L2 numerical core: redo the SMA and centred-MA examples on {3,7,2,5,4,8,6} before checking, and trace how SES and Holt-Winters extend the smoothing idea.",
+        "checklistText": "Write the L1 task map, then redo the L2 SMA and centred-MA examples before checking the lecture."
       },
       {
         "label": "Consolidate: smoothing, Holt-Winters, and decomposition",
         "kind": "read",
         "minutes": 40,
         "noteIds": [
+          "ts-l1-overview",
           "ts-smoothing",
           "ts-holt-winters"
         ],
-        "instruction": "Compare your worked numbers against ts-smoothing's worked example ($m=3$ on $\\{3,7,2,5,4,8,6\\}$), then write one line each on where SMA/SES (real-time), CMA/WMA (offline, no periodicity), and Holt-Winters (monthly econometric) apply. In ts-holt-winters, write the three update equations from memory first, then check — its table gives you additive vs multiplicative directly, write that one line each too.",
-        "checklistText": "Check your numbers against ts-smoothing's m=3 example, then write one line on where each method applies."
+        "instruction": "Build TS_PackA_method_map.md: first map smooth/decompose, fit, forecast and simulate to their purpose; then compare your L2 numbers against ts-smoothing and write one line on where SMA/SES, CMA/WMA and Holt-Winters apply. Finish with additive versus multiplicative seasonality and the three Holt-Winters state updates.",
+        "checklistText": "Build the Pack A method map and add one lecture-faithful use rule for each smoothing method."
       },
       {
         "label": "Flag the shakiest 1–2 steps",
@@ -268,16 +273,17 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-006': {
     "concepts": [
-      "One-page formula sheet: SMA, SES, Holt-Winters (3 equations), decomposition",
-      "10 closed-book recall prompts spanning smoothing + decomposition",
+      "One-page method/formula sheet: L1 task map, SMA/CMA/WMA/SES, Holt-Winters, decomposition",
+      "10 closed-book recall prompts spanning method choice, smoothing, and decomposition",
       "Self-test scored, weak topics flagged for Pack B"
     ],
     "steps": [
       {
-        "label": "Compress: build the one-page formula sheet",
+        "label": "Compress: build the one-page method/formula sheet",
         "kind": "write",
         "minutes": 55,
         "noteIds": [
+          "ts-l1-overview",
           "ts-smoothing",
           "ts-holt-winters"
         ],
@@ -285,15 +291,15 @@ export const CARD_STUDY_SEQUENCE = {
           "timeSeries-quick-reference-master-formula-and-r-code-sheet",
           "timeSeries-quick-reference-r-comprehensive-cheat-sheet"
         ],
-        "instruction": "Using ts-smoothing and ts-holt-winters as your source, not the raw slides, compress to one page: SMA/CMA/WMA/SES formulas, the 3 Holt-Winters equations, additive vs multiplicative in one line each. Spend your last 10 minutes cross-checking against the master formula/R-code sheet for anything missing, and pull in the matching R call (HoltWinters(), etc.) from the R cheat sheet.",
-        "checklistText": "Compress the smoothing and Holt-Winters formulas onto one page, then cross-check against the master R cheat sheet."
+        "instruction": "Using the three Pack A notes, make one page with two zones: (1) the L1 decision map — smooth/decompose, fit, forecast, simulate; (2) the L2 formulas and use rules — SMA/CMA/WMA/SES, the three Holt-Winters updates, additive versus multiplicative. Cross-check the R calls only after the conceptual page is complete.",
+        "checklistText": "Compress the L1 decision map and L2 smoothing formulas/use rules onto one page, then cross-check the R calls."
       },
       {
         "label": "Write: 10 closed-book recall prompts",
         "kind": "write",
         "minutes": 25,
-        "instruction": "Write 10 prompts spanning smoothing and decomposition — start from the \"Check yourself\" questions inside ts-smoothing and ts-holt-winters, then add your own until you have 10 that would embarrass you if you couldn't answer them cold.",
-        "checklistText": "Write 10 closed-book recall prompts, starting from the Check-yourself questions in ts-smoothing and ts-holt-winters."
+        "instruction": "Write 10 prompts spanning task choice, smoothing and decomposition — start from the check-yourself questions in ts-l1-overview, ts-smoothing and ts-holt-winters, then add prompts that force a method choice from a short series description.",
+        "checklistText": "Write 10 prompts spanning task choice, formulas, method use, and additive-versus-multiplicative seasonality."
       },
       {
         "label": "Self-test, mark, and flag",
@@ -1746,7 +1752,7 @@ export const CARD_STUDY_SEQUENCE = {
   'card-010': {
     "concepts": [
       "Covariance functions for white noise, random walk, Wiener process, Brownian bridge, and Poisson process",
-      "Short memory (white noise decorrelates instantly) vs long memory (random walk/Wiener variance grows unboundedly; bridge tied down at both ends; Poisson as a counting process)"
+      "Stationarity status for each named process, with the exact reason a non-stationary process fails WSS"
     ],
     "steps": [
       {
@@ -1764,10 +1770,10 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Read all five process notes once, focusing only on each definition box and covariance formula, skipping the R code."
       },
       {
-        "label": "Write: covariance + memory line for each process",
+        "label": "Write: covariance + stationarity verdict for each process",
         "kind": "write",
         "minutes": 30,
-        "instruction": "Closed-book, write the covariance function for each of the five processes, then one line per process: short memory (white noise, R=0 beyond lag 0) vs long memory (random walk/Wiener, R(t,s)=min(t,s) unbounded; bridge tied to 0 at both ends; Poisson as a counting process).",
+        "instruction": "Closed-book, write the covariance function for each of the five processes, then add a WSS verdict with one reason. White noise is WSS under the lecture definition; random walk and Wiener fail because variance depends on time; Brownian bridge covariance depends on t and s separately; Poisson variance grows with time. Do not call those four 'long memory' — the lecture defines short/long-range dependence only for stationary processes.",
         "noteIds": [
           "ts-white-noise",
           "ts-random-walk",
@@ -1775,20 +1781,20 @@ export const CARD_STUDY_SEQUENCE = {
           "ts-brownian-bridge",
           "ts-poisson"
         ],
-        "checklistText": "Closed-book, write each process's covariance function plus one line on whether it has short or long memory."
+        "checklistText": "Closed-book, write each covariance plus a WSS-or-not verdict with the exact failing condition."
       },
       {
         "label": "Assemble: TS_PackB_definitions.md",
         "kind": "write",
         "minutes": 15,
-        "instruction": "Consolidate the five covariances and memory lines into the one-page evidence file. Check every formula against the notes once before closing the card.",
-        "checklistText": "Consolidate all five covariances and memory lines into TS_PackB_definitions.md, double-checking each formula against the notes."
+        "instruction": "Consolidate the five covariances and stationarity verdicts into the one-page evidence file. Check every formula and every reason against the notes once before closing the card.",
+        "checklistText": "Consolidate all five covariances and stationarity verdicts into TS_PackB_definitions.md."
       }
     ]
   },
   'card-012': {
     "concepts": [
-      "Applying the WSS test, named-process covariance formulas, and short/long-memory classification to worked exam-style problems",
+      "Applying the WSS test, named-process covariance formulas, and positive-semidefiniteness proof to exam-style problems",
       "Closed-book reproduction of two named covariances and the full WSS argument under time pressure"
     ],
     "steps": [
@@ -1796,12 +1802,12 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Do: 3 worked examples",
         "kind": "do",
         "minutes": 45,
-        "instruction": "Pick 3 problems from the L3/L4 exam-like exercises spanning: (a) decide WSS or not, (b) compute a named covariance, (c) classify short vs long memory. Write full workings by hand, no peeking at notes.",
+        "instruction": "Pick 3 problems from the L3/L4 exam-like exercises spanning: (a) decide WSS or not, (b) compute a named-process covariance, and (c) prove a covariance/correlation function is positive semidefinite. Write full workings by hand, no peeking at notes.",
         "resourceIds": [
           "timeSeries-exam-like-exercises-exam-like-exercises-l3",
           "timeSeries-exam-like-exercises-exam-like-exercises-l4"
         ],
-        "checklistText": "Hand-write full workings for 3 L3/L4 problems: a WSS check, a named covariance, and a memory classification."
+        "checklistText": "Hand-write full workings for a WSS check, a named covariance, and the positive-semidefinite variance proof."
       },
       {
         "label": "Check: against L3/L4 solutions",
@@ -1834,7 +1840,7 @@ export const CARD_STUDY_SEQUENCE = {
     "concepts": [
       "Bochner–Khinchin spectral representation: R(t) = ∫e^{itλ}f(λ)dλ, continuous vs discrete limits of integration",
       "Mercer expands the covariance function R(t,s); Karhunen–Loève expands the process x_t itself, same λ_j and φ_j",
-      "Periodogram and filtering interpretation, redone by hand from the L5–L7 gap sheets"
+      "One representative calculation each for covariance recovery/filtering, BLUP setup, and sample covariance/periodogram"
     ],
     "steps": [
       {
@@ -1855,12 +1861,12 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Read + redo: L6–L7 periodogram, filtering, BLUP/estimation setup",
         "kind": "do",
         "minutes": 40,
-        "instruction": "From the L6–L7 gap sheets, redo one periodogram-interpretation example and one filtering example by hand — write the spectrum as deltas, check which frequencies survive the filter interval, before checking the fill-ins. Only skim the BLUP and estimation setup; card-021 does the closed-book worked examples on those, not this pass.",
+        "instruction": "From the L6–L7 gap sheets, redo one filtering or periodogram example by hand, then set up (without fully solving) one BLUP matrix and one sample-covariance calculation. Card-021 handles the full closed-book BLUP and estimation work; this pass must still touch each core method once.",
         "resourceIds": [
           "timeSeries-lecture-notes-with-gaps-lecture-6-active-recall-notes",
           "timeSeries-lecture-notes-with-gaps-lecture-7-active-recall-notes"
         ],
-        "checklistText": "Hand-redo one periodogram example and one filtering example, writing the spectrum as deltas before checking."
+        "checklistText": "Redo one filtering/periodogram example, then set up one BLUP matrix and one sample-covariance calculation."
       },
       {
         "label": "Flag shaky steps",
@@ -1876,14 +1882,14 @@ export const CARD_STUDY_SEQUENCE = {
       "Spectral density formula and the covariance ↔ spectrum relation (cosine-transform recovery)",
       "Spectrum of a sinusoid/sum: amplitudes enter squared, spectra of sums add",
       "Filtering: spectrum of filtered series = product of filter and base spectra",
-      "Short-range vs long-range dependence: Σ|R(k)| test, via |k|^{-α}, α>1"
+      "Short-range vs long-range dependence: the lecture's ΣR(k) test for a stationary process, via |k|^{-α}, α>1 for the supplied positive examples"
     ],
     "steps": [
       {
         "label": "Read/consolidate: the 5 spectral notes",
         "kind": "read",
         "minutes": 30,
-        "instruction": "Second pass, fast: pull one killer line from each — Bochner–Khinchin's two integral forms (mind the [-π,π] vs (-∞,∞) limits), the cosine-transform recovery (R(0)=6π, R(±1)=π for f(λ)=3+cos λ), the squared-amplitude sinusoid rule, the 'multiply the spectra' filtering rule, and the |k|^{-α}, α>1 short/long-range test.",
+        "instruction": "Second pass, fast: pull one killer line from each — Bochner–Khinchin's two integral forms (mind the [-π,π] vs (-∞,∞) limits), the cosine-transform recovery, the squared-amplitude sinusoid rule, the 'multiply the spectra' filtering rule, and the lecture's stationary-process ΣR(k) range test reduced to |k|^{-α}, α>1 for the supplied positive examples.",
         "noteIds": [
           "ts-bochner-khinchin",
           "ts-spectrum-covariance",
@@ -2053,8 +2059,8 @@ export const CARD_STUDY_SEQUENCE = {
   'card-031': {
     "concepts": [
       "MA(q) covariance cutoff: R(k) = 0 for |k| > q, because c_j = 0 beyond j = q",
-      "ACF signature: AR decays slowly, MA(q) cuts off sharply after lag q",
-      "PACF signature: AR(p) cuts off after lag p, MA decays — the mirror image of ACF",
+      "AR(1) covariance and correlation: R(k)=σ²a^{|k|}/(1-a²), ρ(k)=a^{|k|}",
+      "AR(2) correlation recursion: ρ(1)=a1/(1-a2), ρ(2)=a1ρ(1)+a2, then recurse",
       "Closed-book self-test covering all of Pack D (L8–L10), with shaky items flagged"
     ],
     "steps": [
@@ -2062,9 +2068,9 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Work: MA(q) covariance cutoff",
         "kind": "do",
         "minutes": 25,
-        "instruction": "No note is tagged to this card, so build the general result from the two closest ones: redo the MA(1) case from ts-ma1-estimation by hand (R(0), R(1), and R(k)=0 for |k|≥2), then use ts-arma-to-ma-worked's general R(k)=σ²Σ c_sc_{s+k} formula to see why an MA(q) forces R(k)=0 once |k|>q. Cross-check against the Complete lecture 9 notes if they state the general-q cutoff directly.",
+        "instruction": "Redo the MA(1) case from ts-ma1-estimation by hand, then use the general R(k)=σ²Σc_sc_{s+|k|} formula to show why an MA(q) forces R(k)=0 once |k|>q. Cross-check the general theorem on Lecture 8 p.10.",
         "resourceIds": [
-          "timeSeries-lecture-notes-complete-lecture-9-notes"
+          "timeSeries-lecture-notes-complete-lecture-8-notes"
         ],
         "noteIds": [
           "ts-ma1-estimation",
@@ -2073,24 +2079,20 @@ export const CARD_STUDY_SEQUENCE = {
         "checklistText": "Hand-redo the MA(1) covariance case, then derive why MA(q) forces R(k)=0 past lag q."
       },
       {
-        "label": "Read: ACF vs PACF signatures for AR/MA/ARMA",
-        "kind": "read",
+        "label": "Work: AR(1) and AR(2) covariance/correlation recursions",
+        "kind": "do",
         "minutes": 25,
-        "instruction": "ts-real-data-workflow only gives you the ACF side (AR = slowly decaying correlogram, MA(q) = cuts off exactly at lag q) — no knowledge note in this module covers PACF at all, so get the PACF mirror-image rule (AR(p) cuts off after lag p, MA decays) directly from the Complete lecture 9–10 notes. Build one small AR/MA/ARMA × ACF/PACF table as you read; that table is exactly what this card needs reproduced closed-book.",
+        "instruction": "From Lecture 9, reproduce the AR(1) covariance/correlation formula, then derive the AR(2) starting values ρ(1), ρ(2) and compute the next two lags by recursion.",
         "resourceIds": [
-          "timeSeries-lecture-notes-complete-lecture-9-notes",
-          "timeSeries-lecture-notes-complete-lecture-10-notes"
+          "timeSeries-lecture-notes-complete-lecture-9-notes"
         ],
-        "noteIds": [
-          "ts-real-data-workflow"
-        ],
-        "checklistText": "Build an AR/MA/ARMA by ACF/PACF table, pulling the PACF cutoff rule from the Lecture 9-10 notes."
+        "checklistText": "Reproduce the AR(1) formula and compute an AR(2) correlation sequence from its Yule-Walker starting values."
       },
       {
         "label": "Timed self-test: Exam-like exercises L9",
         "kind": "test",
         "minutes": 30,
-        "instruction": "Closed-book, timed: work through the L9 (ARMA properties) exam-like exercises cold. This is the closest real drill set to today's cutoff/ACF/PACF content, and doubles as the self-test the card's evidence requirement asks for.",
+        "instruction": "Closed-book, timed: work through the L9 ARMA-properties exam-like exercises cold. This is the closest real drill set to today's MA cutoff and AR covariance-recursion content, and doubles as the self-test the card's evidence requirement asks for.",
         "resourceIds": [
           "timeSeries-exam-like-exercises-exam-like-exercises-l9"
         ],
@@ -2100,32 +2102,34 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Mark, flag shaky, and close Pack D",
         "kind": "test",
         "minutes": 25,
-        "instruction": "Mark your L9 answers against the solution set, then recite the ACF/PACF table from the previous step from memory. Name anything still shaky — from today or carried over from card-025/card-028 — explicitly in writing; Pack D closes here, so nothing shaky should go forward unnamed.",
+        "instruction": "Mark your L9 answers against the solution set, then reproduce the MA cutoff and AR(1)/AR(2) correlation rules from memory. Name anything still shaky — from today or carried over from card-025/card-028 — explicitly in writing; Pack D closes here, so nothing shaky should go forward unnamed.",
         "resourceIds": [
           "timeSeries-exam-like-solutions-exam-like-solutions-l9"
         ],
-        "checklistText": "Mark your L9 answers, recite the ACF/PACF table from memory, and name every remaining shaky point."
+        "checklistText": "Mark your L9 answers, reproduce the MA cutoff and AR correlation rules, and name every remaining shaky point."
       }
     ]
   },
   'card-034': {
     "concepts": [
       "Mean of an ARMA process with an intercept: μ = δ / a(1), the AR polynomial at z=1",
-      "How Yule-Walker estimation, MA(1) moment estimation, AR forecasting, and ARIMA/SARIMA structure fit together across L11-L13"
+      "How Yule-Walker estimation, MA(1) moment estimation, AR forecasting, and ARIMA/SARIMA structure fit together across L11-L13",
+      "ARIMA is difference-then-ARMA; SARIMA adds seasonal differencing and seasonal AR/MA polynomials"
     ],
     "steps": [
       {
         "label": "Read: L11-L13 complete lecture notes",
         "kind": "read",
         "minutes": 40,
-        "instruction": "First pass only, across all three lectures: L11 fitting + mean formula, L12 Yule-Walker/MA(1) estimation, L13 forecasting + ARIMA/SARIMA. Mark where each worked example appears so you can redo it next; don't solve anything yet.",
+        "instruction": "First pass only: L11 covers the ARMA mean and Yule-Walker/MA(1) estimation; L12 covers stationary/ARMA forecasting; L13 supplies worked forecasting plus ARIMA/SARIMA. Mark one representative example per method for the next step.",
         "resourceIds": [
           "timeSeries-lecture-notes-complete-lecture-11-notes",
           "timeSeries-lecture-notes-complete-lecture-12-notes",
           "timeSeries-lecture-notes-complete-lecture-13-notes"
         ],
         "noteIds": [
-          "ts-arma-mean"
+          "ts-arma-mean",
+          "ts-arima-sarima"
         ],
         "checklistText": "Skim all three lectures once, marking where each worked example sits, without solving anything yet."
       },
@@ -2133,7 +2137,13 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Write: redo the L11-L13 worked examples",
         "kind": "write",
         "minutes": 45,
-        "instruction": "By hand, redo one worked example per topic: the ARMA mean with an intercept, a Yule-Walker setup, the MA(1) moment equations, one AR forecast + prediction interval, and a sketched ARIMA(p,d,q)/SARIMA(P,D,Q)_s structure from a stated model. Use the formula sheet only to check structure, not to copy steps -- this sheet is your evidence.",
+        "instruction": "By hand, redo one core example per method: the ARMA mean with an intercept, an AR(2) Yule-Walker setup, the MA(1) moment equation and root choice, one AR forecast with bounds, and the Lecture 13 ARIMA(1,1,0)/SARIMA structure. Use the notes only after each attempt.",
+        "noteIds": [
+          "ts-yule-walker-worked",
+          "ts-ma1-estimation",
+          "ts-forecast-ar1",
+          "ts-arima-sarima"
+        ],
         "resourceIds": [
           "timeSeries-quick-reference-master-formula-and-r-code-sheet"
         ],
@@ -2219,11 +2229,14 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Write: ARIMA/SARIMA identification example",
         "kind": "write",
         "minutes": 25,
-        "instruction": "No knowledge note covers this -- pull the differencing/seasonal structure straight from L13. Take one non-stationary series description, state its ARIMA(p,d,q) order, then extend it to a SARIMA(P,D,Q)_s by adding a seasonal period, in the style of the airline-passenger example.",
+        "instruction": "Use ts-arima-sarima and Lecture 13: expand ARIMA(1,1,0), forecast it recursively, then expand the lecture's SARIMA(1,0,1)(1,0,0)_12 example and identify the lag-1, lag-12 and lag-13 terms. This tests structure from a stated model, not unsupported order-guessing from a vague description.",
         "resourceIds": [
           "timeSeries-lecture-notes-complete-lecture-13-notes"
         ],
-        "checklistText": "Take a non-stationary series, assign its ARIMA(p,d,q) order, then extend it to a SARIMA like the airline-passenger example."
+        "noteIds": [
+          "ts-arima-sarima"
+        ],
+        "checklistText": "Expand and forecast ARIMA(1,1,0), then expand the lecture's monthly SARIMA example with its lag-13 cross-term."
       },
       {
         "label": "Self-test: closed-book forecasting + ARIMA/SARIMA",
@@ -2236,8 +2249,8 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-044': {
     "concepts": [
-      "The four-step real-data workflow: plot -> transform (log/diff) -> correlogram -> periodogram",
-      "AIC-based model-order choice",
+      "The real-data workflow: plot -> transform -> ACF/PACF + periodogram -> fit/compare -> forecast",
+      "Lecture-faithful model comparison: parameters, noise variance, log-likelihood, and reported AIC",
       "SSA's four stages: embedding, SVD, grouping, diagonal averaging"
     ],
     "steps": [
@@ -2245,38 +2258,42 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Read: Pack F — L14 real-data workflow",
         "kind": "read",
         "minutes": 40,
-        "instruction": "Read the L14 section only: the four-step workflow (plot -> transform -> correlogram -> periodogram) and the AIC-based order-choice discussion. Redo the airline-passenger log+diff worked example by hand on paper, line by line.",
+        "instruction": "Read the L14 workflow and airline example. Redo the transform logic (log for increasing variance, difference for non-constant mean), then annotate where ACF/PACF, periodogram, candidate fitting, reported-AIC comparison and forecasting enter.",
         "resourceIds": [
           "timeSeries-study-packs-pack-f-l14-l15-real-data-workflow"
         ],
         "noteIds": [
-          "ts-real-data-workflow"
+          "ts-real-data-workflow",
+          "ts-acf-pacf",
+          "ts-aic-model-choice"
         ],
-        "checklistText": "Redo the airline-passenger log-and-diff example by hand, line by line, following the plot-transform-correlogram-periodogram workflow."
+        "checklistText": "Annotate the airline workflow from transform through ACF/PACF, periodogram, candidate comparison, and forecast."
       },
       {
         "label": "Read: Pack F — L15 SSA skeleton",
         "kind": "read",
         "minutes": 25,
-        "instruction": "Read the L15 SSA section only. Note the four stages (embedding, SVD, grouping, diagonal averaging) and the Rssa function names used in the worked example.",
+        "instruction": "Read the L15 SSA note, then inspect pp.9–11 and 26–36 of the lecture: record the trajectory-matrix shape, the SVD/eigentriple form, grouping/reconstruction, and the recurrent versus vector forecast distinction. Rssa syntax is supporting evidence, not the main learning target.",
         "resourceIds": [
           "timeSeries-study-packs-pack-f-l14-l15-real-data-workflow"
         ],
         "noteIds": [
           "ts-ssa"
         ],
-        "checklistText": "Note the four SSA stages and the specific Rssa function names used in the worked example."
+        "checklistText": "Record the SSA matrix shape, eigentriple decomposition, grouping/reconstruction, and two forecast types."
       },
       {
         "label": "Write: hand-redone L14–15 sheet",
         "kind": "write",
         "minutes": 30,
-        "instruction": "Closed-book, on one page: the 4-step workflow, the log-vs-diff transformation rule, one line on AIC model choice, and the 4-stage SSA skeleton. This page is the evidence for this card.",
+        "instruction": "Closed-book, on one page: the full diagnostic-to-forecast workflow, log-versus-difference rule, ACF/PACF and periodogram cues, the four lecture comparison criteria, and the SSA embedding/SVD/grouping/reconstruction skeleton.",
         "noteIds": [
           "ts-real-data-workflow",
+          "ts-acf-pacf",
+          "ts-aic-model-choice",
           "ts-ssa"
         ],
-        "checklistText": "Fit the workflow, the log-vs-diff rule, an AIC note, and the SSA skeleton onto one closed-book page."
+        "checklistText": "Fit the full diagnostic/model-choice workflow and the SSA skeleton onto one closed-book page."
       },
       {
         "label": "Flag shaky steps",
@@ -2289,40 +2306,45 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-047': {
     "concepts": [
-      "AIC comparison between candidate ARMA orders",
-      "Reproducing the real-data workflow and its R skeleton from memory",
-      "SSA algorithm skeleton (Rssa embed/decompose/group/reconstruct shape)"
+      "Comparing candidate models from a supplied Lecture 14 table without inventing unsupported criteria",
+      "Reproducing the diagnostic, fitting and forecasting workflow and its R skeleton from memory",
+      "SSA embedding/SVD/grouping/reconstruction skeleton"
     ],
     "steps": [
       {
         "label": "Do: AIC comparison worked example",
         "kind": "do",
         "minutes": 25,
-        "instruction": "Closed-book: pick two candidate ARMA orders for a series, write the AIC formula, and state which order you'd choose and why. Check against the Pack F pack only if you get stuck.",
+        "instruction": "Use a supplied Lecture 14 table (Airpass, Earth temperature, or Nile). Compare two candidate models using parameter count, estimated noise variance, log-likelihood and reported AIC; choose one and justify the trade-off. The lecture reports AIC but does not derive its formula, so do not make formula recall the task.",
         "resourceIds": [
           "timeSeries-study-packs-pack-f-l14-l15-real-data-workflow"
         ],
-        "checklistText": "Compare two candidate ARMA orders by AIC from memory and justify which one you'd pick."
+        "noteIds": [
+          "ts-aic-model-choice"
+        ],
+        "checklistText": "Choose between two candidates from a Lecture 14 table using all four reported comparison criteria."
       },
       {
         "label": "Write: forecasting workflow + R skeleton",
         "kind": "write",
         "minutes": 25,
-        "instruction": "From memory, write the four-step workflow and the R skeleton (read.csv -> plot -> diff(log()) -> acf -> arima()). Check line-by-line against the note only after you've written it.",
+        "instruction": "From memory, write the workflow and R skeleton: read/plot -> log and/or diff if justified -> acf/pacf + periodogram -> fit several arima() candidates -> compare output -> predict(). Check only after writing it.",
         "noteIds": [
-          "ts-real-data-workflow"
+          "ts-real-data-workflow",
+          "ts-acf-pacf",
+          "ts-aic-model-choice"
         ],
-        "checklistText": "Write the four-step workflow plus the read.csv-plot-diff(log())-acf-arima() R skeleton entirely from memory first."
+        "checklistText": "Write the transform-diagnose-fit-compare-forecast R skeleton entirely from memory first."
       },
       {
         "label": "Write: SSA algorithm skeleton",
         "kind": "write",
         "minutes": 20,
-        "instruction": "From memory, write the four SSA stages and a one-line skeleton (choose window L, embed, decompose, group, reconstruct). Check against the note only after.",
+        "instruction": "From memory, write the trajectory-matrix dimensions, SVD/eigentriple form, grouping and diagonal-averaging reconstruction. Add the names recurrent and vector forecasting; check against the note only after.",
         "noteIds": [
           "ts-ssa"
         ],
-        "checklistText": "Write the four SSA stages and the choose-L, embed, decompose, group, reconstruct skeleton from memory."
+        "checklistText": "Write the SSA matrix/SVD/group/reconstruct skeleton and name both forecast types from memory."
       },
       {
         "label": "Self-test: closed-book Pack F recall",
@@ -2343,7 +2365,7 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Read: Master formula sheet + exam-shape map",
         "kind": "read",
-        "minutes": 30,
+        "minutes": 15,
         "instruction": "Skim the master formula/R sheet and the question bank once to refresh full A–F coverage, then read the two notes for the compressed formula list and the seven-slot exam map that will decide which formula goes under which group.",
         "resourceIds": [
           "timeSeries-quick-reference-master-formula-and-r-code-sheet",
@@ -2358,7 +2380,7 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Read: the three drill one-pagers",
         "kind": "read",
-        "minutes": 20,
+        "minutes": 10,
         "instruction": "Read all three drills straight through. These ARE the recall content to consolidate, not new material to re-derive.",
         "noteIds": [
           "ts-calculation-drill",
@@ -2370,8 +2392,8 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Write: TS_all_formula_recall.md",
         "kind": "write",
-        "minutes": 75,
-        "instruction": "One line per high-yield formula across Packs A–F, grouped under five templates: stationarity, ARMA, estimation, forecasting, spectral. Pull directly from the five notes above rather than re-opening the original six packs.",
+        "minutes": 65,
+        "instruction": "One line per high-yield formula across Packs A–F, grouped under stationarity, spectral, ARMA/integrated models, estimation, forecasting, and real-data diagnostics. Include the ARIMA/SARIMA operator forms and the smaller-reported-AIC selection rule, but keep SSA as a four-stage skeleton rather than forcing it into a formula.",
         "noteIds": [
           "ts-formula-sheet",
           "ts-calculation-drill",
@@ -2379,12 +2401,12 @@ export const CARD_STUDY_SEQUENCE = {
           "ts-exam-strategy",
           "ts-exam-shape"
         ],
-        "checklistText": "Compile one line per formula into TS_all_formula_recall.md, grouped under stationarity, ARMA, estimation, forecasting, and spectral."
+        "checklistText": "Compile the high-yield formulas plus ARIMA/SARIMA, model-choice, and SSA skeletons into TS_all_formula_recall.md."
       },
       {
         "label": "Store + first daily recall pass",
         "kind": "do",
-        "minutes": 25,
+        "minutes": 15,
         "instruction": "Save/print the sheet, then immediately run the first 10-minute closed-book recall pass against it and mark any group that's still shaky.",
         "checklistText": "Save the sheet, then run a 10-minute closed-book recall pass against it and mark any weak group."
       }
@@ -2477,7 +2499,7 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-058': {
     "concepts": [
-      "Full timed paper attempt under real exam conditions (closed book, 3-question format)",
+      "Full timed attempt of an older-format paper: choose 3 of 4 questions, 25 marks each",
       "Self-marking against templates when no year-specific solution key exists",
       "Seeding the first TS error-log entries from a live paper"
     ],
@@ -2485,12 +2507,12 @@ export const CARD_STUDY_SEQUENCE = {
       {
         "label": "Do: sit the 2015 paper (paper #1), timed",
         "kind": "do",
-        "minutes": 90,
-        "instruction": "Attempt the full 2015 paper — the earliest year available, used here as 'paper #1' in the 7-attempt sequence across cards 058/068/081/089/095/113/118 (which will need to stretch across only 6 real years plus the mock, so a later attempt will have to reuse a paper or fall back to the mock — flagged here, not hidden). Closed book, calculator only. Compressed to ~90 minutes rather than a real 2-hour sitting so marking fits this card's budget: move faster than exam pace but still attempt all 3 required questions in full.",
+        "minutes": 120,
+        "instruction": "Attempt the 2015 paper — paper #1 in the seven-paper sequence across cards 058/068/081/089/095/113/118. This older paper presents four 25-mark questions; choose any three and sit the full 2 hours under closed-book conditions, with only the calculator and other aids stated on the paper.",
         "resourceIds": [
           "timeSeries-past-papers-2015-past-exam-paper"
         ],
-        "checklistText": "Attempt all three required questions of the 2015 paper closed-book, calculator only, compressed into about 90 minutes."
+        "checklistText": "Choose three of the four 2015 questions and sit them closed-book under the full 2-hour limit."
       },
       {
         "label": "Test: mark and tag every sub-part",
@@ -2557,24 +2579,26 @@ export const CARD_STUDY_SEQUENCE = {
     "concepts": [
       "Yule-Walker estimation (data -> AR parameters and noise variance)",
       "AR forecasting with prediction intervals",
-      "ARIMA identification via correlogram shape (slow decay = AR, sharp cutoff = MA)",
-      "AIC-based order selection (thinly covered in this kit — flagged gap)"
+      "ARIMA/SARIMA structure plus ACF/PACF/periodogram diagnostic evidence",
+      "Reported-AIC comparison balanced against parameter count, noise variance, and log-likelihood"
     ],
     "steps": [
       {
         "label": "Read: pick 4 templates (recall pass only)",
         "kind": "read",
         "minutes": 15,
-        "instruction": "Quick recall pass; pick one question per template — Yule-Walker estimation, AR forecast+PI, ARIMA identification. AIC has no dedicated note in this kit yet, so for that one template lean on the master formula/R-code sheet and Pack F only, and treat it as the weakest-covered of the four going in.",
+        "instruction": "Quick recall pass; pick one question per template — Yule-Walker estimation, AR forecast with bounds, ARIMA/SARIMA structure, and Lecture 14 model comparison. Use the dedicated notes to state each method before attempting the question.",
         "resourceIds": [
           "timeSeries-quick-reference-master-exam-question-bank"
         ],
         "noteIds": [
           "ts-yule-walker",
           "ts-forecast-ar1",
-          "ts-real-data-workflow"
+          "ts-arima-sarima",
+          "ts-acf-pacf",
+          "ts-aic-model-choice"
         ],
-        "checklistText": "Pick one question each for Yule-Walker, AR forecast with PI, ARIMA ID, and AIC, treating AIC as weakest."
+        "checklistText": "Pick one question each for Yule-Walker, AR forecast with bounds, integrated/seasonal structure, and model comparison."
       },
       {
         "label": "Do: sit all 4 to time, closed-book",
@@ -2587,7 +2611,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Write: mark and rewrite broken templates",
         "kind": "write",
         "minutes": 30,
-        "instruction": "Mark against the master formula/R-code sheet. Rewrite any broken template clean from a blank page — if AIC broke, note that separately since it wasn't backed by a dedicated recall note going in.",
+        "instruction": "Mark against the master formula/R-code sheet and the four dedicated knowledge notes. Rewrite any broken template clean from a blank page and name the exact failure in the TS error log.",
         "resourceIds": [
           "timeSeries-quick-reference-master-formula-and-r-code-sheet"
         ],
@@ -2597,24 +2621,24 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-068': {
     "concepts": [
-      "Full past-paper exam conditions: 3 questions of 25 marks, 75 total, closed-book, calculator only",
+      "Full older-format paper conditions: choose 3 of 4 questions, 25 marks each, 75 attempted marks",
       "Tagging every part right/partial/blank so the error log drives future repair, not just a raw score"
     ],
     "steps": [
       {
         "label": "Do: sit the 2016 paper, timed",
         "kind": "do",
-        "minutes": 95,
-        "instruction": "This is paper #2, the next one in sequence after the 2015 paper you sat for card-058. Closed-book, calculator only, no notes. Answer 3 questions in full, self-timeboxing to roughly 30 min/question so marking still fits inside this slot.",
+        "minutes": 120,
+        "instruction": "This is paper #2, following the 2015 paper in card-058. The 2016 paper presents four 25-mark questions: choose any three, work closed-book with only the aids stated on the paper, and timebox each attempted question to about 40 minutes.",
         "resourceIds": [
           "timeSeries-past-papers-2016-past-exam-paper"
         ],
-        "checklistText": "Sit the 2016 paper closed-book with calculator only, answering three questions at roughly 30 minutes each."
+        "checklistText": "Choose three of the four 2016 questions and sit them closed-book at about 40 minutes per question."
       },
       {
-        "label": "Test: mark vs solutions + log",
+        "label": "Test: self-mark + log",
         "kind": "test",
-        "minutes": 25,
+        "minutes": 30,
         "instruction": "There's no official answer key for the raw 2016 paper, so mark against the mapping audit's template list plus your own formula/proof/R-code drill pages. Tag every part right/partial/blank, record the paper #2 score, and add every broken template to the TS error log.",
         "resourceIds": [
           "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
@@ -2754,25 +2778,25 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-081': {
     "concepts": [
-      "Full past-paper exam conditions, run exactly to real timing one paper before the actual exam",
+      "Third full past-paper attempt in the seven-paper run, under genuine 2-hour timing",
       "Converting a marked paper into a template-level error-log update"
     ],
     "steps": [
       {
         "label": "Do: sit the 2017 paper, timed",
         "kind": "do",
-        "minutes": 115,
-        "instruction": "Paper #3 — the next one in sequence after 2015 (card-058) and 2016 (card-068). Run this one exactly to real exam conditions: 3 questions, ~40 min each, closed-book, calculator only. This is the last full past-paper sit before the exam.",
+        "minutes": 120,
+        "instruction": "Paper #3 follows 2015 (card-058) and 2016 (card-068). The 2017 paper presents four 25-mark questions: choose any three, run the full 2 hours closed-book with only the stated aids, and timebox each attempted question to about 40 minutes.",
         "resourceIds": [
           "timeSeries-past-papers-2017-past-exam-paper"
         ],
-        "checklistText": "Sit the 2017 paper under full exam conditions: three questions, about 40 minutes each, closed-book with calculator only."
+        "checklistText": "Choose three of the four 2017 questions and sit them closed-book at about 40 minutes per question."
       },
       {
-        "label": "Test: mark vs solutions + log",
+        "label": "Test: self-mark + log",
         "kind": "test",
         "minutes": 35,
-        "instruction": "Mark against the mapping audit plus your formula/proof/R-code drills as before. Tag every part right/partial/blank, record the paper #3 score, and add every broken template to the error log — this is your last data point before the exam, so be honest about what's still shaky.",
+        "instruction": "Self-mark against the mapping audit plus your formula/proof/R-code drills. Tag every attempted part right/partial/blank, record the paper #3 score, and add every broken template to the error log so the later repair cards target it.",
         "resourceIds": [
           "timeSeries-quick-reference-past-paper-and-mock-mapping-audit"
         ],
@@ -2791,7 +2815,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Do: sit the 2018 past paper, closed-book, 2h",
         "kind": "do",
         "minutes": 120,
-        "instruction": "This is paper #4 of the 7-card TS past-paper run (058=2015 sat as #1, 068=2016 as #2, 081=2017 as #3; this is the 2018 paper as #4; 095/113/118 later in this batch cover 2019, 2020, and the mock exam). No notes, no calculator aids beyond what the real exam allows. Answer three questions, 25 marks each, exactly as the rubric states. Time-box each question to ~40 minutes and move on if a part is stuck rather than losing the whole paper to it.",
+        "instruction": "This is paper #4 of the seven-paper TS run (2015-2017 were #1-#3; 2019, 2020, and the mock follow as #5-#7). The 2018 paper presents four 25-mark questions: choose any three, use no aids beyond those stated on the paper, and timebox each attempted question to about 40 minutes.",
         "resourceIds": [
           "timeSeries-past-papers-2018-past-exam-paper"
         ],
@@ -2819,7 +2843,7 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-092': {
     "concepts": [
-      "Identify the true 3 weakest templates from the mock #4 error log — not a general re-read of the module",
+      "Identify the true 3 weakest templates from the paper #4 error log — not a general re-read of the module",
       "Re-derive or recompute each from the bare method name, closed-book, before checking any note",
       "Confirm each is clean with a second closed-book pass before ticking it off the error log"
     ],
@@ -2864,7 +2888,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Do: sit the 2019 past paper, closed-book, 2h",
         "kind": "do",
         "minutes": 120,
-        "instruction": "This is paper #5 of the 7-card run (2015→#1, 2016→#2, 2017→#3, 2018→#4 already sat; this is 2019 as #5; the 2020 paper and the mock exam are still to come as #6/#7 in cards 113 and 118). Closed-book, three questions, 25 marks each, 2 hours total — treat it exactly like the real thing.",
+        "instruction": "This is paper #5 of the seven-paper run (2015-2018 were #1-#4; 2020 and the mock follow as #6/#7). The 2019 paper presents four 25-mark questions: choose any three, work closed-book with only the stated aids, and use the full 2 hours.",
         "resourceIds": [
           "timeSeries-past-papers-2019-past-exam-paper"
         ],
@@ -2892,7 +2916,7 @@ export const CARD_STUDY_SEQUENCE = {
   },
   'card-099': {
     "concepts": [
-      "Repair exactly 3 named weak templates from mock #5's error log — not a broad re-read",
+      "Repair exactly 3 named weak templates from paper #5's error log — not a broad re-read",
       "Reproduce the full formula sheet cold in a strict 10-minute window and mark every gap honestly",
       "Only tick the error log once both the repair and the recall gap are closed"
     ],
@@ -2983,7 +3007,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Do: sit the 2020 past paper, closed-book, 2h",
         "kind": "do",
         "minutes": 120,
-        "instruction": "This is the 2020 paper — the 6th and final of the 6 real past-year papers in the plan (2015-2019 already sat across cards 058/068/081/089/095). The card's own title labels it '#7', but it is the 6th real-year paper; only the mock exam (card-118) remains after this, as the 7th and last item in the 7-card past-paper run. Note that many of your knowledge notes (ts-arma.md, ts-spectral.md) directly quote and work through 2020 paper questions — that's expected overlap, not a leak, since you're sitting it closed-book now regardless. Closed-book, three questions, 25 marks each, 2 hours.",
+        "instruction": "This is paper #6 and the final real past-year paper in the plan; the mock in card-118 is #7. The 2020 paper presents four 25-mark questions: choose any three and sit the full 2 hours closed-book with only the stated aids. Some knowledge notes work through 2020-paper methods, so preserve the diagnostic value by completing the paper before opening those notes.",
         "resourceIds": [
           "timeSeries-past-papers-2020-past-exam-paper"
         ],
@@ -3067,7 +3091,7 @@ export const CARD_STUDY_SEQUENCE = {
         "label": "Do: sit the mock exam, closed-book, 2h",
         "kind": "do",
         "minutes": 120,
-        "instruction": "This is the mock exam paper — the 7th and last item in the 7-card past-paper run (2015-2020 sat as papers #1-#6 across cards 058/068/081/089/095/113; the card checklist labels this '#8' by a running-count slip, but it is the 7th and final paper). Unlike the 6 real-year papers, this one has an official worked solution, so treat this sit as the closest possible rehearsal of the real thing. Closed-book, three questions, 25 marks each, 2 hours.",
+        "instruction": "This mock is paper #7 and the final item in the seven-paper run, after the six real papers from 2015-2020. Unlike those older papers, the current mock instructs you to answer all three 25-mark questions and has an official worked solution. Sit it closed-book for the full 2 hours as the closest available rehearsal of the current format.",
         "resourceIds": [
           "timeSeries-past-papers-mock-exam"
         ],

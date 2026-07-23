@@ -21,7 +21,7 @@ export const EXAM_WINDOW_END = '2026-08-28'
 
 export const EXAM_MODULES = [
   { id: 'aml', label: 'Applied ML', code: 'CMT307' },
-  { id: 'time-series', label: 'Time Series', code: 'MAT508' },
+  { id: 'time-series', label: 'Time Series', code: 'MA4508' },
   { id: 'mat700', label: 'MAT700', code: 'MAT700' },
 ]
 

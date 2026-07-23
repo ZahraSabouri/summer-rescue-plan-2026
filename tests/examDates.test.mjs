@@ -40,7 +40,7 @@ test('the three examinable modules are modelled with their Cardiff codes', () =>
     EXAM_MODULES.map((entry) => [entry.id, entry.code]),
     [
       ['aml', 'CMT307'],
-      ['time-series', 'MAT508'],
+      ['time-series', 'MA4508'],
       ['mat700', 'MAT700'],
     ],
   )

@@ -337,14 +337,14 @@ Pgram = function(xts) {
 2. What does `covg[1]` hold? :: $\hat{R}(0)$ — R's index 1 corresponds to lag 0.
 3. Variance 9 is given. What do you pass to `rnorm`? :: The standard deviation, 3.
 
-@@ id=ts-short-long-range | title=Short-range vs long-range dependence | kind=concept | topic=TS · L7 Estimation | key | tags=exam,calculation | cards=card-018
+@@ id=ts-short-long-range | title=Short-range vs long-range dependence | kind=concept | topic=TS · L4 Named processes | key | tags=exam,calculation | cards=card-018
 **A recurring slot (iv)** [2 marks]. Mock: $R(k) = \dfrac{5}{(1+|k|^3)^{2/7}}$. 2020: $R(k) = \dfrac{3}{(4+|k|^{0.75})^{1.4}}$.
 
-**The test.** A stationary process is **short-range dependent** if
+**The lecture's test.** A **stationary** process is short-range dependent if
 
-$$\sum_{k=-\infty}^{\infty}|R(k)| < \infty$$
+$$\sum_{k=1}^{\infty}R(k)$$
 
-and **long-range dependent** if the sum **diverges**.
+converges, and long-range dependent if it diverges. The supplied exam examples have positive covariance functions, so the usual power-series comparison is direct. Do not apply this classification to a random walk, Wiener process, Brownian bridge, or Poisson counting process: those named processes are not WSS.
 
 **Method.** These covariances all behave like $|k|^{-\alpha}$ for large $|k|$. Find $\alpha$, then apply the $p$-series test: $\sum |k|^{-\alpha}$ converges **iff $\alpha > 1$**.
 
@@ -354,7 +354,9 @@ and **long-range dependent** if the sum **diverges**.
 
 **The whole trick is multiplying the two exponents**: the inner power times the outer power. Then compare with 1. Both worked examples sit deliberately close to the boundary, so do the arithmetic rather than eyeballing it.
 
+**Sources:** `Complete lecture notes/ma3508_lecture4.pdf`, p.17; `Some solutions/ma3508_mock_exam.pdf`, relevant slot (iv); `Past Exams Papers/ma0367_2020_exam_.pdf`, relevant slot (iv).
+
 ## Check yourself
-1. State the criterion. :: Short-range if $\sum_k |R(k)| < \infty$; long-range if it diverges.
+1. State the lecture criterion. :: For a stationary process, short-range if $\sum_{k=1}^{\infty}R(k)$ converges; long-range if it diverges.
 2. For $R(k) \sim |k|^{-\alpha}$, when does the sum converge? :: When $\alpha > 1$.
 3. Classify $R(k) = (1+|k|^2)^{-0.4}$. :: The exponent is $2 \times 0.4 = 0.8 < 1$, so the sum diverges — long-range dependent.

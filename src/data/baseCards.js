@@ -44,7 +44,7 @@ export const baseCards = [
     "id": "card-002",
     "number": 2,
     "sortOrder": 2,
-    "title": "TS Pack A — Read L1–L2 + redo every worked example",
+    "title": "TS Pack A — Map L1 + work the core L2 smoothing examples",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 2",
@@ -58,15 +58,15 @@ export const baseCards = [
     "dueDate": "2026-07-04",
     "dueDateTime": "2026-07-04 16:30",
     "estimatedHours": 3,
-    "description": "Pass 1 = understand. Read actively and reproduce each worked example by hand before reading the solution.",
+    "description": "Use L1 to map the module's tasks and model families, then work the core L2 smoothing examples before checking the lecture.",
     "checklist": [
-      "Redo each L1–L2 worked example on paper first",
-      "Note where SMA / exp smoothing / Holt-Winters apply",
-      "Additive vs multiplicative decomposition in one line each",
+      "Read L1 for the task map: smooth/decompose, fit, forecast, simulate",
+      "Redo the L2 SMA and centred-MA numerical examples before checking",
+      "State where SMA / SES / CMA / WMA / Holt-Winters apply",
       "Flag the 1–2 shakiest steps"
     ],
-    "evidenceRequirement": "hand-redone worked-example sheet",
-    "doneCondition": "every L1–L2 worked example reproduced by hand",
+    "evidenceRequirement": "TS_PackA_method_map.md + hand-redone L2 examples",
+    "doneCondition": "module task map written; core L2 examples and method-choice rules reproduced",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -136,7 +136,7 @@ export const baseCards = [
     "id": "card-006",
     "number": 6,
     "sortOrder": 6,
-    "title": "TS Pack A — Formula sheet + 10 recall prompts self-test",
+    "title": "TS Pack A — Method-choice sheet + 10 recall prompts",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 2",
@@ -150,14 +150,14 @@ export const baseCards = [
     "dueDate": "2026-07-05",
     "dueDateTime": "2026-07-05 22:30",
     "estimatedHours": 3,
-    "description": "Compress L1–L2 into a one-page exam-usable formula sheet, then write and sit 10 closed-book recall prompts. Completes TS Pack A.",
+    "description": "Compress L1's decision map and L2's smoothing formulas into one page, then sit 10 closed-book recall prompts. Completes TS Pack A.",
     "checklist": [
-      "One-page sheet: SMA, simple exp smoothing, Holt-Winters (3 update eqns), decomposition",
-      "10 closed-book recall prompts across smoothing+decomposition",
+      "One-page sheet: task map, SMA/CMA/WMA/SES, Holt-Winters, additive vs multiplicative",
+      "10 closed-book prompts across method choice, smoothing and decomposition",
       "Self-test, mark, flag <8/10 topics"
     ],
-    "evidenceRequirement": "TS_PackA_formula_sheet.md + recall self-test score",
-    "doneCondition": "all Pack A formulas on one page; >=8/10 closed-book",
+    "evidenceRequirement": "TS_PackA_method_formula_sheet.md + recall self-test score",
+    "doneCondition": "Pack A method map and formulas fit on one page; >=8/10 closed-book",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -276,7 +276,7 @@ export const baseCards = [
     "description": "Build the named-process reference later ARMA work depends on.",
     "checklist": [
       "Covariance function for white noise, random walk, Brownian motion, Brownian bridge, Poisson",
-      "One line each: short vs long memory",
+      "One line each: WSS or not, with the reason",
       "Assemble the one-page definitions sheet"
     ],
     "evidenceRequirement": "TS_PackB_definitions.md",
@@ -334,7 +334,7 @@ export const baseCards = [
     "estimatedHours": 3,
     "description": "Lock Pack B with 3 fully worked examples, then a closed-book self-test. Completes TS Pack B.",
     "checklist": [
-      "3 worked examples: show WSS or not; compute a named covariance; classify memory",
+      "3 worked examples: show WSS or not; compute a named covariance; prove positive semidefiniteness",
       "Closed-book: reproduce 2 covariances + the WSS argument",
       "Flag anything shaky"
     ],
@@ -379,7 +379,7 @@ export const baseCards = [
     "id": "card-015",
     "number": 15,
     "sortOrder": 15,
-    "title": "TS Pack C — Read L5–L7 (spectral, estimation, BLUP)",
+    "title": "TS Pack C — Read L5–L7 + reproduce the core spectral/BLUP examples",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 2",
@@ -393,15 +393,15 @@ export const baseCards = [
     "dueDate": "2026-07-08",
     "dueDateTime": "2026-07-08 16:30",
     "estimatedHours": 3,
-    "description": "Pass 1 over spectral methods, periodogram, estimation, BLUP. Redo worked examples by hand.",
+    "description": "Pass 1 over spectral methods, filtering, BLUP and estimation. Reproduce one representative example per core method by hand.",
     "checklist": [
-      "Read L5–L7; redo worked examples by hand",
+      "Read L5–L7; redo one representative example per core method",
       "Spectral density <-> covariance relation",
       "Periodogram / filtering interpretation",
       "Flag shaky steps"
     ],
     "evidenceRequirement": "hand-redone L5–L7 worked-example sheet",
-    "doneCondition": "every L5–L7 worked example reproduced",
+    "doneCondition": "spectral recovery, filtering, BLUP and covariance-estimation examples reproduced",
     "trackerNotes": "",
     "tags": [
       "exam"
@@ -748,7 +748,7 @@ export const baseCards = [
     "id": "card-031",
     "number": 31,
     "sortOrder": 31,
-    "title": "TS Pack D — MA(q) cutoff + ACF/PACF + self-test",
+    "title": "TS Pack D — MA(q) cutoff + AR covariance recursion + self-test",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 2",
@@ -762,14 +762,14 @@ export const baseCards = [
     "dueDate": "2026-07-15",
     "dueDateTime": "2026-07-15 11:30",
     "estimatedHours": 3,
-    "description": "Lock Pack D with ACF/PACF behaviour and a closed-book self-test. Completes Pack D.",
+    "description": "Lock Pack D with the MA(q) covariance cutoff, AR correlation recursions and a closed-book L9 self-test. Completes Pack D.",
     "checklist": [
       "MA(q) covariance cutoff worked",
-      "ACF vs PACF signatures for AR/MA/ARMA",
+      "AR(1)/AR(2) covariance and correlation recursions worked",
       "Closed-book self-test; flag shaky"
     ],
     "evidenceRequirement": "TS_PackD worked examples + self-test",
-    "doneCondition": "ACF/PACF signatures reproduced closed-book",
+    "doneCondition": "MA cutoff and AR covariance recursions reproduced closed-book",
     "trackerNotes": "",
     "tags": []
   },
@@ -821,9 +821,9 @@ export const baseCards = [
     "dueDate": "2026-07-16",
     "dueDateTime": "2026-07-16 19:30",
     "estimatedHours": 3,
-    "description": "Pass 1 over estimation + forecasting + (S)ARIMA. Redo worked examples.",
+    "description": "Pass 1 over estimation, forecasting and integrated/seasonal models. Reproduce one core example per method.",
     "checklist": [
-      "Read L11–L13; redo worked examples",
+      "Read L11–L13; redo one core example per method",
       "Yule-Walker setup; MA(1) estimation",
       "Forecasting + prediction intervals; ARIMA/SARIMA structure",
       "Flag shaky steps"
@@ -1003,15 +1003,15 @@ export const baseCards = [
     "dueDate": "2026-07-19",
     "dueDateTime": "2026-07-19 22:30",
     "estimatedHours": 3,
-    "description": "Pass 1 over the applied/real-data layer.",
+    "description": "Pass 1 over the applied workflow: transformations, ACF/PACF/periodogram diagnostics, fitted-model comparison, forecasting and SSA.",
     "checklist": [
       "Read L14–L15; redo worked examples",
-      "Transformations + AIC model choice",
-      "Forecasting workflow + SSA/Rssa skeleton",
+      "Transformations + ACF/PACF/periodogram diagnostics + reported-AIC comparison",
+      "Forecasting workflow + SSA embedding/SVD/reconstruction skeleton",
       "Flag shaky steps"
     ],
     "evidenceRequirement": "hand-redone L14–L15 sheet",
-    "doneCondition": "real-data workflow + SSA skeleton captured",
+    "doneCondition": "diagnostic/model-choice workflow + SSA skeleton captured",
     "trackerNotes": "",
     "tags": []
   },
@@ -1064,9 +1064,9 @@ export const baseCards = [
     "estimatedHours": 3,
     "description": "Lock Pack F with a closed-book self-test. Completes TS first pass A–F.",
     "checklist": [
-      "AIC comparison worked example",
-      "Forecasting workflow + R skeleton",
-      "SSA algorithm skeleton",
+      "Reported-AIC comparison from a lecture table",
+      "Diagnostic, fitting and forecasting R skeleton",
+      "SSA embedding/SVD/grouping/reconstruction skeleton",
       "Closed-book self-test"
     ],
     "evidenceRequirement": "TS_PackF worked examples + self-test",
@@ -1232,7 +1232,7 @@ export const baseCards = [
     "id": "card-058",
     "number": 58,
     "sortOrder": 58,
-    "title": "TS — Past-paper #1 (full, timed)",
+    "title": "TS — Past-paper #1 (2015, timed)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 3",
@@ -1249,7 +1249,7 @@ export const baseCards = [
     "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
+      "Self-mark from lecture/template references; tag each part right / partial / blank",
       "Record paper #1 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
@@ -1420,7 +1420,7 @@ export const baseCards = [
     "id": "card-068",
     "number": 68,
     "sortOrder": 68,
-    "title": "TS — Past-paper #2 (full, timed)",
+    "title": "TS — Past-paper #2 (2016, timed)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 3",
@@ -1437,7 +1437,7 @@ export const baseCards = [
     "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
+      "Self-mark from lecture/template references; tag each part right / partial / blank",
       "Record paper #2 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
@@ -1631,7 +1631,7 @@ export const baseCards = [
     "id": "card-081",
     "number": 81,
     "sortOrder": 81,
-    "title": "TS — Past-paper #3 (full, timed)",
+    "title": "TS — Past-paper #3 (2017, timed)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 3",
@@ -1648,7 +1648,7 @@ export const baseCards = [
     "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
+      "Self-mark from lecture/template references; tag each part right / partial / blank",
       "Record paper #3 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
@@ -1695,7 +1695,7 @@ export const baseCards = [
     "id": "card-089",
     "number": 89,
     "sortOrder": 89,
-    "title": "TS — Full past-paper mock #4 (timed)",
+    "title": "TS — Past-paper #4 (2018, timed)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 4",
@@ -1712,7 +1712,7 @@ export const baseCards = [
     "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
+      "Self-mark from lecture/template references; tag each part right / partial / blank",
       "Record paper #4 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
@@ -1759,7 +1759,7 @@ export const baseCards = [
     "id": "card-092",
     "number": 92,
     "sortOrder": 92,
-    "title": "TS — Weak-topic repair (mock #4)",
+    "title": "TS — Weak-topic repair (past-paper #4)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 4",
@@ -1773,9 +1773,9 @@ export const baseCards = [
     "dueDate": "2026-08-02",
     "dueDateTime": "2026-08-02 21:30",
     "estimatedHours": 2,
-    "description": "Targeted repair on the weakest Time Series topics from the last mock — re-derive, redo, re-test. No broad re-reading.",
+    "description": "Targeted repair on the weakest Time Series topics from past-paper #4 — re-derive, redo, re-test. No broad re-reading.",
     "checklist": [
-      "Take the 3 weakest topics from the last mock/error log",
+      "Take the 3 weakest topics from the paper #4 error log",
       "Re-derive the method or re-run the lab cell for each",
       "Re-test yourself closed-book on just those",
       "Tick them off the error log only when clean"
@@ -1820,7 +1820,7 @@ export const baseCards = [
     "id": "card-095",
     "number": 95,
     "sortOrder": 95,
-    "title": "TS — Full past-paper mock #5 (timed)",
+    "title": "TS — Past-paper #5 (2019, timed)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 4",
@@ -1837,7 +1837,7 @@ export const baseCards = [
     "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
+      "Self-mark from lecture/template references; tag each part right / partial / blank",
       "Record paper #5 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
@@ -2035,7 +2035,7 @@ export const baseCards = [
     "id": "card-113",
     "number": 113,
     "sortOrder": 113,
-    "title": "TS — Past-paper mock #7 (timed)",
+    "title": "TS — Past-paper #6 (2020, timed)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 4",
@@ -2052,11 +2052,11 @@ export const baseCards = [
     "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
-      "Record paper #7 score and the question templates that broke",
+      "Self-mark from lecture/template references; tag each part right / partial / blank",
+      "Record paper #6 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
-    "evidenceRequirement": "TS past-paper #7 attempt + marked result + error-log update",
+    "evidenceRequirement": "TS past-paper #6 attempt + marked result + error-log update",
     "doneCondition": "paper sat to time, marked, weak templates logged",
     "trackerNotes": "",
     "tags": [
@@ -2159,7 +2159,7 @@ export const baseCards = [
     "id": "card-118",
     "number": 118,
     "sortOrder": 118,
-    "title": "TS — Final past-paper under exam timing",
+    "title": "TS — Mock exam #7 (final timed paper)",
     "module": "Time Series",
     "moduleGroup": "Time Series",
     "phase": "Phase 4",
@@ -2173,14 +2173,14 @@ export const baseCards = [
     "dueDate": "2026-08-10",
     "dueDateTime": "2026-08-10 16:30",
     "estimatedHours": 3,
-    "description": "Sit one past Time Series paper under exam timing — no notes first pass, then mark.",
+    "description": "Sit the supplied mock under exam timing, then mark it against the supplied worked solution.",
     "checklist": [
       "Attempt the full paper to time, closed-book",
-      "Mark vs solutions; tag each question right / partial / blank",
-      "Record paper #8 score and the question templates that broke",
+      "Mark against the official mock solution; tag each part right / partial / blank",
+      "Record paper #7 score and the question templates that broke",
       "Add broken templates to the TS error log"
     ],
-    "evidenceRequirement": "TS past-paper #8 attempt + marked result + error-log update",
+    "evidenceRequirement": "TS mock #7 attempt + official-solution marking + error-log update",
     "doneCondition": "paper sat to time, marked, weak templates logged",
     "trackerNotes": "",
     "tags": [

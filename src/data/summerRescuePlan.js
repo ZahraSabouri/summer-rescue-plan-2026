@@ -486,12 +486,12 @@ const adminCards = [
   datedCard({
     id: 'admin-summer-assessment-confirmation', number: 501, title: 'ADMIN — confirm summer assessment entry and information channels', moduleGroup: 'Admin', phase: 'Phase 0', startDate: '2026-07-16', dueDate: '2026-07-16', hours: 0.5, priority: 'Critical',
     description: 'The current notice confirms the summer assessment window but does not state whether any registration action is required. Send one concise confirmation to the COMSC School Office.',
-    checklist: ['Ask whether any MAT700 summer-assessment registration action is required', 'Ask where the CMT307, MAT508, and MAT700 date/time/location will be published', 'Ask how the MAT700 summer assessment mark will be recorded', 'Record the answer in the app; do not start a broad complaint thread'],
+    checklist: ['Ask whether any MAT700 summer-assessment registration action is required', 'Ask where the CMT307, MA4508, and MAT700 date/time/location will be published', 'Ask how the MAT700 summer assessment mark will be recorded', 'Record the answer in the app; do not start a broad complaint thread'],
     evidence: 'sent confirmation message + reply/action logged', done: 'entry/action requirements and publication channels are confirmed or formally chased', tags: ['admin', 'exam', 'date-watch'], slotLabel: 'Thu 16 Jul 20:15–20:45',
   }),
   ...['2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10'].map((date, index) => datedCard({
     id: `admin-date-watch-${index + 1}`, number: 502 + index, title: `ADMIN — summer timetable watch ${index + 1}`, moduleGroup: 'Admin', phase: date < '2026-08-01' ? 'Phase 0' : date < '2026-08-10' ? 'Phase 1' : 'Phase 2', startDate: date, dueDate: date, hours: index === 2 ? 0.5 : 0.25, priority: 'Critical',
-    description: index === 2 ? 'The Registry timetable should be available by the start of August. Treat this as the hard publication checkpoint.' : 'Check only the official channels for CMT307, MAT508, and MAT700 date/time/location changes.',
+    description: index === 2 ? 'The Registry timetable should be available by the start of August. Treat this as the hard publication checkpoint.' : 'Check only the official channels for CMT307, MA4508, and MAT700 date/time/location changes.',
     checklist: ['Check SIMS/student intranet timetable', 'Check Learning Central announcements', 'Check Cardiff email/School notice', 'Enter confirmed module dates in app Settings immediately'],
     evidence: 'dated check and any confirmed date/location', done: 'official channels checked and settings updated if anything changed', tags: ['admin', 'date-watch', 'exam'], slotLabel: 'Monday 20:00–20:15',
   })),

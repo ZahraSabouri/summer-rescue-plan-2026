@@ -1,5 +1,5 @@
 @@ id=ts-r-code-drill | title=Every R question on one page | kind=cheatsheet | topic=TS · Drills | key | tags=exam,recall,code,R | cards=card-077
-**Three R parts per paper, ~10 marks, and only five templates exist.** This is the highest marks-per-hour revision in the module.
+**Three R parts per answered paper, usually ~10 marks, recur around five core templates.** This is among the highest marks-per-hour revision in the module.
 
 | Asked as | Template |
 | --- | --- |
@@ -90,13 +90,13 @@ Slot (i) is 2 marks for a definition or theorem statement, on every question of 
 3. Name the two expansions that recur most often. :: Mercer (of the covariance function) and Karhunen–Loève (of the process).
 
 @@ id=ts-exam-strategy | title=Working the paper | kind=qa | topic=TS · Drills | key | tags=exam,strategy | cards=card-048
-2 hours, three questions, 75 marks — **40 minutes and 25 marks per question**, and each question has seven parts.
+2 hours, answer three questions, 75 marks — **40 minutes and 25 marks per answered question**, and each supplied question has seven parts. The 2026 mock contains exactly three questions; the 2015–2020 papers contain four and ask you to choose three.
 
 **A workable order.**
 
 1. **Scan all questions first** and mark the (i) definition slots. They are 2 marks each for pure recall — bank six marks in the first five minutes.
 2. **Then the (iv) identification slots** — causal? invertible? short- or long-range? Each is 2–3 marks and under two minutes if you know the root test.
-3. **Then the R code (iii).** 3–4 marks for a template you have already memorised. Do not leave these to the end; they are the most mechanical marks on the paper.
+3. **Then the R code (iii).** Usually 3–4 marks for a recurring template. Do not leave these to the end; they are among the most mechanical marks on the paper.
 4. **Then the calculations (v)–(vii).** These are the 4–6 mark items and take the most time.
 5. **Leave the derivation (ii) until last** if you are unsure of it. Partial credit is real — state what you are proving and set up the first line even if you cannot finish.
 
@@ -118,15 +118,20 @@ Lecture 15 introduces **SSA** as a **model-free** methodology — it does not as
 
 The four stages of basic SSA:
 
-1. **Embedding** — build a trajectory matrix from lagged copies of the series, using a window length $L$.
-2. **Singular value decomposition** — decompose that matrix into elementary components.
-3. **Grouping** — assign components to interpretable groups (trend, oscillations, noise).
-4. **Diagonal averaging (reconstruction)** — turn each group back into a time series.
+1. **Embedding** — choose $L$ with $2\leq L<n-L+1$ and build the $L\times(n-L+1)$ Hankel trajectory matrix from lagged windows.
+2. **Singular value decomposition** — write
+   $$X=\sum_i\sqrt{\lambda_i}U_iV_i^T,$$
+   where $(\lambda_i,U_i,V_i)$ is an eigentriple.
+3. **Grouping** — combine eigentriples representing trend, oscillations/seasonality, and noise.
+4. **Diagonal averaging (Hankelisation/reconstruction)** — average matrix anti-diagonals to turn each grouped matrix back into a time series.
 
-The output is a decomposition of the original series into **trend + oscillatory components + noise**, obtained without fitting a parametric model — which is what "model-free" means here.
+The output is a decomposition of the original series into **trend + oscillatory components + noise**, obtained without fitting a parametric model. Lecture 15 also distinguishes **recurrent** and **vector** SSA forecasting; for first-pass revision, know that both extend the reconstructed signal subspace, while the full formulas are lower priority than the embedding/SVD/reconstruction skeleton.
 
 **Note on coverage.** SSA sits at the very end of the module and does **not appear in the mock exam or in the 2019/2020 papers I have extracted**. Treat it as lower priority than Lectures 3–13 unless your lecturer has flagged it — but be able to say what the four stages are.
+
+**Source:** `Learning Materials/ma3508_lecture15.pdf`, pp.2–11, 26–36.
 
 ## Check yourself
 1. What does "model-free" mean for SSA? :: It does not assume a parametric model such as ARMA, nor stationarity.
 2. Name the four stages. :: Embedding, singular value decomposition, grouping, and diagonal averaging (reconstruction).
+3. What shape is the trajectory matrix? :: $L\times(n-L+1)$, with lagged windows as columns.

@@ -2,12 +2,13 @@
 | | |
 | --- | --- |
 | Format | **Written paper, 2 hours** |
-| Structure | 3–4 questions; **answer THREE**, each on a separate page |
+| Current mock | **THREE questions; answer all three**, each on a separate page |
+| Older 2015–2020 papers | **FOUR questions; answer any three** |
 | Marks | **75 total**, 25 per question |
-| Allowed | **calculator**; translation dictionary. **No note sheet** — this is closed book |
+| Listed permitted materials | **calculator** and a stamped translation dictionary; no note sheet is listed |
 | Instruction | **"Show all your working clearly"** |
 
-**The single most valuable observation: every question has the same seven slots, year after year.** Comparing the 2026 mock with the 2020 and 2019 papers, each question runs (i)–(vii) in this order:
+**The single most valuable observation: every supplied question has seven slots.** The 2026 mock and every 2015–2020 paper run each question from (i) to (vii):
 
 | Slot | What it asks | Marks |
 | --- | --- | --- |
@@ -19,12 +20,14 @@
 | **(vi)** | **Forecast or estimate from data** — AR forecasts with MSE and CI, or MA(1)/AR(2) parameter estimation | 4–5 |
 | **(vii)** | **Spectral density ↔ covariance**, or find $c$ making a process (non-)stationary, or Yule–Walker | 4–5 |
 
-**What this means for revision.** You are not preparing for an unknown paper; you are preparing seven repeatable procedures. Three of the twenty-one parts on a paper are **R code** — roughly 10 marks — which is the most under-revised and most mechanical part of the whole exam.
+**What this means for revision.** Prepare seven repeatable procedures, but still read the wording of each part. Three of the twenty-one answered parts are normally **R code** — roughly 10 marks — which makes the code templates unusually efficient revision.
+
+**Sources:** `Some solutions/ma3508_mock_exam.pdf`, p.1; `Past Exams Papers/ma0367_2015_exam-.pdf` to `ma0367_2020_exam_.pdf`, p.1 and question pages.
 
 ## Check yourself
 1. How many questions do you answer, and what is each worth? :: Three, 25 marks each, 75 total.
 2. Roughly how many marks on a full paper come from writing R code? :: About 10 — one R part per question, worth 3–4 marks each.
-3. Are you allowed a note sheet? :: No. Unlike MAT700, this is closed book with only a calculator.
+3. What permitted materials are listed on the supplied mock? :: A calculator and a stamped translation dictionary; no note sheet is listed.
 
 @@ id=ts-formula-sheet | title=The formula sheet to reconstruct from memory | kind=cheatsheet | topic=TS · Exam shape | key | tags=exam,recall,formula | cards=card-048
 Closed book, so this is what has to be in your head. Write it out cold before each mock.
@@ -46,8 +49,9 @@ Closed book, so this is what has to be in your head. Write it out cold before ea
 
 **Spectral**
 
-* $R(k) = \int_{-\pi}^{\pi} e^{ik\lambda}f(\lambda)d\lambda$ (discrete); $f(\lambda) = \dfrac{1}{2\pi}\sum_k R(k)\cos(k\lambda)$
+* $R(k) = \int_{-\pi}^{\pi}\cos(k\lambda)f(\lambda)d\lambda$ (discrete); $f(\lambda) = \dfrac{1}{2\pi}\sum_k R(k)\cos(k\lambda)$
 * ARMA: $f_x(\lambda) = \dfrac{\sigma^2}{2\pi}\dfrac{|b(e^{-i\lambda})|^2}{|a(e^{-i\lambda})|^2}$
+* Lecture criterion: short-range if $\sum_{k=1}^{\infty}R(k)$ converges; long-range if it diverges. For the supplied positive power-law examples, reduce to a $p$-series.
 
 **ARMA**
 
@@ -59,7 +63,7 @@ Closed book, so this is what has to be in your head. Write it out cold before ea
 **Forecasting**
 
 * $\hat{x}_{n+h} = \mu + \mathbf{\lambda}_h^T Y$, $\mathbf{\lambda}_h = \Sigma^{-1}b_h$, $\sigma^2_{n+h} = R(0) - b_h^T\Sigma^{-1}b_h$
-* AR(1): $\hat{x}_{n+h} = a^h x_n$, $MSE = \sigma^2\dfrac{1-a^{2h}}{1-a^2}$
+* AR(1): $\hat{x}_{n+h} = \mu + a^h(x_n-\mu)$, $MSE = \sigma^2\dfrac{1-a^{2h}}{1-a^2}$
 * General causal ARMA: $MSE(\hat{x}_{n+h}) = \sigma^2\sum_{i=0}^{h-1}c_i^2$
 * Bound: $\hat{x}_{n+h} \pm z_{1-\alpha/2}\sqrt{MSE}$
 
@@ -68,6 +72,14 @@ Closed book, so this is what has to be in your head. Write it out cold before ea
 * $\hat{R}(k) = \dfrac{1}{n}\sum_{j=1}^{n-k}(x_j - \bar{X}_n)(x_{j+k} - \bar{X}_n)$; $\hat{\rho}(k) = \hat{R}(k)/\hat{R}(0)$
 * Yule–Walker: $\hat{a} = \hat{C}^{-1}\hat{v}$; $\hat{\sigma}^2 = \hat{R}(0)(1 - \hat{a}_1\hat{\rho}(1) - \dots - \hat{a}_p\hat{\rho}(p))$
 * $n\text{Var}(\bar{X}_n) \rightarrow 2\pi f(0)$
+
+**Integrated and applied models**
+
+* ARIMA$(p,d,q)$: $a(B)(1-B)^d x_t=b(B)\varepsilon_t$
+* SARIMA$(p,d,q)(P,D,Q)_s$: difference first with $(1-B)^d(1-B^s)^D$, then fit the non-seasonal and seasonal ARMA polynomials
+* Real-data order: plot → transform if needed → inspect ACF/PACF and periodogram → fit candidates → prefer a defensible parsimonious model with smaller reported AIC
+
+**Sources:** `Complete lecture notes/ma3508_lecture3.pdf`, pp.11–18; Lectures 5–13 at the matching theorem/example pages; `Learning Materials/ma3508_lecture14.pdf`, pp.2–24.
 
 @@ id=ts-continuous-discrete | title=Continuous vs discrete, deterministic vs stochastic | kind=concept | topic=TS · L3 Processes | tags=definition,exam | cards=card-009
 Four definitions the paper can ask for directly.
@@ -358,6 +370,33 @@ lines(tp, mt, col="red")
 2. Write the covariance line for $R(t,s) = e^{-3|t-s|^{1.5}}$. :: `CovMtp[i,j] = exp(-3*abs(tp[i]-tp[j])^1.5)`.
 3. What three parts of the template change between questions? :: The points `tp`, the mean function `mt`, and the covariance expression inside the loop.
 
+@@ id=ts-l1-overview | title=Lecture 1 map: what a time-series answer is trying to do | kind=cheatsheet | topic=TS · L1 Overview | tags=workflow,model-choice,exam | cards=card-002,card-006
+Lecture 1 is an orientation lecture, not a page of calculations. Its value is the **decision map** that tells you what later methods are for.
+
+| Goal | What it means in this module | Later lecture block |
+| --- | --- | --- |
+| **Smoothing** | suppress high-frequency noise to reveal signal | L2 |
+| **Decomposition** | separate trend, seasonality/cycles, and irregular noise | L1–L2, L14 |
+| **Model fitting** | choose AR, MA, ARMA, ARIMA or SSA and estimate its parameters | L8–L15 |
+| **Forecasting** | continue the series using the fitted model, with uncertainty where required | L6, L12–L15 |
+| **Simulation** | generate a realization from a specified stochastic model | L4, L8–L9 |
+
+**Exam-oriented reading rule.** For any unfamiliar series, first write:
+
+1. What visible structure is present: trend, seasonality/cycle, changing variance, or noise?
+2. Is the series plausibly stationary? If not, would a log transform and/or differencing help?
+3. Which evidence will guide the model: covariance/correlogram, PACF, periodogram, or a stated equation?
+4. Is the task smoothing, fitting, simulation, or forecasting? Do not apply a method before naming the task.
+
+Lecture 1 also lists the syllabus spine: covariance/correlation/spectrum, time-domain prediction and bounds, AR/MA/ARMA, Yule–Walker estimation, ARIMA, and SSA. Use this as a coverage checklist, not as a formula sheet.
+
+**Source:** `Learning Materials/ma3508_lecture1.pdf`, pp.2–4, 8–19.
+
+## Check yourself
+1. What are the four main actions carried through the module? :: Smooth/decompose, fit, forecast, and simulate.
+2. What should you inspect before choosing a model? :: Trend/seasonality/cycles, changing variance, stationarity, the correlogram/PACF, and the periodogram.
+3. Why is Lecture 1 not a "redo every worked example" lecture? :: It supplies the module map and datasets; the first numerical smoothing examples begin in Lecture 2.
+
 @@ id=ts-smoothing | title=Smoothing: SMA, CMA, WMA and SES | kind=cheatsheet | topic=TS · L2 Smoothing | tags=definition,exam | cards=card-002,card-006
 The model is **"signal + noise"**; the goal is to **suppress the noise** and estimate the underlying signal — decomposing the series into a **low-frequency "signal"** and a **high-frequency "noise"**.
 
@@ -373,6 +412,8 @@ The model is **"signal + noise"**; the goal is to **suppress the noise** and est
 **Worked SMA, $m = 3$, on $\{3,7,2,5,4,8,6\}$:** $S_3 = 12/3 = 4.00$, $S_4 = 14/3 \approx 4.67$, $S_5 = 11/3 \approx 3.67$, $S_6 = 17/3 \approx 5.67$, $S_7 = 18/3 = 6.00$. The centered MA of window 3 gives the **same numbers shifted one place left** — $C_2 = 4.00$, and you lose $k=1$ and $k=7$.
 
 **Practical use:** SMA and SES for **real-time (online) monitoring**; CMA and WMA for series **without periodicities, offline**; **Holt–Winters** for monthly econometric series.
+
+**Source:** `Learning Materials/ma3508_lecture2.pdf`, pp.2–10, 13.
 
 ## Check yourself
 1. Why does a centered moving average avoid time lag? :: It averages symmetrically over past and future values rather than only past ones.
@@ -403,6 +444,8 @@ HoltWinters(milkTS, alpha = 0.2, beta = FALSE, gamma = FALSE)
 ```
 
 **In R, `HoltWinters()` estimates $\alpha,\beta,\gamma$ automatically by minimising the squared prediction errors** — you only supply them to override.
+
+**Source:** `Learning Materials/ma3508_lecture2.pdf`, pp.11–13.
 
 ## Check yourself
 1. What do the three Holt–Winters equations track? :: Level, trend, and seasonal component.

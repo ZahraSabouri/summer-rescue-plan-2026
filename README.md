@@ -34,7 +34,7 @@ bounded CMT501 capacity lane, a small job-search lane, and essential life/admin 
 | Lane | Module | Focus | Allocation |
 | --- | --- | --- | --- |
 | Applied ML | CMT307 | Lab-first fluency, videos only when they produce a lab/output | 36 cards / 80 h |
-| Time Series | MAT508 | Concept rebuild plus repeated exam-template drills | 35 cards / 95 h |
+| Time Series | MA4508 | Concept rebuild plus repeated exam-template drills | 35 cards / 95 h |
 | Data Mining | MAT700 | Tutorial-first rebuild, timed recall, and papers | 24 cards / 52 h |
 | Team Project | CMT501 | Generic protected capacity only; detailed management stays elsewhere | 5 cards / 37 h |
 | Job Hunt | Personal | Five tiny scans plus one weekly review/development output; hard 2 h/week cap | 7 cards / 14 h |

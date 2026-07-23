@@ -436,6 +436,100 @@ For this AR(2), $c_0 = 1$, $c_1 = 0.5$, so $MSE(\hat x_{n+1}) = 0.6$ and $MSE(\h
 2. Give the general MSE formula. :: $MSE(\hat x_{n+h}) = \sigma^2\sum_{i=0}^{h-1}c_i^2$ using the MA representation coefficients.
 3. What is $MSE(\hat x_{n+1})$ always equal to? :: $\sigma^2$, since only $c_0 = 1$ contributes.
 
+@@ id=ts-arima-sarima | title=ARIMA and SARIMA: difference first, then use ARMA | kind=formula | topic=TS · L13 Integrated models | key | tags=exam,definition,forecasting | cards=card-034,card-040
+An ARIMA process is not a separate set of forecasting rules. It is the lecture's **difference-then-ARMA** construction.
+
+> $x_t$ is ARIMA$(p,d,q)$ if $(1-B)^d x_t$ is ARMA$(p,q)$:
+>
+> $$a(B)(1-B)^d x_t=b(B)\varepsilon_t.$$
+
+Here $d$ is the number of ordinary differences. In particular,
+
+$$\text{ARIMA}(0,1,0):\quad (1-B)x_t=\varepsilon_t\quad\Longleftrightarrow\quad x_t=x_{t-1}+\varepsilon_t,$$
+
+so ARIMA$(0,1,0)$ is a random walk.
+
+**Worked structure: ARIMA$(1,1,0)$.**
+
+$$(1-aB)(1-B)x_t=\varepsilon_t
+\quad\Longrightarrow\quad
+x_t=(1+a)x_{t-1}-ax_{t-2}+\varepsilon_t.$$
+
+Forecast by setting future noise to zero and recursing:
+
+$$\hat{x}_{n+1}=(1+a)x_n-ax_{n-1},\qquad
+\hat{x}_{n+2}=(1+a)\hat{x}_{n+1}-ax_n.$$
+
+**Seasonal extension.** SARIMA$(p,d,q)(P,D,Q)_s$ applies both ordinary and seasonal differencing:
+
+$$y_t=(1-B)^d(1-B^s)^Dx_t,$$
+
+then models $y_t$ with
+
+$$a(B)\tilde a(B^s)y_t=b(B)\tilde b(B^s)\varepsilon_t.$$
+
+For monthly data, $s=12$. The lecture's SARIMA$(1,0,1)(1,0,0)_{12}$ example expands to
+
+$$x_t-a_1x_{t-1}-\tilde a_1x_{t-12}+a_1\tilde a_1x_{t-13}
+=\varepsilon_t-b_1\varepsilon_{t-1}.$$
+
+**Exam traps**
+
+* $d$ and $D$ are differencing orders, not AR or MA orders.
+* Expand the two polynomial factors carefully: the cross-term at lag $13$ has a plus sign in this example.
+* Forecast the differenced/model equation, then return to the original scale when the question asks for original observations.
+
+**Source:** `Complete lecture notes/ma3508_lecture13.pdf`, pp.6–9, 14–15.
+
+## Check yourself
+1. What does the "I" in ARIMA mean operationally? :: Difference the series $d$ times so the transformed series follows an ARMA model.
+2. What familiar process is ARIMA$(0,1,0)$? :: A random walk.
+3. What does the seasonal period $s=12$ mean? :: The seasonal operators act at lags 12, 24, and so on, appropriate for monthly annual seasonality.
+
+@@ id=ts-acf-pacf | title=ACF and PACF: use the lecture evidence, not a slogan | kind=cheatsheet | topic=TS · L14 Model identification | key | tags=exam,diagnostics,R | cards=card-044,card-047
+The lecture uses the sample ACF (correlogram), PACF, and periodogram as **diagnostic evidence** after making a series approximately stationary.
+
+| Diagnostic pattern | Lecture-supported interpretation |
+| --- | --- |
+| ACF slowly decreasing | an AR$(p)$ model may be relevant |
+| ACF quickly decreasing / cutting off | an MA$(q)$ model may be relevant; theoretically an MA$(q)$ covariance is zero beyond lag $q$ |
+| Slightly damped oscillations | a cyclical component may be present |
+| PACF | additional evidence for the number of AR terms; inspect it with the ACF rather than treating either plot as a proof |
+| Periodogram peak | a frequency/period with a large contribution |
+
+**Discipline:** these are model-identification cues, not guarantees. Fit plausible candidates and compare the fitted output; do not declare an order from one noisy sample plot alone.
+
+```r
+acf(y, lag.max = length(y))
+pacf(y, lag.max = min(150, length(y) - 1))
+```
+
+**Sources:** `Learning Materials/ma3508_lecture14.pdf`, pp.2, 4–5, 12–15, 19–24; `Complete lecture notes/ma3508_lecture8.pdf`, p.10 for the MA$(q)$ cutoff.
+
+## Check yourself
+1. What does a slowly decreasing correlogram suggest? :: An AR model may be relevant.
+2. What exact theoretical fact supports the MA cutoff cue? :: For MA$(q)$, $R(k)=0$ for $|k|>q$.
+3. Why is an ACF/PACF pattern not a final model choice? :: It is sample diagnostic evidence; candidate models still need fitting and comparison.
+
+@@ id=ts-aic-model-choice | title=AIC model choice: compare fitted candidates defensibly | kind=cheatsheet | topic=TS · L14 Model identification | key | tags=exam,diagnostics,AIC | cards=card-044,card-047,card-066
+Lecture 14 compares fitted candidates using four pieces of evidence:
+
+1. a **small number of parameters** for interpretation;
+2. a **small estimated noise variance** $\hat{\sigma}^2$;
+3. a **large log-likelihood**;
+4. a **small reported AIC**.
+
+The lecture tables report AIC values but do not derive an AIC formula. For a lecture-faithful answer, compare the reported values and explain the fit-versus-complexity trade-off. Do not automatically choose a much larger model for a tiny AIC improvement.
+
+**Worked reading of the Nile table.** ARMA$(3,1)$ has AIC $7514.25$ while ARMA$(3,2)$ has AIC $7515.21$. The extra MA term does not improve AIC, so the smaller ARMA$(3,1)$ is preferred between those two candidates.
+
+**Source:** `Learning Materials/ma3508_lecture14.pdf`, pp.7, 15, 22.
+
+## Check yourself
+1. Is a larger or smaller AIC preferred? :: Smaller.
+2. Name the other three criteria shown beside AIC. :: Fewer parameters, smaller estimated noise variance, and larger log-likelihood.
+3. Why not choose the most complex fitted model automatically? :: Extra parameters cost interpretability and may not improve the penalised AIC.
+
 @@ id=ts-real-data-workflow | title=The real-data workflow | kind=cheatsheet | topic=TS · L14 Real data | key | tags=exam,workflow,R | cards=card-044
 The four-step procedure from Lecture 14, which is also the shape of any "analyse this series" answer.
 
@@ -443,11 +537,12 @@ The four-step procedure from Lecture 14, which is also the shape of any "analyse
 2. **If non-stationary, transform.**
    * If $\text{Var}(x_t)$ is **increasing** and $x_t > 0$, take the **logarithm** $y_t = \log(x_t)$.
    * If the **mean function is not constant**, take **differences** $y_t = x_t - x_{t-1}$.
-3. **Compute the correlogram and guess a model:**
+3. **Compute the correlogram and PACF and propose candidate models:**
    * **slightly damped oscillations** → a significant **cyclical** component;
    * **slowly decreasing** → an **AR(p)** model may be relevant;
    * **quickly decreasing** → an **MA(q)** model may be relevant.
 4. **Compute the periodogram** and identify frequencies with a large contribution.
+5. **Fit and compare plausible candidates** using parameter count, $\hat\sigma^2$, log-likelihood and reported AIC; then forecast from the selected model.
 
 **The airline-passenger example** (Box & Jenkins, 1949–60) applies both transformations: **take the logarithm, then take differences** to obtain a stationary series.
 
@@ -461,6 +556,8 @@ arima(y, order=c(1,0,1), seasonal=list(order=c(1,0,0), period=12))
 ```
 
 **The correlogram reading in step 3 is the examinable part** — slowly decaying means AR, sharply cutting off means MA. An MA(q) correlogram is exactly zero beyond lag $q$.
+
+**Source:** `Learning Materials/ma3508_lecture14.pdf`, pp.2–9, 12–24.
 
 ## Check yourself
 1. What transformation fixes increasing variance, and what fixes a non-constant mean? :: Logarithm for increasing variance; differencing for a non-constant mean.
