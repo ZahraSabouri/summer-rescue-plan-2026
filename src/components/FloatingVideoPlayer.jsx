@@ -68,7 +68,7 @@ function withJsApi(embedUrl) {
   return `${embedUrl}${joiner}enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`
 }
 
-export function FloatingVideoPlayer() {
+export function FloatingVideoPlayer({ portal = true }) {
   // Restored via lazy initial state (read once, synchronously, at mount)
   // rather than an effect + setState — the same trick this app already uses
   // for srp-nav-collapsed etc. After mount, every open/close/move/resize
@@ -318,6 +318,70 @@ export function FloatingVideoPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resizing])
 
+  const floatingWindow =
+    visible && embedUrl ? (
+      <div
+        ref={boxRef}
+        className={`floating-video-player${dragging ? ' is-dragging' : ''}${resizing ? ' is-resizing' : ''}${minimized ? ' is-minimized' : ''}`}
+        style={{ left: position.x, top: position.y, width: displayWidth }}
+      >
+        <div className="floating-video-header" onPointerDown={startDrag}>
+          <span className="floating-video-handle" aria-hidden="true">
+            ⠿
+          </span>
+          <span className="floating-video-label">Study video</span>
+          <button
+            type="button"
+            className="floating-video-btn"
+            onClick={toggleMinimize}
+            aria-label={minimized ? 'Restore video' : 'Minimize video'}
+            title={minimized ? 'Restore' : 'Minimize'}
+          >
+            {minimized ? '▢' : '_'}
+          </button>
+          <button
+            type="button"
+            className="floating-video-btn"
+            onClick={toggleMaximize}
+            aria-label={maximized ? 'Restore video size' : 'Maximize video'}
+            title={maximized ? 'Restore size' : 'Maximize'}
+          >
+            {maximized ? '❐' : '□'}
+          </button>
+          <button
+            type="button"
+            className="floating-video-btn floating-video-close"
+            onClick={closeVideo}
+            aria-label="Close video player"
+            title="Close"
+          >
+            ×
+          </button>
+        </div>
+        {!isOwner && (
+          <div className="floating-video-follower-bar">
+            <span>Paused · playing in another tab</span>
+            <button type="button" className="text-button" onClick={claimHere}>
+              Play here
+            </button>
+          </div>
+        )}
+        <div className="floating-video-body" style={{ height: minimized ? 0 : bodyHeight }}>
+          <iframe
+            ref={iframeRef}
+            src={withJsApi(embedUrl)}
+            title="Study video"
+            width={displayWidth}
+            height={bodyHeight}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            onLoad={() => sendCommand(isOwner ? 'playVideo' : 'pauseVideo')}
+          />
+        </div>
+        <div className="floating-video-resize-handle" onPointerDown={startResize} aria-hidden="true" />
+      </div>
+    ) : null
+
   return (
     <div className="video-player-wrap" ref={wrapRef}>
       <button
@@ -364,71 +428,7 @@ export function FloatingVideoPlayer() {
         </form>
       )}
 
-      {visible &&
-        embedUrl &&
-        createPortal(
-          <div
-            ref={boxRef}
-            className={`floating-video-player${dragging ? ' is-dragging' : ''}${resizing ? ' is-resizing' : ''}${minimized ? ' is-minimized' : ''}`}
-            style={{ left: position.x, top: position.y, width: displayWidth }}
-          >
-            <div className="floating-video-header" onPointerDown={startDrag}>
-              <span className="floating-video-handle" aria-hidden="true">
-                ⠿
-              </span>
-              <span className="floating-video-label">Study video</span>
-              <button
-                type="button"
-                className="floating-video-btn"
-                onClick={toggleMinimize}
-                aria-label={minimized ? 'Restore video' : 'Minimize video'}
-                title={minimized ? 'Restore' : 'Minimize'}
-              >
-                {minimized ? '▢' : '_'}
-              </button>
-              <button
-                type="button"
-                className="floating-video-btn"
-                onClick={toggleMaximize}
-                aria-label={maximized ? 'Restore video size' : 'Maximize video'}
-                title={maximized ? 'Restore size' : 'Maximize'}
-              >
-                {maximized ? '❐' : '□'}
-              </button>
-              <button
-                type="button"
-                className="floating-video-btn floating-video-close"
-                onClick={closeVideo}
-                aria-label="Close video player"
-                title="Close"
-              >
-                ×
-              </button>
-            </div>
-            {!isOwner && (
-              <div className="floating-video-follower-bar">
-                <span>Paused · playing in another tab</span>
-                <button type="button" className="text-button" onClick={claimHere}>
-                  Play here
-                </button>
-              </div>
-            )}
-            <div className="floating-video-body" style={{ height: minimized ? 0 : bodyHeight }}>
-              <iframe
-                ref={iframeRef}
-                src={withJsApi(embedUrl)}
-                title="Study video"
-                width={displayWidth}
-                height={bodyHeight}
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-                onLoad={() => sendCommand(isOwner ? 'playVideo' : 'pauseVideo')}
-              />
-            </div>
-            <div className="floating-video-resize-handle" onPointerDown={startResize} aria-hidden="true" />
-          </div>,
-          document.body,
-        )}
+      {floatingWindow && (portal ? createPortal(floatingWindow, document.body) : floatingWindow)}
     </div>
   )
 }

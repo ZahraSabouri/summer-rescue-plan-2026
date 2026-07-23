@@ -343,7 +343,6 @@ export function FocusRoomTab() {
         theme={theme}
         onThemeChange={handleThemeChange}
       />
-      <FloatingVideoPlayer />
       {activeResource && (
         <Suspense fallback={null}>
           <ResourceReader

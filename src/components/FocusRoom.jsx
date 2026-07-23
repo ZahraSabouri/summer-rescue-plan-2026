@@ -5,6 +5,7 @@ import { checklistDoneCount, formatDate, requiresEvidence } from '../utils/progr
 import { focusRewards } from '../utils/focusRewards'
 import { kindMeta, splitSequenceNotes } from '../utils/knowledge'
 import { AmbientSoundPlayer } from './AmbientSoundPlayer'
+import { FloatingVideoPlayer } from './FloatingVideoPlayer'
 import { MarkdownDoc, MarkdownPreview } from './MarkdownDoc'
 import { MusicPopover } from './MusicPopover'
 import { LazyRichTextEditor } from './LazyRichTextEditor'
@@ -652,6 +653,7 @@ export function FocusRoom({
         <div className="focus-room-topbar-actions">
           <AmbientSoundPlayer />
           <MusicPopover theme={theme} />
+          <FloatingVideoPlayer portal={false} />
           {onThemeChange && <ThemeToggle theme={theme} onChange={onThemeChange} />}
           <button ref={closeRef} type="button" className="focus-room-exit" onClick={onExit}>
             Exit <kbd>Esc</kbd>
